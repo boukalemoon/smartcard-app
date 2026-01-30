@@ -70,18 +70,18 @@ export default function QRCodeDisplay({ username, fullName }) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-semibold mb-4">Dijital Kartınız</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+      <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Dijital Kartınız</h2>
       
       <div className="flex flex-col items-center space-y-4">
         {/* QR Code Canvas */}
-        <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
+        <div className="bg-white p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700">
           <canvas ref={canvasRef} />
         </div>
 
         {/* Profile URL */}
         <div className="w-full">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Kart Linkiniz
           </label>
           <div className="flex gap-2">
@@ -89,11 +89,11 @@ export default function QRCodeDisplay({ username, fullName }) {
               type="text"
               value={profileUrl}
               readOnly
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50"
+              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             />
             <button
               onClick={copyToClipboard}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
               title="Kopyala"
             >
               📋
@@ -120,11 +120,11 @@ export default function QRCodeDisplay({ username, fullName }) {
         </div>
 
         {/* Usage Instructions */}
-        <div className="w-full mt-4 p-4 bg-blue-50 rounded-lg">
-          <h3 className="font-semibold text-sm text-blue-900 mb-2">
+        <div className="w-full mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+          <h3 className="font-semibold text-sm text-blue-900 dark:text-blue-300 mb-2">
             Nasıl Kullanılır?
           </h3>
-          <ul className="text-sm text-blue-800 space-y-1">
+          <ul className="text-sm text-blue-800 dark:text-blue-400 space-y-1">
             <li>• QR kodu indirip baskı yaptırabilirsiniz</li>
             <li>• Dijital imzanızda kullanabilirsiniz</li>
             <li>• NFC etiketine yazabilirsiniz (yakında)</li>

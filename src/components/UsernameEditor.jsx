@@ -11,7 +11,6 @@ export default function UsernameEditor({ currentUsername, profileId, onUpdate })
   const [saving, setSaving] = useState(false);
 
   const validateUsername = (value) => {
-    // Sadece küçük harf, rakam, alt çizgi ve tire
     const regex = /^[a-z0-9_-]+$/;
     
     if (!value) {
@@ -83,7 +82,6 @@ export default function UsernameEditor({ currentUsername, profileId, onUpdate })
     setAvailable(null);
     setError('');
     
-    // Debounce check
     if (value) {
       const timer = setTimeout(() => {
         checkAvailability(value);
@@ -125,11 +123,11 @@ export default function UsernameEditor({ currentUsername, profileId, onUpdate })
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Username</h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Username</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Profil kartınızın URL'inde görünür
           </p>
         </div>
@@ -146,10 +144,10 @@ export default function UsernameEditor({ currentUsername, profileId, onUpdate })
       {editing ? (
         <div className="space-y-4">
           {/* URL Preview */}
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-500 mb-1">Profil URL'iniz:</p>
-            <p className="text-sm font-mono text-gray-900">
-              {window.location.origin}/card/<span className="text-blue-600 font-bold">{username || '...'}</span>
+          <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Profil URL'iniz:</p>
+            <p className="text-sm font-mono text-gray-900 dark:text-gray-100">
+              {window.location.origin}/card/<span className="text-blue-600 dark:text-blue-400 font-bold">{username || '...'}</span>
             </p>
           </div>
 
@@ -160,37 +158,37 @@ export default function UsernameEditor({ currentUsername, profileId, onUpdate })
               value={username}
               onChange={handleChange}
               placeholder="username"
-              className={`w-full px-4 py-3 pr-12 border-2 rounded-xl transition-all outline-none font-mono
-                ${error ? 'border-red-300 focus:border-red-500' : 
-                  available ? 'border-green-300 focus:border-green-500' : 
-                  'border-gray-200 focus:border-blue-500'}`}
+              className={`w-full px-4 py-3 pr-12 border-2 rounded-xl transition-all outline-none font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                ${error ? 'border-red-300 dark:border-red-700 focus:border-red-500 dark:focus:border-red-500' : 
+                  available ? 'border-green-300 dark:border-green-700 focus:border-green-500 dark:focus:border-green-500' : 
+                  'border-gray-200 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400'}`}
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
               {checking && <Loader size={20} className="text-gray-400 animate-spin" />}
-              {!checking && available && <Check size={20} className="text-green-600" />}
-              {!checking && available === false && <X size={20} className="text-red-600" />}
+              {!checking && available && <Check size={20} className="text-green-600 dark:text-green-400" />}
+              {!checking && available === false && <X size={20} className="text-red-600 dark:text-red-400" />}
             </div>
           </div>
 
           {/* Error/Success Message */}
           {error && (
-            <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <AlertCircle size={18} className="text-red-600 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-red-800">{error}</p>
+            <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <AlertCircle size={18} className="text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
             </div>
           )}
 
           {available && !error && username !== currentUsername && (
-            <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <Check size={18} className="text-green-600 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-green-800">Bu username kullanılabilir!</p>
+            <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <Check size={18} className="text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-green-800 dark:text-green-300">Bu username kullanılabilir!</p>
             </div>
           )}
 
           {/* Rules */}
-          <div className="p-3 bg-blue-50 rounded-lg">
-            <p className="text-xs font-semibold text-blue-900 mb-2">Username Kuralları:</p>
-            <ul className="text-xs text-blue-800 space-y-1">
+          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <p className="text-xs font-semibold text-blue-900 dark:text-blue-300 mb-2">Username Kuralları:</p>
+            <ul className="text-xs text-blue-800 dark:text-blue-400 space-y-1">
               <li>• 3-30 karakter arası olmalı</li>
               <li>• Sadece küçük harf, rakam, - ve _ kullanılabilir</li>
               <li>• - veya _ ile başlayamaz</li>
@@ -228,11 +226,11 @@ export default function UsernameEditor({ currentUsername, profileId, onUpdate })
           </div>
         </div>
       ) : (
-        <div className="p-4 bg-gray-50 rounded-xl">
+        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-1">Mevcut username:</p>
-              <p className="text-lg font-mono font-bold text-gray-900">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Mevcut username:</p>
+              <p className="text-lg font-mono font-bold text-gray-900 dark:text-gray-100">
                 {currentUsername || 'Henüz ayarlanmamış'}
               </p>
             </div>
@@ -241,7 +239,7 @@ export default function UsernameEditor({ currentUsername, profileId, onUpdate })
                 href={`/card/${currentUsername}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
+                className="px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors text-sm font-medium"
               >
                 Görüntüle
               </a>

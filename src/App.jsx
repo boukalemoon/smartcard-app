@@ -1,3 +1,4 @@
+import { ThemeProvider } from './contexts/ThemeContext'
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabaseClient'
@@ -36,6 +37,7 @@ function App() {
   }
 
   return (
+    <ThemeProvider>
     <Router>
       <Routes>
         {/* Public route - herkes erişebilir */}
@@ -60,6 +62,7 @@ function App() {
         />
       </Routes>
     </Router>
+    </ThemeProvider>
   )
 }
 

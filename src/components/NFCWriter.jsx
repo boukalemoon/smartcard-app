@@ -37,7 +37,6 @@ export default function NFCWriter({ username }) {
       setStatus('NFC etiketini cihazınıza yaklaştırın...');
       setStatusType('info');
 
-      // Request NFC permission and write
       const ndef = new NDEFReader();
       await ndef.write({
         records: [
@@ -55,7 +54,6 @@ export default function NFCWriter({ username }) {
       setStatus('✅ NFC etikete başarıyla yazıldı!');
       setStatusType('success');
       
-      // Reset status after 5 seconds
       setTimeout(() => {
         setStatus('NFC destekli cihaz tespit edildi');
         setStatusType('success');
@@ -121,30 +119,30 @@ export default function NFCWriter({ username }) {
   const getStatusColor = () => {
     switch (statusType) {
       case 'success':
-        return 'bg-green-50 text-green-800 border-green-200';
+        return 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800';
       case 'error':
-        return 'bg-red-50 text-red-800 border-red-200';
+        return 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800';
       default:
-        return 'bg-blue-50 text-blue-800 border-blue-200';
+        return 'bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800';
     }
   };
 
   const getStatusIcon = () => {
     switch (statusType) {
       case 'success':
-        return <CheckCircle className="text-green-600" size={20} />;
+        return <CheckCircle className="text-green-600 dark:text-green-400" size={20} />;
       case 'error':
-        return <AlertCircle className="text-red-600" size={20} />;
+        return <AlertCircle className="text-red-600 dark:text-red-400" size={20} />;
       default:
-        return <Smartphone className="text-blue-600" size={20} />;
+        return <Smartphone className="text-blue-600 dark:text-blue-400" size={20} />;
     }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
       <div className="flex items-center gap-2 mb-4">
-        <Nfc className="text-blue-600" size={24} />
-        <h2 className="text-xl font-semibold">NFC Etiket Yazma</h2>
+        <Nfc className="text-blue-600 dark:text-blue-400" size={24} />
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">NFC Etiket Yazma</h2>
       </div>
 
       {/* Status Message */}
@@ -156,11 +154,11 @@ export default function NFCWriter({ username }) {
       )}
 
       {/* Instructions */}
-      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-        <h3 className="font-semibold text-sm text-gray-900 mb-2">
+      <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+        <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-2">
           NFC Nasıl Kullanılır?
         </h3>
-        <ol className="text-sm text-gray-700 space-y-1 list-decimal list-inside">
+        <ol className="text-sm text-gray-700 dark:text-gray-300 space-y-1 list-decimal list-inside">
           <li>Boş bir NFC etiketi (tag) edinin</li>
           <li>Android Chrome tarayıcısını kullandığınızdan emin olun</li>
           <li>"NFC'ye Yaz" butonuna tıklayın</li>
@@ -177,7 +175,7 @@ export default function NFCWriter({ username }) {
           className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors
             ${isNFCSupported && !isWriting
               ? 'bg-blue-600 hover:bg-blue-700 text-white'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
             }`}
         >
           <Nfc size={20} />
@@ -189,8 +187,8 @@ export default function NFCWriter({ username }) {
           disabled={!isNFCSupported}
           className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors border-2
             ${isNFCSupported
-              ? 'border-blue-600 text-blue-600 hover:bg-blue-50'
-              : 'border-gray-300 text-gray-500 cursor-not-allowed'
+              ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+              : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
             }`}
         >
           <Smartphone size={20} />
@@ -200,8 +198,8 @@ export default function NFCWriter({ username }) {
 
       {/* Browser Compatibility Info */}
       {!isNFCSupported && (
-        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-800">
+        <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+          <p className="text-sm text-yellow-800 dark:text-yellow-300">
             <strong>⚠️ Uyumluluk Notu:</strong> NFC yazma özelliği şu anda sadece{' '}
             <strong>Android cihazlarda Chrome tarayıcısı</strong> ile çalışmaktadır.
             iOS cihazlarda NFC okuma yapılabilir ancak yazma desteklenmemektedir.
@@ -210,11 +208,11 @@ export default function NFCWriter({ username }) {
       )}
 
       {/* What is NFC */}
-      <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-        <h3 className="font-semibold text-sm text-blue-900 mb-2">
+      <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+        <h3 className="font-semibold text-sm text-blue-900 dark:text-blue-300 mb-2">
           NFC Nedir?
         </h3>
-        <p className="text-sm text-blue-800">
+        <p className="text-sm text-blue-800 dark:text-blue-400">
           NFC (Near Field Communication), kısa mesafeli kablosuz iletişim teknolojisidir.
           Profilinizi NFC etiketine yazarak, akıllı telefonları etikete dokundurarak
           kartvizitinizi anında paylaşabilirsiniz. Fiziksel kartvizit yerine modern
