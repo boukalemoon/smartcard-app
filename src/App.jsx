@@ -1,3 +1,4 @@
+import LandingPage from './pages/LandingPage'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
@@ -37,32 +38,29 @@ function App() {
   }
 
   return (
-    <ThemeProvider>
+  <ThemeProvider>
     <Router>
       <Routes>
-        {/* Public route - herkes erişebilir */}
-        <Route path="/card/:username" element={<PublicCard />} />
-        
-        {/* Auth routes */}
-        <Route 
-          path="/login" 
-          element={!session ? <Auth /> : <Navigate to="/dashboard" />} 
-        />
-        
-        {/* Protected routes */}
-        <Route 
-          path="/dashboard" 
-          element={session ? <Dashboard session={session} /> : <Navigate to="/login" />} 
-        />
-        
-        {/* Default route */}
-        <Route 
-          path="/" 
-          element={session ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} 
-        />
-      </Routes>
+  {/* Public route - Ana sayfa */}
+  <Route path="/" element={<LandingPage />} />
+  
+  {/* Public route - Public card */}
+  <Route path="/card/:username" element={<PublicCard />} />
+  
+  {/* Auth routes */}
+  <Route 
+    path="/login" 
+    element={!session ? <Auth /> : <Navigate to="/dashboard" />} 
+  />
+  
+  {/* Protected routes */}
+  <Route 
+    path="/dashboard" 
+    element={session ? <Dashboard session={session} /> : <Navigate to="/login" />} 
+  />
+      </Routes> 
     </Router>
-    </ThemeProvider>
+  </ThemeProvider>
   )
 }
 
