@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import QRCodeDisplay from './QRCodeDisplay'
 import NFCWriter from './NFCWriter'
+import SocialLinksManager from './SocialLinksManager'
+import UsernameEditor from './UsernameEditor'
 
 export default function Dashboard({ session }) {
   const [profile, setProfile] = useState(null)
@@ -252,22 +254,54 @@ export default function Dashboard({ session }) {
               </div>
             </div>
 
-            {/* İstatistikler */}
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="bg-white rounded-xl shadow p-6 border-l-4 border-blue-500">
-                <div className="text-sm font-semibold text-gray-600 mb-1">Profil Goruntulenme</div>
-                <div className="text-3xl font-bold text-gray-900">0</div>
-              </div>
-              <div className="bg-white rounded-xl shadow p-6 border-l-4 border-green-500">
-                <div className="text-sm font-semibold text-gray-600 mb-1">QR Tarama</div>
-                <div className="text-3xl font-bold text-gray-900">0</div>
-              </div>
-              <div className="bg-white rounded-xl shadow p-6 border-l-4 border-purple-500">
-                <div className="text-sm font-semibold text-gray-600 mb-1">Link Tiklama</div>
-                <div className="text-3xl font-bold text-gray-900">0</div>
-              </div>
-            </div>
-          </div>
+           {/* İstatistikler */}
+<div className="grid md:grid-cols-3 gap-4">
+  <div className="bg-white rounded-xl shadow p-6 border-l-4 border-blue-500">
+    <div className="text-sm font-semibold text-gray-600 mb-1">Profil Görüntülenme</div>
+    <div className="text-3xl font-bold text-gray-900">
+      {profile?.card_views || 0}
+    </div>
+  </div>
+  <div className="bg-white rounded-xl shadow p-6 border-l-4 border-green-500">
+    <div className="text-sm font-semibold text-gray-600 mb-1">QR Kod İndirme</div>
+    <div className="text-3xl font-bold text-gray-900">-</div>
+    <p className="text-xs text-gray-500 mt-1">Yakında</p>
+  </div>
+  <div className="bg-white rounded-xl shadow p-6 border-l-4 border-purple-500">
+    <div className="text-sm font-semibold text-gray-600 mb-1">Son Görüntülenme</div>
+    <div className="text-sm font-bold text-gray-900 mt-2">
+      {profile?.last_viewed_at 
+        ? new Date(profile.last_viewed_at).toLocaleDateString('tr-TR', {
+            day: 'numeric',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        : 'Henüz görüntülenmedi'
+      }
+    </div>
+  </div>
+</div>
+          {/* Username Editor */}
+{profile && (
+  <UsernameEditor 
+    currentUsername={profile.username}
+    profileId={profile.id}
+    onUpdate={(newUsername) => {
+      setProfile({ ...profile, username: newUsername });
+    }}
+  />
+)}
+
+{/* Social Links Manager */}
+{profile && (
+  <SocialLinksManager 
+    profileId={profile.id}
+    subscriptionPlan={profile.subscription_plan || 'free'}
+  />
+)}
+
+</div>
 
           {/* Sağ Panel - QR Kod ve Diğer */}
           <div className="space-y-6">
