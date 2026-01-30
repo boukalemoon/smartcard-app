@@ -46,7 +46,7 @@ export default function NFCWriter({ username }) {
           },
           {
             recordType: "text",
-            data: `SmartCard - ${username}`
+            data: `Qartim - ${username}`
           }
         ]
       });

@@ -106,11 +106,12 @@ export default function Dashboard({ session }) {
       <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Qartim
-              </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Bireysel Dashboard</p>
+            <div className="flex items-center gap-3">
+              <img 
+                src="/qartim-logo.jpg" 
+                alt="Qartim" 
+                className="h-16 w-auto"
+              />
             </div>
             <div className="flex items-center gap-3">
               <ThemeToggle />

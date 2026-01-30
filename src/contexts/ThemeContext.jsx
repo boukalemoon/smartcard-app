@@ -5,13 +5,13 @@ const ThemeContext = createContext();
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
     // LocalStorage'dan tema tercihini al
-    const savedTheme = localStorage.getItem('smartcard-theme');
+    const savedTheme = localStorage.getItem('Qartim-theme');
     return savedTheme || 'light';
   });
 
   useEffect(() => {
     // Tema değiştiğinde localStorage'a kaydet ve HTML'e class ekle
-    localStorage.setItem('smartcard-theme', theme);
+    localStorage.setItem('Qartim-theme', theme);
     
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
