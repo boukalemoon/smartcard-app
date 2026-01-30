@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import QRCodeDisplay from './QRCodeDisplay'
+import NFCWriter from './NFCWriter'
 
 export default function Dashboard({ session }) {
   const [profile, setProfile] = useState(null)
@@ -269,22 +271,26 @@ export default function Dashboard({ session }) {
 
           {/* Sağ Panel - QR Kod ve Diğer */}
           <div className="space-y-6">
-            {/* QR Kod Önizleme */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">QR Kod</h3>
-              <div className="bg-gray-100 rounded-xl p-8 flex items-center justify-center">
-                <div className="w-48 h-48 bg-white rounded-lg shadow-lg flex items-center justify-center">
-                  <div className="text-center text-gray-400">
-                    <div className="text-4xl mb-2">📱</div>
-                    <p className="text-sm">QR Kod</p>
-                    <p className="text-xs">Cok yakinda</p>
-                  </div>
-                </div>
-              </div>
-              <button className="w-full mt-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all">
-                QR Kodu Indir
-              </button>
-            </div>
+           {/* QR Kod ve NFC */}
+{profile && profile.username && (
+  <>
+    <QRCodeDisplay 
+      username={profile.username} 
+      fullName={profile.name || session.user.email} 
+    />
+    <NFCWriter username={profile.username} />
+  </>
+)}
+
+{!profile?.username && (
+  <div className="bg-yellow-50 border-2 border-yellow-200 rounded-2xl p-6">
+    <h3 className="text-lg font-bold text-yellow-900 mb-2">⚠️ Username Gerekli</h3>
+    <p className="text-sm text-yellow-800">
+      QR kod ve NFC özelliklerini kullanmak için bir username oluşturulması gerekiyor.
+      Lütfen profil bilgilerinizi güncelleyin.
+    </p>
+  </div>
+)}
 
             {/* Abonelik Durumu */}
             <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg p-6 text-white">

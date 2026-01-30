@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabaseClient'
 import Auth from './components/Auth'
 import Dashboard from './components/Dashboard'
+import PublicCard from './pages/PublicCard'
 
 function App() {
   const [session, setSession] = useState(null)
@@ -33,11 +35,32 @@ function App() {
     )
   }
 
-  if (!session) {
-    return <Auth />
-  }
-
-  return <Dashboard session={session} />
+  return (
+    <Router>
+      <Routes>
+        {/* Public route - herkes erişebilir */}
+        <Route path="/card/:username" element={<PublicCard />} />
+        
+        {/* Auth routes */}
+        <Route 
+          path="/login" 
+          element={!session ? <Auth /> : <Navigate to="/dashboard" />} 
+        />
+        
+        {/* Protected routes */}
+        <Route 
+          path="/dashboard" 
+          element={session ? <Dashboard session={session} /> : <Navigate to="/login" />} 
+        />
+        
+        {/* Default route */}
+        <Route 
+          path="/" 
+          element={session ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} 
+        />
+      </Routes>
+    </Router>
+  )
 }
 
 export default App
