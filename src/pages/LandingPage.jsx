@@ -86,7 +86,7 @@ export default function LandingPage() {
                 <QrCode className="text-white" size={24} />
               </div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                SmartCard
+                Qartim
               </h1>
             </div>
             <div className="flex items-center gap-3">
@@ -314,7 +314,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
-              <h3 className="text-white font-bold mb-4">SmartCard</h3>
+              <h3 className="text-white font-bold mb-4">Qartim</h3>
               <p className="text-sm">
                 Türkiye'nin dijital kartvizit platformu
               </p>
@@ -343,7 +343,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="pt-8 border-t border-gray-800 text-center text-sm">
-            <p>&copy; 2026 SmartCard. Tüm hakları saklıdır.</p>
+            <p>&copy; 2026 Qartim. Tüm hakları saklıdır.</p>
           </div>
         </div>
       </footer>

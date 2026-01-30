@@ -415,6 +415,7 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
 
                     <div className="flex items-center gap-2">
                       <button
+                        onClick={() => alert('Üye yönetimi çok yakında! Şimdilik organizasyonu oluşturabildiniz.')}
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
                       >
                         <Users size={16} />
@@ -425,6 +426,7 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
                       {org.role === 'admin' && (
                         <>
                           <button
+                            onClick={() => alert('Düzenleme özelliği çok yakında!')}
                             className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                             title="Düzenle"
                           >

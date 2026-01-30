@@ -147,7 +147,7 @@ END:VCARD`;
             <span>Ana Sayfa</span>
           </button>
           <div className="text-sm text-gray-500">
-            Powered by SmartCard
+            Powered by Qartim
           </div>
         </div>
 
