@@ -1,3 +1,4 @@
+import OrganizationManager from './OrganizationManager'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import ThemeToggle from './ThemeToggle'
@@ -299,11 +300,19 @@ export default function Dashboard({ session }) {
 
             {/* Social Links Manager */}
             {profile && (
-              <SocialLinksManager 
-                profileId={profile.id}
-                subscriptionPlan={profile.subscription_plan || 'free'}
-              />
-            )}
+  <SocialLinksManager 
+    profileId={profile.id}
+    subscriptionPlan={profile.subscription_plan || 'free'}
+  />
+)}
+
+{/* Organization Manager */}
+{profile && (
+  <OrganizationManager 
+    profileId={profile.id}
+    subscriptionPlan={profile.subscription_plan || 'free'}
+  />
+)}  
           </div>
 
           {/* Sağ Panel - QR Kod ve Diğer */}
