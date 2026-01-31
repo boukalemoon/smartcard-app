@@ -1,11 +1,13 @@
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../contexts/ThemeContext';
 import { 
   CreditCard, Sparkles, Leaf, Diamond, Zap,
-  ArrowRight, CheckCircle, Mail, Phone
+  ArrowRight, CheckCircle, Mail, Phone, Moon, Sun
 } from 'lucide-react';
 
 export default function NFCCardsPage() {
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
 
   const cardTypes = [
     {
@@ -96,12 +98,27 @@ export default function NFCCardsPage() {
                 className="h-12 w-auto"
               />
             </button>
-            <button
-              onClick={() => navigate('/login')}
-              className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
-            >
-              Giriş Yap
-            </button>
+            <div className="flex items-center gap-3">
+              {/* Dark Mode Toggle */}
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                title={theme === 'light' ? 'Karanlık mod' : 'Aydınlık mod'}
+              >
+                {theme === 'light' ? (
+                  <Moon size={20} className="text-gray-700 dark:text-gray-300" />
+                ) : (
+                  <Sun size={20} className="text-yellow-400" />
+                )}
+              </button>
+              
+              <button
+                onClick={() => navigate('/login')}
+                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
+              >
+                Giriş Yap
+              </button>
+            </div>
           </div>
         </div>
       </header>

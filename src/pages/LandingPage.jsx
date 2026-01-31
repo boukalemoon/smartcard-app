@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   QrCode, Nfc, Share2, BarChart3, 
   Building2, Users, Zap, Shield,
-  Check, ArrowRight, Moon, Sun
+  Check, ArrowRight, Moon, Sun, CreditCard
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -100,6 +100,16 @@ export default function LandingPage() {
                   <Sun size={20} className="text-yellow-400" />
                 )}
               </button>
+              
+              {/* NFC Kartlar Link */}
+              <button
+                onClick={() => navigate('/nfc-cards')}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium flex items-center gap-2 transition-colors"
+              >
+                <CreditCard size={18} />
+                <span className="hidden sm:inline">NFC Kartlar</span>
+              </button>
+              
               <button
                 onClick={() => navigate('/login')}
                 className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium"
@@ -321,9 +331,9 @@ export default function LandingPage() {
             <div>
               <h4 className="text-white font-semibold mb-4">Ürün</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white">Özellikler</a></li>
-                <li><a href="#" className="hover:text-white">Fiyatlar</a></li>
-                <li><a href="#" className="hover:text-white">Kurumsal</a></li>
+                <li><button onClick={() => navigate('/nfc-cards')} className="hover:text-white">NFC Kartlar</button></li>
+                <li><a href="#pricing" className="hover:text-white">Fiyatlar</a></li>
+                <li><a href="#features" className="hover:text-white">Özellikler</a></li>
               </ul>
             </div>
             <div>
