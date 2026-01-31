@@ -66,7 +66,8 @@ export default function LandingPage() {
       price: '₺299',
       period: '/ay',
       yearlyPrice: '₺2.990/yıl',
-      nfcGift: '1 NFC Kart Hediye',
+      nfcGift: '1 NFC Kart Hediye*',
+      nfcGiftNote: '* Renkli PVC kart',
       features: [
         'Sınırsız sosyal medya',
         '15 organizasyon',
@@ -84,7 +85,8 @@ export default function LandingPage() {
       price: '₺499',
       period: '/ay',
       yearlyPrice: '₺4.490/yıl',
-      nfcGift: 'Admin + 5 Üye Kartı',
+      nfcGift: 'Admin + 5 Üye Kartı*',
+      nfcGiftNote: '* Renkli PVC kart',
       features: [
         'Sınırsız üye',
         'Başvuru sistemi',
@@ -103,7 +105,8 @@ export default function LandingPage() {
       price: '₺999',
       period: '/ay',
       yearlyPrice: '₺9.990/yıl',
-      nfcGift: '10 NFC Kart Hediye',
+      nfcGift: '10 NFC Kart Hediye*',
+      nfcGiftNote: '* Renkli PVC kart',
       features: [
         '50+ çalışan',
         'API erişimi',
@@ -337,6 +340,11 @@ export default function LandingPage() {
                       <Gift size={14} />
                       <span>{plan.nfcGift}</span>
                     </div>
+                    {plan.nfcGiftNote && (
+                      <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-1 ml-5">
+                        {plan.nfcGiftNote}
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -374,10 +382,13 @@ export default function LandingPage() {
             <p className="text-gray-600 dark:text-gray-400 mb-3">
               İhtiyacınız olduğunda ekstra NFC kart sipariş edebilirsiniz
             </p>
-            <div className="inline-flex items-center gap-2">
-              <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">₺149</span>
+            <div className="inline-flex items-center gap-2 mb-2">
+              <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">₺899</span>
               <span className="text-gray-600 dark:text-gray-400">/adet</span>
             </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              * Renkli PVC kart için geçerlidir
+            </p>
           </div>
         </div>
       </section>
