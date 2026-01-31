@@ -1,5 +1,6 @@
 import LandingPage from './pages/LandingPage'
 import { ThemeProvider } from './contexts/ThemeContext'
+import NFCCardsPage from './pages/NFCCardsPage'
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabaseClient'
@@ -46,6 +47,8 @@ function App() {
   
   {/* Public route - Public card */}
   <Route path="/card/:username" element={<PublicCard />} />
+
+  <Route path="/nfc-cards" element={<NFCCardsPage />} />  
   
   {/* Auth routes */}
   <Route 
