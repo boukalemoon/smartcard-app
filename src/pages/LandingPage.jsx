@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   QrCode, Nfc, Share2, BarChart3, 
   Building2, Users, Zap, Shield,
-  Check, ArrowRight, Moon, Sun, CreditCard
+  Check, ArrowRight, Moon, Sun, CreditCard, Gift
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -48,30 +48,75 @@ export default function LandingPage() {
       name: 'Ücretsiz',
       price: '₺0',
       period: '/ay',
+      yearlyPrice: null,
+      nfcGift: null,
       features: [
         '1 dijital kartvizit',
         '3 sosyal medya hesabı',
-        '2 şirket kaydı',
+        '2 organizasyon',
         'Temel QR kod',
         'Profil analytics'
       ],
       cta: 'Ücretsiz Başla',
-      popular: false
+      popular: false,
+      badge: null
     },
     {
-      name: 'Premium',
-      price: '₺99',
+      name: 'Profesyonel',
+      price: '₺299',
       period: '/ay',
+      yearlyPrice: '₺2.990/yıl',
+      nfcGift: '1 NFC Kart Hediye',
       features: [
-        'Sınırsız kartvizit',
         'Sınırsız sosyal medya',
-        'Sınırsız şirket kaydı',
-        'Özelleştirilebilir QR',
+        '15 organizasyon',
+        'QR kod özelleştirme',
         'Gelişmiş analytics',
-        'Öncelikli destek'
+        'Öncelikli destek',
+        'Özel QR tasarımı'
       ],
-      cta: 'Premium\'a Geç',
-      popular: true
+      cta: 'Profesyonel\'e Geç',
+      popular: true,
+      badge: 'Popüler'
+    },
+    {
+      name: 'STK Özel',
+      price: '₺499',
+      period: '/ay',
+      yearlyPrice: '₺4.490/yıl',
+      nfcGift: 'Admin + 5 Üye Kartı',
+      features: [
+        'Sınırsız üye',
+        'Başvuru sistemi',
+        'Üye onay yönetimi',
+        'Toplu üye yönetimi',
+        'Public üye dizini',
+        'Rozet sistemi',
+        'Özel alan adı desteği'
+      ],
+      cta: 'STK Planına Geç',
+      popular: false,
+      badge: 'STK\'lar İçin'
+    },
+    {
+      name: 'Kurumsal',
+      price: '₺999',
+      period: '/ay',
+      yearlyPrice: '₺9.990/yıl',
+      nfcGift: '10 NFC Kart Hediye',
+      features: [
+        '50+ çalışan',
+        'API erişimi',
+        'White-label çözüm',
+        'Özel entegrasyon',
+        'Dedike destek',
+        'SLA garantisi',
+        'Özel eğitim',
+        'Kurumsal faturalama'
+      ],
+      cta: 'İletişime Geç',
+      popular: false,
+      badge: 'En Güçlü'
     }
   ];
 
@@ -237,55 +282,76 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section */}
-      <section className="py-20 px-4">
+      <section className="py-20 px-4" id="pricing">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
               Planlar ve Fiyatlar
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-400">
+            <p className="text-xl text-gray-600 dark:text-gray-400 mb-4">
               İhtiyacınıza uygun planı seçin
             </p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full">
+              <Gift size={18} />
+              <span className="text-sm font-semibold">Yıllık aboneliklerde NFC kart hediye!</span>
+            </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {plans.map((plan, index) => (
               <div
                 key={index}
-                className={`relative p-8 rounded-2xl border-2 ${
+                className={`relative p-6 rounded-2xl border-2 transition-all ${
                   plan.popular
-                    ? 'border-blue-600 bg-white dark:bg-gray-800 shadow-2xl'
-                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
+                    ? 'border-blue-600 bg-white dark:bg-gray-800 shadow-2xl scale-105'
+                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-400 dark:hover:border-blue-500'
                 }`}
               >
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-semibold rounded-full">
-                    Popüler
+                {plan.badge && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-semibold rounded-full whitespace-nowrap">
+                    {plan.badge}
                   </div>
                 )}
 
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                   {plan.name}
                 </h3>
-                <div className="mb-6">
-                  <span className="text-5xl font-bold text-gray-900 dark:text-white">
-                    {plan.price}
-                  </span>
-                  <span className="text-gray-600 dark:text-gray-400">{plan.period}</span>
+                
+                <div className="mb-4">
+                  <div className="flex items-baseline">
+                    <span className="text-4xl font-bold text-gray-900 dark:text-white">
+                      {plan.price}
+                    </span>
+                    <span className="text-gray-600 dark:text-gray-400 ml-1">{plan.period}</span>
+                  </div>
+                  {plan.yearlyPrice && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      veya {plan.yearlyPrice}
+                    </p>
+                  )}
                 </div>
 
-                <ul className="space-y-3 mb-8">
+                {plan.nfcGift && (
+                  <div className="mb-4 p-2 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-yellow-800 dark:text-yellow-300">
+                      <Gift size={14} />
+                      <span>{plan.nfcGift}</span>
+                    </div>
+                  </div>
+                )}
+
+                <ul className="space-y-2.5 mb-6">
                   {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-center gap-3">
-                      <Check className="text-green-600" size={20} />
-                      <span className="text-gray-700 dark:text-gray-300">{feature}</span>
+                    <li key={i} className="flex items-start gap-2">
+                      <Check className="text-green-600 flex-shrink-0 mt-0.5" size={16} />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{feature}</span>
                     </li>
                   ))}
                 </ul>
 
                 <button
                   onClick={() => navigate('/login')}
-                  className={`w-full py-3 rounded-xl font-semibold transition-all ${
+                  className={`w-full py-2.5 rounded-xl font-semibold transition-all text-sm ${
                     plan.popular
                       ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-xl'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -295,6 +361,23 @@ export default function LandingPage() {
                 </button>
               </div>
             ))}
+          </div>
+
+          {/* Extra NFC Card Pricing */}
+          <div className="mt-12 text-center p-6 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl border border-gray-200 dark:border-gray-600">
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <CreditCard className="text-blue-600" size={24} />
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                Ekstra NFC Kart
+              </h3>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400 mb-3">
+              İhtiyacınız olduğunda ekstra NFC kart sipariş edebilirsiniz
+            </p>
+            <div className="inline-flex items-center gap-2">
+              <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">₺149</span>
+              <span className="text-gray-600 dark:text-gray-400">/adet</span>
+            </div>
           </div>
         </div>
       </section>
