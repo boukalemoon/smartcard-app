@@ -47,31 +47,31 @@ export function useSubscription(profileId) {
     if (!subscription) return null;
 
     const limits = {
-  free: {
-    organizations: 2,
-    socialLinks: 3,
-    nfcCards: 0,
-    name: 'Başlangıç Planı'  // ✅ DEĞİŞTİ
-  },
-  professional: {
-    organizations: 999,  // ✅ SINIRSIZ (15 → 999)
-    socialLinks: 999,
-    nfcCards: 1,  // Her türlü 1 kart
-    name: 'Profesyonel Plan'  // ✅ DEĞİŞTİ
-  },
-  stk: {
-    organizations: 999,
-    socialLinks: 999,
-    nfcCards: subscription.billing_cycle === 'yearly' ? 6 : 0,
-    name: 'STK Özel Plan'  // ✅ DEĞİŞTİ
-  },
-  business: {  // ✅ corporate → business
-    organizations: 999,
-    socialLinks: 999,
-    nfcCards: subscription.billing_cycle === 'yearly' ? 10 : 0,
-    name: 'Kurumsal Plan'  // ✅ DEĞİŞTİ
-  }
-};
+      free: {
+        organizations: 2,
+        socialLinks: 3,
+        nfcCards: 0,
+        name: 'Başlangıç Planı'
+      },
+      professional: {
+        organizations: 999,
+        socialLinks: 999,
+        nfcCards: subscription.billing_cycle === 'yearly' ? 1 : 0,
+        name: 'Profesyonel Plan'
+      },
+      stk: {
+        organizations: 999,
+        socialLinks: 999,
+        nfcCards: subscription.billing_cycle === 'yearly' ? 6 : 0,
+        name: 'STK Özel Plan'
+      },
+      business: {
+        organizations: 999,
+        socialLinks: 999,
+        nfcCards: subscription.billing_cycle === 'yearly' ? 10 : 0,
+        name: 'Kurumsal Plan'
+      }
+    };
 
     return limits[subscription.plan] || limits.free;
   };
