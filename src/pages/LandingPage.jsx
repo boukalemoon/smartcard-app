@@ -44,84 +44,84 @@ export default function LandingPage() {
   ];
 
   const plans = [
-    {
-      name: 'Ücretsiz',
-      price: '₺0',
-      period: '/ay',
-      yearlyPrice: null,
-      nfcGift: null,
-      features: [
-        '1 dijital kartvizit',
-        '3 sosyal medya hesabı',
-        '2 organizasyon',
-        'Temel QR kod',
-        'Profil analytics'
-      ],
-      cta: 'Ücretsiz Başla',
-      popular: false,
-      badge: null
-    },
-    {
-      name: 'Profesyonel',
-      price: '₺299',
-      period: '/ay',
-      yearlyPrice: '₺2.990/yıl',
-      nfcGift: '1 NFC Kart Hediye*',
-      nfcGiftNote: '* Renkli PVC kart',
-      features: [
-        'Sınırsız sosyal medya',
-        '15 organizasyon',
-        'QR kod özelleştirme',
-        'Gelişmiş analytics',
-        'Öncelikli destek',
-        'Özel QR tasarımı'
-      ],
-      cta: 'Profesyonel\'e Geç',
-      popular: true,
-      badge: 'Popüler'
-    },
-    {
-      name: 'STK Özel',
-      price: '₺499',
-      period: '/ay',
-      yearlyPrice: '₺4.490/yıl',
-      nfcGift: 'Admin + 5 Üye Kartı*',
-      nfcGiftNote: '* Renkli PVC kart',
-      features: [
-        'Sınırsız üye',
-        'Başvuru sistemi',
-        'Üye onay yönetimi',
-        'Toplu üye yönetimi',
-        'Public üye dizini',
-        'Rozet sistemi',
-        'Özel alan adı desteği'
-      ],
-      cta: 'STK Planına Geç',
-      popular: false,
-      badge: 'STK\'lar İçin'
-    },
-    {
-      name: 'Kurumsal',
-      price: '₺999',
-      period: '/ay',
-      yearlyPrice: '₺9.990/yıl',
-      nfcGift: '10 NFC Kart Hediye*',
-      nfcGiftNote: '* Renkli PVC kart',
-      features: [
-        '50+ çalışan',
-        'API erişimi',
-        'White-label çözüm',
-        'Özel entegrasyon',
-        'Dedike destek',
-        'SLA garantisi',
-        'Özel eğitim',
-        'Kurumsal faturalama'
-      ],
-      cta: 'İletişime Geç',
-      popular: false,
-      badge: 'En Güçlü'
-    }
-  ];
+  {
+    name: 'Başlangıç',  // ✅ DEĞİŞTİ
+    price: '₺0',
+    period: '/ay',
+    yearlyPrice: null,
+    nfcGift: null,
+    features: [
+      '1 dijital kartvizit',
+      '3 sosyal medya hesabı',
+      '2 organizasyon',
+      'Temel QR kod',
+      'Profil analytics'
+    ],
+    cta: 'Ücretsiz Başla',
+    popular: false,
+    badge: null
+  },
+  {
+    name: 'Profesyonel',  // ✅ ZATEN DOĞRU
+    price: '₺299',
+    period: '/ay',
+    yearlyPrice: '₺2.990/yıl',
+    nfcGift: '1 NFC Kart Hediye*',
+    nfcGiftNote: '* Renkli PVC kart',
+    features: [
+      'Sınırsız sosyal medya',
+      'Sınırsız organizasyon',  // ✅ DEĞİŞTİ (15 → Sınırsız)
+      'QR kod özelleştirme',
+      'Gelişmiş analytics',
+      'Öncelikli destek',
+      'Özel QR tasarımı'
+    ],
+    cta: 'Profesyonel\'e Geç',
+    popular: true,
+    badge: 'Popüler'
+  },
+  {
+    name: 'STK Özel',  // ✅ ZATEN DOĞRU
+    price: '₺499',
+    period: '/ay',
+    yearlyPrice: '₺4.490/yıl',
+    nfcGift: 'Admin + 5 Üye Kartı*',
+    nfcGiftNote: '* Renkli PVC kart',
+    features: [
+      'Sınırsız üye',
+      'Başvuru sistemi',
+      'Üye onay yönetimi',
+      'Toplu üye yönetimi',
+      'Public üye dizini',
+      'Rozet sistemi',
+      'Özel alan adı desteği'
+    ],
+    cta: 'STK Planına Geç',
+    popular: false,
+    badge: 'STK\'lar İçin'
+  },
+  {
+    name: 'Kurumsal',  // ✅ ZATEN DOĞRU
+    price: '₺999',
+    period: '/ay',
+    yearlyPrice: '₺9.990/yıl',
+    nfcGift: '10 NFC Kart Hediye*',
+    nfcGiftNote: '* Renkli PVC kart',
+    features: [
+      '50+ çalışan',
+      'API erişimi',
+      'White-label çözüm',
+      'Özel entegrasyon',
+      'Dedike destek',
+      'SLA garantisi',
+      'Özel eğitim',
+      'Kurumsal faturalama'
+    ],
+    cta: 'İletişime Geç',
+    popular: false,
+    badge: 'En Güçlü'
+  }
+];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">

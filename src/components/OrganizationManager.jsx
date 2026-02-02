@@ -21,7 +21,7 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
     phone: ''
   });
 
-  const isPremium = subscriptionPlan === 'premium' || subscriptionPlan === 'business';
+  const isPremium = subscriptionPlan !== 'free';
   const canAddMore = isPremium || organizations.length < FREE_PLAN_LIMIT;
 
   useEffect(() => {

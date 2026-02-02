@@ -1,9 +1,12 @@
 import LandingPage from './pages/LandingPage'
 import { ThemeProvider } from './contexts/ThemeContext'
+import { DashboardModeProvider } from './contexts/DashboardModeContext'  // ✅ import ekle
 import NFCCardsPage from './pages/NFCCardsPage'
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabaseClient'
+import PublicApplicationPage from './pages/PublicApplicationPage'
+import PublicMemberDirectoryPage from './pages/PublicMemberDirectoryPage'
 import Auth from './components/Auth'
 import Dashboard from './components/Dashboard'
 import PublicCard from './pages/PublicCard'
@@ -32,38 +35,43 @@ function App() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-xl font-semibold text-gray-600">Yukleniyor...</p>
+          <p className="text-xl font-semibold text-gray-600">Yükleniyor...</p>
         </div>
       </div>
     )
   }
 
   return (
-  <ThemeProvider>
-    <Router>
-      <Routes>
-  {/* Public route - Ana sayfa */}
-  <Route path="/" element={<LandingPage />} />
-  
-  {/* Public route - Public card */}
-  <Route path="/card/:username" element={<PublicCard />} />
+    <ThemeProvider>
+      <DashboardModeProvider>  {/* ✅ Buraya ekle */}
+        <Router>
+          <Routes>
+            {/* Public route - Ana sayfa */}
+            <Route path="/" element={<LandingPage />} />
+            
+            {/* Public route - Public card */}
+            <Route path="/card/:username" element={<PublicCard />} />
 
-  <Route path="/nfc-cards" element={<NFCCardsPage />} />  
-  
-  {/* Auth routes */}
-  <Route 
-    path="/login" 
-    element={!session ? <Auth /> : <Navigate to="/dashboard" />} 
-  />
-  
-  {/* Protected routes */}
-  <Route 
-    path="/dashboard" 
-    element={session ? <Dashboard session={session} /> : <Navigate to="/login" />} 
-  />
-      </Routes> 
-    </Router>
-  </ThemeProvider>
+            <Route path="/nfc-cards" element={<NFCCardsPage />} />  
+
+            <Route path="/org/:orgSlug/apply" element={<PublicApplicationPage />} />
+            <Route path="/org/:orgSlug/members" element={<PublicMemberDirectoryPage />} />
+            
+            {/* Auth routes */}
+            <Route 
+              path="/login" 
+              element={!session ? <Auth /> : <Navigate to="/dashboard" />} 
+            />
+            
+            {/* Protected routes */}
+            <Route 
+              path="/dashboard" 
+              element={session ? <Dashboard session={session} /> : <Navigate to="/login" />} 
+            />
+          </Routes> 
+        </Router>
+      </DashboardModeProvider>  {/* ✅ Buraya ekle */}
+    </ThemeProvider>
   )
 }
 

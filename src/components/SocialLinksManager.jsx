@@ -32,7 +32,7 @@ export default function SocialLinksManager({ profileId, subscriptionPlan }) {
   const [editLink, setEditLink] = useState({ platform: '', url: '' });
   const [showUpgrade, setShowUpgrade] = useState(false);
 
-  const isPremium = subscriptionPlan === 'premium' || subscriptionPlan === 'business';
+  const isPremium = subscriptionPlan !== 'free';
   const canAddMore = isPremium || links.length < FREE_PLAN_LIMIT;
 
   useEffect(() => {
