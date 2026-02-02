@@ -77,7 +77,6 @@ export default function CorporateDashboard({ profile, subscription }) {
 
     } catch (error) {
       console.error('Error loading organizations:', error)
-      alert('Organizasyonlar yüklenirken hata: ' + error.message)
     } finally {
       setLoading(false)
     }
@@ -104,7 +103,6 @@ export default function CorporateDashboard({ profile, subscription }) {
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
       <div className="grid md:grid-cols-3 gap-4">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
           <div className="flex items-center justify-between">
@@ -155,7 +153,6 @@ export default function CorporateDashboard({ profile, subscription }) {
         </div>
       </div>
 
-      {/* Member Manager */}
       {showMemberManager && selectedOrg && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
           <div className="mb-4">
@@ -180,7 +177,6 @@ export default function CorporateDashboard({ profile, subscription }) {
         </div>
       )}
 
-      {/* Application Manager */}
       {showApplications && selectedOrg && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
           <div className="mb-4">
@@ -201,7 +197,6 @@ export default function CorporateDashboard({ profile, subscription }) {
         </div>
       )}
 
-      {/* Organizations List */}
       {!showMemberManager && !showApplications && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between mb-6">
@@ -279,7 +274,6 @@ export default function CorporateDashboard({ profile, subscription }) {
         </div>
       )}
 
-      {/* Info Card */}
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
         <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
           💡 Kurumsal Panel Özellikleri
