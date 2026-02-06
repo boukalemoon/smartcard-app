@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
 export default function Auth() {
@@ -6,7 +6,34 @@ export default function Auth() {
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
-  const [mode, setMode] = useState('login')
+  const [mode, setMode] = useState('signup') // Referral gelince direkt signup
+  const [referralCode, setReferralCode] = useState(null)
+
+  useEffect(() => {
+    // URL'den ref al
+    const urlParams = new URLSearchParams(window.location.search)
+    const ref = urlParams.get('ref')
+    if (ref) {
+      setReferralCode(ref)
+      setMode('signup') // Referral varsa direkt signup
+      console.log('✅ Referral code captured:', ref)
+    }
+
+    // LocalStorage'dan da kontrol et (backup)
+    const savedRef = localStorage.getItem('qartim_referral_code')
+    if (savedRef && !ref) {
+      setReferralCode(savedRef)
+      setMode('signup')
+      console.log('✅ Referral code from localStorage:', savedRef)
+    }
+  }, [])
+
+  // Ref varsa localStorage'a kaydet (page refresh'te kaybolmasın)
+  useEffect(() => {
+    if (referralCode) {
+      localStorage.setItem('qartim_referral_code', referralCode)
+    }
+  }, [referralCode])
 
   const handleAuth = async (e) => {
     e.preventDefault()
@@ -27,7 +54,8 @@ export default function Auth() {
         if (authError) throw authError
 
         if (authData.user) {
-          const { error: profileError } = await supabase
+          // Profile oluştur
+          const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .insert([
               {
@@ -38,11 +66,35 @@ export default function Auth() {
                 subscription_status: 'active'
               }
             ])
+            .select()
+            .single()
           
           if (profileError) throw profileError
+
+          // Free subscription oluştur
+          await supabase
+            .from('subscriptions')
+            .insert({
+              profile_id: profileData.id,
+              plan: 'free',
+              status: 'active',
+              organizations_limit: 2,
+              social_links_limit: 3,
+              nfc_cards_included: 0,
+              organizations_used: 0,
+              social_links_used: 0,
+              nfc_cards_used: 0
+            })
+
+          // Referral code varsa kaydet
+          if (referralCode) {
+            console.log('💾 Saving referral with code:', referralCode)
+            await saveReferral(profileData.id, referralCode)
+          }
         }
         
-        alert('Kayit basarili! Giris yapabilirsiniz.')
+        alert('Kayıt başarılı! Giriş yapabilirsiniz.')
+        localStorage.removeItem('qartim_referral_code') // Temizle
         setMode('login')
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -59,17 +111,73 @@ export default function Auth() {
     }
   }
 
+  const saveReferral = async (newProfileId, refCode) => {
+    try {
+      // Referral code'dan referrer profile'i bul
+      const { data: referrer, error: refError } = await supabase
+        .from('referral_codes')
+        .select('profile_id')
+        .eq('code', refCode)
+        .single()
+
+      if (refError || !referrer) {
+        console.log('❌ Referral code not found:', refCode)
+        return
+      }
+
+      console.log('✅ Referrer found:', referrer.profile_id)
+
+      // Referral kaydı oluştur
+      const { error: referralError } = await supabase
+        .from('referrals')
+        .insert({
+          referrer_id: referrer.profile_id,
+          referee_id: newProfileId,
+          referral_code: refCode,
+          status: 'pending',
+          commission_amount: 0
+        })
+
+      if (referralError) {
+        console.error('❌ Referral insert error:', referralError)
+        throw referralError
+      }
+
+      // Referral code usage_count güncelle
+      await supabase
+        .from('referral_codes')
+        .update({ usage_count: supabase.rpc('increment', { x: 1 }) })
+        .eq('code', refCode)
+
+      console.log('✅ Referral saved successfully!')
+    } catch (error) {
+      console.error('❌ Error saving referral:', error)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Qartim
+            QRtım
           </h1>
           <p className="text-gray-600">
-            {mode === 'login' ? 'Hesabiniza giris yapin' : 'Yeni hesap olusturun'}
+            {mode === 'login' ? 'Hesabınıza giriş yapın' : 'Yeni hesap oluşturun'}
           </p>
         </div>
+
+        {/* Referral Badge */}
+        {referralCode && (
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-center">
+            <p className="text-sm text-green-800 font-medium">
+              🎉 Referans koda ile kayıt oluyorsunuz!
+            </p>
+            <p className="text-xs text-green-600 mt-1">
+              Kayıt sonrası her iki taraf da kazanacak!
+            </p>
+          </div>
+        )}
 
         <form onSubmit={handleAuth} className="space-y-4">
           {mode === 'signup' && (
@@ -82,7 +190,7 @@ export default function Auth() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
-                placeholder="Ahmet Yilmaz"
+                placeholder="Ahmet Yılmaz"
                 required
               />
             </div>
@@ -104,7 +212,7 @@ export default function Auth() {
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Sifre
+              Şifre
             </label>
             <input
               type="password"
@@ -122,7 +230,7 @@ export default function Auth() {
             disabled={loading}
             className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50"
           >
-            {loading ? 'Yukleniyor...' : (mode === 'login' ? 'Giris Yap' : 'Kayit Ol')}
+            {loading ? 'Yükleniyor...' : (mode === 'login' ? 'Giriş Yap' : 'Kayıt Ol')}
           </button>
         </form>
 
@@ -137,7 +245,7 @@ export default function Auth() {
             className="text-blue-600 hover:underline text-sm font-medium"
             disabled={loading}
           >
-            {mode === 'login' ? 'Hesabiniz yok mu? Kayit olun' : 'Zaten hesabiniz var mi? Giris yapin'}
+            {mode === 'login' ? 'Hesabınız yok mu? Kayıt olun' : 'Zaten hesabınız var mı? Giriş yapın'}
           </button>
         </div>
       </div>

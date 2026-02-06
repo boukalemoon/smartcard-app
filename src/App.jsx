@@ -1,15 +1,21 @@
 import LandingPage from './pages/LandingPage'
 import { ThemeProvider } from './contexts/ThemeContext'
-import { DashboardModeProvider } from './contexts/DashboardModeContext'  // ✅ import ekle
+import { DashboardModeProvider } from './contexts/DashboardModeContext'
 import NFCCardsPage from './pages/NFCCardsPage'
 import { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { supabase } from './lib/supabaseClient'
 import PublicApplicationPage from './pages/PublicApplicationPage'
 import PublicMemberDirectoryPage from './pages/PublicMemberDirectoryPage'
 import Auth from './components/Auth'
 import Dashboard from './components/Dashboard'
 import PublicCard from './pages/PublicCard'
+
+// Auth Wrapper component
+function AuthWrapper() {
+  const location = useLocation()
+  return <Auth />
+}
 
 function App() {
   const [session, setSession] = useState(null)
@@ -43,7 +49,7 @@ function App() {
 
   return (
     <ThemeProvider>
-      <DashboardModeProvider>  {/* ✅ Buraya ekle */}
+      <DashboardModeProvider>
         <Router>
           <Routes>
             {/* Public route - Ana sayfa */}
@@ -60,7 +66,7 @@ function App() {
             {/* Auth routes */}
             <Route 
               path="/login" 
-              element={!session ? <Auth /> : <Navigate to="/dashboard" />} 
+              element={!session ? <AuthWrapper /> : <Navigate to="/dashboard" />} 
             />
             
             {/* Protected routes */}
@@ -70,7 +76,7 @@ function App() {
             />
           </Routes> 
         </Router>
-      </DashboardModeProvider>  {/* ✅ Buraya ekle */}
+      </DashboardModeProvider>
     </ThemeProvider>
   )
 }

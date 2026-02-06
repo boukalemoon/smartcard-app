@@ -159,14 +159,20 @@ export default function LandingPage() {
               </button>
               
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => {
+                  const ref = new URLSearchParams(window.location.search).get('ref')
+                  navigate(ref ? `/login?ref=${ref}` : '/login')
+                }}
                 className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium"
               >
                 Giriş Yap
               </button>
               <button
-                onClick={() => navigate('/login')}
-                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
+                onClick={() => {
+                  const ref = new URLSearchParams(window.location.search).get('ref')
+                  navigate(ref ? `/login?ref=${ref}` : '/login')
+                }}
+                  className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
               >
                 Ücretsiz Başla
               </button>
@@ -198,7 +204,10 @@ export default function LandingPage() {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => {
+                const ref = new URLSearchParams(window.location.search).get('ref')
+                navigate(ref ? `/login?ref=${ref}` : '/login')
+              }}
               className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold text-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
             >
               Ücretsiz Başla
@@ -358,7 +367,10 @@ export default function LandingPage() {
                 </ul>
 
                 <button
-                  onClick={() => navigate('/login')}
+                  onClick={() => {
+                    const ref = new URLSearchParams(window.location.search).get('ref')
+                    navigate(ref ? `/login?ref=${ref}` : '/login')
+                  }}
                   className={`w-full py-2.5 rounded-xl font-semibold transition-all text-sm ${
                     plan.popular
                       ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-xl'
@@ -403,8 +415,11 @@ export default function LandingPage() {
             Dijital kartvizitinizi dakikalar içinde oluşturun ve paylaşmaya başlayın
           </p>
           <button
-            onClick={() => navigate('/login')}
-            className="px-8 py-4 bg-white text-blue-600 rounded-xl font-semibold text-lg hover:shadow-2xl transition-all inline-flex items-center gap-2"
+            onClick={() => {
+              const ref = new URLSearchParams(window.location.search).get('ref')
+              navigate(ref ? `/login?ref=${ref}` : '/login')
+          }}
+          className="px-8 py-4 bg-white text-blue-600 rounded-xl font-semibold text-lg hover:shadow-2xl transition-all inline-flex items-center gap-2"
           >
             Ücretsiz Kayıt Ol
             <ArrowRight size={20} />
@@ -417,7 +432,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
-              <h3 className="text-white font-bold mb-4">Qartim</h3>
+              <h3 className="text-white font-bold mb-4">Qartım</h3>
               <p className="text-sm">
                 Türkiye'nin dijital kartvizit platformu
               </p>
@@ -446,7 +461,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="pt-8 border-t border-gray-800 text-center text-sm">
-            <p>&copy; 2026 Qartim. Tüm hakları saklıdır.</p>
+            <p>&copy; 2026 Qartım. Tüm hakları saklıdır.</p>
           </div>
         </div>
       </footer>
