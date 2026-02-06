@@ -1,3 +1,4 @@
+import AdminCRM from './AdminCRM'
 import ReferralDashboard from './ReferralDashboard'
 import OrganizationManager from './OrganizationManager'
 import CorporateDashboard from './CorporateDashboard'
@@ -19,6 +20,8 @@ export default function Dashboard({ session }) {
   const [editing, setEditing] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+  
   
   // Dashboard mode
   const { mode, isIndividual, isCorporate } = useDashboardMode()
@@ -41,6 +44,12 @@ export default function Dashboard({ session }) {
 
   const [orgCount, setOrgCount] = useState(0)  // ← Burası doğru
 
+
+useEffect(() => {
+  if (profile?.role === 'admin') {
+    setIsAdmin(true)
+  }
+}, [profile])
 useEffect(() => {
   loadProfile()
 }, [])
@@ -88,11 +97,16 @@ const loadOrganizationCount = async () => {
     console.error('Error counting organizations:', error)
   }
 }
-
+ 
 // useEffect EKLE (loadOrganizationCount'dan SONRA)
 useEffect(() => {
   if (profile?.id) {
     loadOrganizationCount()
+  }
+}, [profile])
+useEffect(() => {
+  if (profile?.role === 'admin') {
+    setIsAdmin(true)
   }
 }, [profile])
 
@@ -213,7 +227,23 @@ useEffect(() => {
               </div>
             </div>
           )}
-
+          {/* Admin CRM Button */}
+{isAdmin && (
+  <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl">
+    <div className="flex items-center justify-between">
+      <div>
+        <h3 className="text-lg font-bold text-red-900 dark:text-red-100">🔐 Admin Yetkisi</h3>
+        <p className="text-sm text-red-700 dark:text-red-300">Tüm kullanıcıları ve ödemeleri yönetin</p>
+      </div>
+      <button
+        onClick={() => window.location.href = '/admin'}
+        className="px-6 py-3 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+      >
+        Admin Paneline Git →
+      </button>
+    </div>
+  </div>
+)}
           {/* Conditional Content Based on Mode */}
           {isCorporate ? (
             /* CORPORATE DASHBOARD */

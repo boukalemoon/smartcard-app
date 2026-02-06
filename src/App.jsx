@@ -1,3 +1,4 @@
+import AdminPage from './pages/AdminPage'
 import LandingPage from './pages/LandingPage'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { DashboardModeProvider } from './contexts/DashboardModeContext'
@@ -73,6 +74,13 @@ function App() {
             <Route 
               path="/dashboard" 
               element={session ? <Dashboard session={session} /> : <Navigate to="/login" />} 
+              
+           
+            />
+            <Route 
+              path="/admin" 
+              element={session ? <AdminPage session={session} /> : <Navigate to="/login" />} 
+              
             />
           </Routes> 
         </Router>

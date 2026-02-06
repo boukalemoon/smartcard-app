@@ -76,16 +76,18 @@ export default function ReferralDashboard({ profile }) {
       setCommissions(commissionsData || [])
 
       // İstatistikleri hesapla
-      const totalEarnings = commissionsData?.filter(c => c.status === 'paid').reduce((sum, c) => sum + parseFloat(c.amount), 0) || 0
-      const pendingEarnings = commissionsData?.filter(c => c.status === 'pending' || c.status === 'approved').reduce((sum, c) => sum + parseFloat(c.amount), 0) || 0
-
+      const totalEarnings = commissionsData?.filter(c => c.status === 'paid' || c.status === 'approved').reduce((sum, c) => sum + parseFloat(c.amount), 0) || 0
+      const pendingEarnings = commissionsData?.filter(c => c.status === 'pending').reduce((sum, c) => sum + parseFloat(c.amount), 0) || 0
+      
       setStats({
         totalReferrals: referralsData?.length || 0,
         activeReferrals: referralsData?.filter(r => r.status === 'active').length || 0,
         totalEarnings,
         pendingEarnings
       })
-
+      console.log('📊 Commissions Data:', commissionsData)
+      console.log('💰 Total Earnings:', totalEarnings)
+      console.log('⏳ Pending Earnings:', pendingEarnings)
     } catch (error) {
       console.error('Error loading referral data:', error)
     } finally {

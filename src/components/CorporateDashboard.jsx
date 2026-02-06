@@ -11,10 +11,12 @@ export default function CorporateDashboard({ profile, subscription }) {
   const [showApplications, setShowApplications] = useState(false)
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
+    
     totalOrgs: 0,
     totalMembers: 0,
     activeMembers: 0
   })
+  const [orgCommissions, setOrgCommissions] = useState([])
 
   useEffect(() => {
     loadOrganizations()
@@ -74,6 +76,19 @@ export default function CorporateDashboard({ profile, subscription }) {
         totalMembers,
         activeMembers
       })
+
+    // Organizational commissions yükle
+if (orgs && orgs.length > 0) {
+  const orgIds = orgs.map(o => o.id)
+  
+  const { data: commissionsData } = await supabase
+    .from('organizational_commissions')
+    .select('*')
+    .in('organization_id', orgIds)
+    .order('created_at', { ascending: false })
+  
+  setOrgCommissions(commissionsData || [])
+}  
 
     } catch (error) {
       console.error('Error loading organizations:', error)
