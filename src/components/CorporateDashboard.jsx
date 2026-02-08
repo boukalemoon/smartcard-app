@@ -1,3 +1,4 @@
+import { exportToCSV, verifyPasswordForExport } from '../utils/exportHelpers'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import MemberManager from './MemberManager'
@@ -10,13 +11,12 @@ export default function CorporateDashboard({ profile, subscription }) {
   const [showMemberManager, setShowMemberManager] = useState(false)
   const [showApplications, setShowApplications] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [orgCommissions, setOrgCommissions] = useState([])
   const [stats, setStats] = useState({
-    
     totalOrgs: 0,
     totalMembers: 0,
     activeMembers: 0
   })
-  const [orgCommissions, setOrgCommissions] = useState([])
 
   useEffect(() => {
     loadOrganizations()
@@ -77,18 +77,21 @@ export default function CorporateDashboard({ profile, subscription }) {
         activeMembers
       })
 
-    // Organizational commissions yükle
-if (orgs && orgs.length > 0) {
-  const orgIds = orgs.map(o => o.id)
-  
-  const { data: commissionsData } = await supabase
-    .from('organizational_commissions')
-    .select('*')
-    .in('organization_id', orgIds)
-    .order('created_at', { ascending: false })
-  
-  setOrgCommissions(commissionsData || [])
-}  
+      // Organizational commissions yükle
+      if (orgs && orgs.length > 0) {
+        const orgIds = orgs.map(o => o.id)
+        
+        const { data: commissionsData } = await supabase
+          .from('organizational_commissions')
+          .select('*')
+          .in('organization_id', orgIds)
+          .order('created_at', { ascending: false })
+        
+        console.log('🔍 Org IDs:', orgIds)
+        console.log('💰 Org Commissions:', commissionsData)
+        
+        setOrgCommissions(commissionsData || [])
+      }
 
     } catch (error) {
       console.error('Error loading organizations:', error)
@@ -107,7 +110,61 @@ if (orgs && orgs.length > 0) {
       setShowApplications(false)
     }
   }
+const handleExportMembers = async () => {
+  const verified = await verifyPasswordForExport(supabase)
+  if (!verified) return
 
+  try {
+    // Tüm organizasyonların üyelerini topla
+    const allMembers = []
+    
+    for (const org of organizations) {
+      const { data: members } = await supabase
+        .from('members')
+        .select(`
+          *,
+          profiles (name, email)
+        `)
+        .eq('organization_id', org.id)
+
+      if (members) {
+        allMembers.push(...members.map(m => ({
+          'Organizasyon': org.name,
+          'Ad Soyad': m.profiles?.name || '-',
+          'Email': m.profiles?.email || '-',
+          'Rol': m.role,
+          'Durum': m.status,
+          'Katılım Tarihi': new Date(m.joined_at).toLocaleDateString('tr-TR')
+        })))
+      }
+    }
+
+    exportToCSV(allMembers, 'members')
+  } catch (error) {
+    console.error('Export error:', error)
+    alert('Export hatası!')
+  }
+}
+
+const handleExportCommissions = async () => {
+  const verified = await verifyPasswordForExport(supabase)
+  if (!verified) return
+
+  const exportData = orgCommissions.map(c => {
+    const org = organizations.find(o => o.id === c.organization_id)
+    return {
+      'Organizasyon': org?.name || '-',
+      'Dönem': `${c.period_month}/${c.period_year}`,
+      'Üye Sayısı': c.member_count,
+      'Üye Başı Komisyon': `₺${parseFloat(c.commission_per_member).toFixed(2)}`,
+      'Toplam Komisyon': `₺${parseFloat(c.total_commission).toFixed(2)}`,
+      'Durum': c.status === 'pending' ? 'Bekliyor' : c.status === 'approved' ? 'Onaylandı' : 'Ödendi',
+      'Tarih': new Date(c.created_at).toLocaleDateString('tr-TR')
+    }
+  })
+
+  exportToCSV(exportData, 'organizational_commissions')
+}
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -118,6 +175,7 @@ if (orgs && orgs.length > 0) {
 
   return (
     <div className="space-y-6">
+      {/* Stats Cards */}
       <div className="grid md:grid-cols-3 gap-4">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
           <div className="flex items-center justify-between">
@@ -167,7 +225,64 @@ if (orgs && orgs.length > 0) {
           </div>
         </div>
       </div>
+{/* Export Buttons */}
+<div className="flex gap-2 mb-4">
+  <button
+    onClick={handleExportMembers}
+    className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-all text-sm flex items-center gap-2"
+  >
+    📥 Üyeleri Export Et
+  </button>
+  {orgCommissions.length > 0 && (
+    <button
+      onClick={handleExportCommissions}
+      className="px-4 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-all text-sm flex items-center gap-2"
+    >
+      📥 Hakediş Export Et
+    </button>
+  )}
+</div>
+      {/* Organizational Commissions */}
+      {orgCommissions.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            💰 Organizasyon Hakediş
+          </h2>
+          <div className="space-y-3">
+            {orgCommissions.map(comm => {
+              const org = organizations.find(o => o.id === comm.organization_id)
+              return (
+                <div key={comm.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{org?.name}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {comm.period_month}/{comm.period_year} • {comm.member_count} üye × ₺{parseFloat(comm.commission_per_member).toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                        ₺{parseFloat(comm.total_commission).toFixed(2)}
+                      </p>
+                      <span className={`inline-block px-2 py-1 text-xs rounded mt-1 ${
+                        comm.status === 'paid' 
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                          : comm.status === 'approved'
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                      }`}>
+                        {comm.status === 'pending' ? 'Bekliyor' : comm.status === 'approved' ? 'Onaylandı' : 'Ödendi'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
+      {/* Member Manager */}
       {showMemberManager && selectedOrg && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
           <div className="mb-4">
@@ -192,6 +307,7 @@ if (orgs && orgs.length > 0) {
         </div>
       )}
 
+      {/* Application Manager */}
       {showApplications && selectedOrg && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
           <div className="mb-4">
@@ -212,6 +328,7 @@ if (orgs && orgs.length > 0) {
         </div>
       )}
 
+      {/* Organizations List */}
       {!showMemberManager && !showApplications && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between mb-6">
@@ -289,6 +406,7 @@ if (orgs && orgs.length > 0) {
         </div>
       )}
 
+      {/* Info Card */}
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
         <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
           💡 Kurumsal Panel Özellikleri

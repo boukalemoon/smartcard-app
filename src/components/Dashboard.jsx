@@ -1,3 +1,4 @@
+import { getAnalyticsSummary } from '../utils/analyticsHelpers'
 import AdminCRM from './AdminCRM'
 import ReferralDashboard from './ReferralDashboard'
 import OrganizationManager from './OrganizationManager'
@@ -21,6 +22,7 @@ export default function Dashboard({ session }) {
   const [showPayment, setShowPayment] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [analytics, setAnalytics] = useState(null)
   
   
   // Dashboard mode
@@ -71,6 +73,9 @@ const loadProfile = async () => {
       setCompany(data.company || '')
       setPhone(data.phone || '')
       setBio(data.bio || '')
+      // Analytics yükle
+  const analyticsData = await getAnalyticsSummary(data.id)
+  setAnalytics(analyticsData)
     }
   } catch (error) {
     console.error('Error loading profile:', error)
@@ -385,33 +390,35 @@ useEffect(() => {
                 </div>
 
                 {/* İstatistikler */}
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-blue-500">
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Profil Görüntülenme</div>
-                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                      {profile?.card_views || 0}
-                    </div>
-                  </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-green-500">
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">QR Kod İndirme</div>
-                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">-</div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Yakında</p>
-                  </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-purple-500">
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Son Görüntülenme</div>
-                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-2">
-                      {profile?.last_viewed_at 
-                        ? new Date(profile.last_viewed_at).toLocaleDateString('tr-TR', {
-                            day: 'numeric',
-                            month: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })
-                        : 'Henüz görüntülenmedi'
-                      }
-                    </div>
-                  </div>
-                </div>
+<div className="grid md:grid-cols-4 gap-4">
+  <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-blue-500">
+    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Profil Görüntülenme</div>
+    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+      {analytics?.profile_views || 0}
+    </div>
+  </div>
+  
+  <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-green-500">
+    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">QR Kod Tarama</div>
+    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+      {analytics?.qr_scans || 0}
+    </div>
+  </div>
+  
+  <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-purple-500">
+    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">vCard İndirme</div>
+    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+      {analytics?.vcard_downloads || 0}
+    </div>
+  </div>
+  
+  <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-yellow-500">
+    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Link Tıklama</div>
+    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+      {analytics?.link_clicks || 0}
+    </div>
+  </div>
+</div>
 
                 {/* Username Editor */}
                 {profile && (

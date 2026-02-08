@@ -1,3 +1,4 @@
+import { exportToCSV, verifyPasswordForExport } from '../utils/exportHelpers'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { 
@@ -25,7 +26,52 @@ export default function AdminCRM() {
   useEffect(() => {
     loadAllData()
   }, [])
+  const handleExportUsers = async () => {
+  const verified = await verifyPasswordForExport(supabase)
+  if (!verified) return
 
+  const exportData = users.map(u => ({
+    'Ad Soyad': u.name,
+    'Email': u.email,
+    'Rol': u.role,
+    'Kayıt Tarihi': new Date(u.created_at).toLocaleDateString('tr-TR')
+  }))
+
+  exportToCSV(exportData, 'users')
+}
+
+const handleExportSubscriptions = async () => {
+  const verified = await verifyPasswordForExport(supabase)
+  if (!verified) return
+
+  const exportData = subscriptions.map(s => ({
+    'Kullanıcı': s.profiles?.name,
+    'Email': s.profiles?.email,
+    'Plan': s.plan.toUpperCase(),
+    'Durum': s.status,
+    'Org Kullanım': `${s.organizations_used}/${s.organizations_limit}`,
+    'Tarih': new Date(s.created_at).toLocaleDateString('tr-TR')
+  }))
+
+  exportToCSV(exportData, 'subscriptions')
+}
+
+const handleExportCommissions = async () => {
+  const verified = await verifyPasswordForExport(supabase)
+  if (!verified) return
+
+  const exportData = commissions.map(c => ({
+    'Kullanıcı': c.profiles?.name,
+    'Email': c.profiles?.email,
+    'Tutar': `₺${parseFloat(c.amount).toFixed(2)}`,
+    'Tip': c.type,
+    'Durum': c.status,
+    'Açıklama': c.description,
+    'Tarih': new Date(c.created_at).toLocaleDateString('tr-TR')
+  }))
+
+  exportToCSV(exportData, 'commissions')
+}
   const loadAllData = async () => {
     try {
       setLoading(true)
@@ -187,7 +233,27 @@ export default function AdminCRM() {
             </button>
           ))}
         </div>
-
+{/* Export Buttons */}
+<div className="flex gap-2 mb-4">
+  <button
+    onClick={handleExportUsers}
+    className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-all text-sm flex items-center gap-2"
+  >
+    📥 Kullanıcıları Export Et
+  </button>
+  <button
+    onClick={handleExportSubscriptions}
+    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all text-sm flex items-center gap-2"
+  >
+    📥 Abonelikleri Export Et
+  </button>
+  <button
+    onClick={handleExportCommissions}
+    className="px-4 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-all text-sm flex items-center gap-2"
+  >
+    📥 Komisyonları Export Et
+  </button>
+</div>
         {/* Search & Filter */}
         <div className="flex gap-4 mb-6">
           <div className="flex-1 relative">

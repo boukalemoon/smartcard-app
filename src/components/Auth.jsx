@@ -57,15 +57,16 @@ export default function Auth() {
           // Profile oluştur
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .insert([
+            .upsert([
               {
                 user_id: authData.user.id,
                 email: email,
                 name: name || email.split('@')[0],
                 subscription_plan: 'free',
                 subscription_status: 'active'
-              }
-            ])
+              } ,  {
+            onConflict: 'user_id' // Eğer user_id varsa, update yap  
+                }])
             .select()
             .single()
           
