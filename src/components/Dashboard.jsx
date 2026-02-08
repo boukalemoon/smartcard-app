@@ -1,3 +1,4 @@
+import ImageUpload from './ImageUpload'
 import { getAnalyticsSummary } from '../utils/analyticsHelpers'
 import AdminCRM from './AdminCRM'
 import ReferralDashboard from './ReferralDashboard'
@@ -158,7 +159,22 @@ useEffect(() => {
       setLoading(false)
     }
   }
+const updateAvatar = async (avatarUrl) => {
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ avatar_url: avatarUrl })
+      .eq('user_id', session.user.id)
 
+    if (error) throw error
+
+    setProfile({ ...profile, avatar_url: avatarUrl })
+    alert('Profil fotoğrafı güncellendi!')
+  } catch (error) {
+    console.error('Avatar update error:', error)
+    alert('Hata: ' + error.message)
+  }
+}
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -295,6 +311,16 @@ useEffect(() => {
                   </div>
 
                   <div className="space-y-4">
+                     {/* Avatar Upload */}
+  <div className="flex justify-center pb-4 border-b border-gray-200 dark:border-gray-700">
+    <ImageUpload
+      currentImageUrl={profile?.avatar_url}
+      onUploadSuccess={updateAvatar}
+      bucket="avatars"
+      label="Profil Fotoğrafı"
+      maxSize={2}
+    />
+  </div> 
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                         Ad Soyad

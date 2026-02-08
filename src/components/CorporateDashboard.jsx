@@ -1,3 +1,5 @@
+import OrganizationProfileManager from './OrganizationProfileManager'
+import ImageUpload from './ImageUpload'
 import { exportToCSV, verifyPasswordForExport } from '../utils/exportHelpers'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
@@ -12,6 +14,7 @@ export default function CorporateDashboard({ profile, subscription }) {
   const [showApplications, setShowApplications] = useState(false)
   const [loading, setLoading] = useState(true)
   const [orgCommissions, setOrgCommissions] = useState([])
+  const [showOrgProfile, setShowOrgProfile] = useState(false)
   const [stats, setStats] = useState({
     totalOrgs: 0,
     totalMembers: 0,
@@ -110,6 +113,26 @@ export default function CorporateDashboard({ profile, subscription }) {
       setShowApplications(false)
     }
   }
+  const updateOrgLogo = async (orgId, logoUrl) => {
+  try {
+    const { error } = await supabase
+      .from('organizations')
+      .update({ logo_url: logoUrl })
+      .eq('id', orgId)
+
+    if (error) throw error
+
+    // Local state güncelle
+    setOrganizations(organizations.map(org => 
+      org.id === orgId ? { ...org, logo_url: logoUrl } : org
+    ))
+
+    alert('Logo güncellendi!')
+  } catch (error) {
+    console.error('Logo update error:', error)
+    alert('Hata: ' + error.message)
+  }
+}
 const handleExportMembers = async () => {
   const verified = await verifyPasswordForExport(supabase)
   if (!verified) return
@@ -281,6 +304,22 @@ const handleExportCommissions = async () => {
           </div>
         </div>
       )}
+{/* Organization Profile Manager */}
+{showOrgProfile && selectedOrg && (
+  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+    <OrganizationProfileManager
+      organizationId={selectedOrg.id}
+      onClose={() => {
+        setShowOrgProfile(false)
+        setSelectedOrg(null)
+      }}
+      onUpdate={() => {
+        loadOrganizations()
+      }}
+    />
+  </div>
+)}
+
 
       {/* Member Manager */}
       {showMemberManager && selectedOrg && (
@@ -368,22 +407,50 @@ const handleExportCommissions = async () => {
                           </p>
                         )}
                       </div>
-                      <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                        <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                      </div>
+                      <div className="relative group">
+  {org.logo_url ? (
+    <img 
+      src={org.logo_url} 
+      alt={org.name}
+      className="w-12 h-12 object-cover rounded-lg"
+    />
+  ) : (
+    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+      <Building2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+    </div>
+  )}
+  
+</div>
                     </div>
 
                     <div className="space-y-2">
-                      <button
-                        onClick={() => selectOrganization(org, 'members')}
-                        className="w-full flex items-center justify-between px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4" />
-                          <span>Üyeleri Yönet</span>
-                        </div>
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
+  {/* Organization Profile Button */}
+  <button
+    onClick={() => {
+      setSelectedOrg(org)
+      setShowOrgProfile(true)
+      setShowMemberManager(false)
+      setShowApplications(false)
+    }}
+    className="w-full flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-colors"
+  >
+    <div className="flex items-center gap-2">
+      <Building2 className="w-4 h-4" />
+      <span>Profil Yönet</span>
+    </div>
+    <ChevronRight className="w-4 h-4" />
+  </button>
+
+  <button
+    onClick={() => selectOrganization(org, 'members')}
+    className="w-full flex items-center justify-between px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+  >
+    <div className="flex items-center gap-2">
+      <Users className="w-4 h-4" />
+      <span>Üyeleri Yönet</span>
+    </div>
+    <ChevronRight className="w-4 h-4" />
+  </button>
 
                       {isSTK && (
                         <button
