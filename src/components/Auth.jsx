@@ -56,19 +56,21 @@ export default function Auth() {
         if (authData.user) {
           // Profile oluştur
           const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .upsert([
-              {
-                user_id: authData.user.id,
-                email: email,
-                name: name || email.split('@')[0],
-                subscription_plan: 'free',
-                subscription_status: 'active'
-              } ,  {
-            onConflict: 'user_id' // Eğer user_id varsa, update yap  
-                }])
-            .select()
-            .single()
+  .from('profiles')
+  .upsert(
+    {
+      user_id: authData.user.id,
+      email: email,
+      name: name || email.split('@')[0],
+      subscription_plan: 'free',
+      subscription_status: 'active'
+    },
+    {
+      onConflict: 'user_id'
+    }
+  )
+  .select()
+  .single()
           
           if (profileError) throw profileError
 
@@ -94,7 +96,7 @@ export default function Auth() {
           }
         }
         
-        alert('Kayıt başarılı! Giriş yapabilirsiniz.')
+        alert('🎉 Kayıt başarılı!\n\n📧 Email adresinize doğrulama linki gönderdik.\n\nLütfen email kutunuzu kontrol edin ve linke tıklayarak hesabınızı aktif edin.\n\n💡 Email gelmedi mi? Spam klasörünü kontrol edin.')
         localStorage.removeItem('qartim_referral_code') // Temizle
         setMode('login')
       } else {
@@ -169,10 +171,10 @@ export default function Auth() {
         </div>
 
         {/* Referral Badge */}
-        {referralCode && (
+        {referralCode && mode === 'signup' && (
           <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-center">
             <p className="text-sm text-green-800 font-medium">
-              🎉 Referans koda ile kayıt oluyorsunuz!
+              🎉 Referans kod ile kayıt oluyorsunuz!
             </p>
             <p className="text-xs text-green-600 mt-1">
               Kayıt sonrası her iki taraf da kazanacak!

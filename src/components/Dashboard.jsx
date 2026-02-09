@@ -1,4 +1,6 @@
+import ReadyPlayerMeAvatar from './ReadyPlayerMeAvatar'
 import ImageUpload from './ImageUpload'
+import PublicCardPreview from './PublicCardPreview'
 import { getAnalyticsSummary } from '../utils/analyticsHelpers'
 import AdminCRM from './AdminCRM'
 import ReferralDashboard from './ReferralDashboard'
@@ -20,6 +22,7 @@ export default function Dashboard({ session }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
+  const [themeColor, setThemeColor] = useState('#3B82F6')
   const [showPayment, setShowPayment] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [isAdmin, setIsAdmin] = useState(false)
@@ -64,11 +67,13 @@ const loadProfile = async () => {
       .select('*')
       .eq('user_id', session.user.id)
       .single()
-
+console.log('📊 Loaded profile data:', data)
     if (error && error.code !== 'PGRST116') throw error
 
     if (data) {
       setProfile(data)
+      console.log('✅ Profile state set:', data.theme_color)
+      setThemeColor(data.theme_color || '#3B82F6')
       setName(data.name || '')
       setTitle(data.title || '')
       setCompany(data.company || '')
@@ -175,6 +180,30 @@ const updateAvatar = async (avatarUrl) => {
     alert('Hata: ' + error.message)
   }
 }
+const handleThemeColorChange = async (color) => {
+  console.log('🎨 Changing theme to:', color)
+  
+  setThemeColor(color)
+  
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ theme_color: color })
+      .eq('user_id', session.user.id)
+
+    if (error) {
+      console.error('❌ Theme update error:', error)
+      throw error
+    }
+
+    console.log('✅ Theme updated in DB!')
+  } catch (error) {
+    console.error('Theme color update error:', error)
+    alert('Hata: ' + error.message)
+    setThemeColor(themeColor)
+  }
+}
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -186,6 +215,7 @@ const updateAvatar = async (avatarUrl) => {
   const limits = getLimits()
   console.log('Limits:', limits)  // EKLE
   console.log('Subscription:', subscription)  // EKLE
+  
 
   return (
     <>
@@ -311,7 +341,7 @@ const updateAvatar = async (avatarUrl) => {
                   </div>
 
                   <div className="space-y-4">
-                     {/* Avatar Upload */}
+  {/* Avatar Upload */}
   <div className="flex justify-center pb-4 border-b border-gray-200 dark:border-gray-700">
     <ImageUpload
       currentImageUrl={profile?.avatar_url}
@@ -320,11 +350,128 @@ const updateAvatar = async (avatarUrl) => {
       label="Profil Fotoğrafı"
       maxSize={2}
     />
-  </div> 
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                        Ad Soyad
-                      </label>
+  </div>
+
+ {/* 3D Avatar - YENİ! */}
+<div className="flex justify-center pb-4 border-b border-gray-200 dark:border-gray-700">
+  <ReadyPlayerMeAvatar
+    profileId={profile?.id}
+    currentAvatarUrl={profile?.avatar_3d_url}
+    onAvatarUpdate={(url) => {
+      setProfile({ ...profile, avatar_3d_url: url })
+    }}
+    type="profile"
+  />
+</div>  {/* ← ReadyPlayerMeAvatar DIV KAPANDI! */}
+
+{/* Tema Rengi */}
+<div className="space-y-4">
+  <div className="flex items-center justify-between">
+    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+      🎨 Tema Rengi
+    </label>
+    {themeColor !== profile?.theme_color && (
+      <button
+  onClick={async () => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ theme_color: themeColor })
+        .eq('user_id', session.user.id)
+
+      if (error) throw error
+
+      setProfile(prev => ({ ...prev, theme_color: themeColor }))
+      alert('✅ Tema rengi kaydedildi!')
+    } catch (error) {
+      console.error('Theme save error:', error)
+      alert('Hata: ' + error.message)
+    }
+  }}
+  className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-all animate-pulse"
+>
+  Kaydet
+</button>
+    )}
+  </div>
+  
+  {/* Hızlı Seçim */}
+  <div className="flex flex-wrap gap-3 justify-center">
+    {['#3B82F6', '#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#EF4444'].map(color => (
+      <button
+        key={color}
+        onClick={() => setThemeColor(color)}
+        className={`w-10 h-10 rounded-full border-2 transition-all hover:scale-110 ${
+          themeColor === color 
+            ? 'border-gray-900 dark:border-white ring-2 ring-offset-2 ring-gray-900 dark:ring-white' 
+            : 'border-gray-300'
+        }`}
+        style={{ backgroundColor: color }}
+      />
+    ))}
+  </div>
+
+  {/* Özel Renk Seçici */}
+  <div className="flex items-center justify-center gap-3">
+    <label className="text-sm text-gray-600 dark:text-gray-400">Özel Renk:</label>
+    <input
+      type="color"
+      value={themeColor}
+      onChange={(e) => setThemeColor(e.target.value)}
+      className="w-16 h-10 rounded cursor-pointer border-2 border-gray-300"
+    />
+    <span className="text-sm font-mono text-gray-600 dark:text-gray-400">{themeColor}</span>
+  </div>
+  
+  <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+    {themeColor !== profile?.theme_color 
+      ? '⚠️ Değişiklikler kaydedilmedi!' 
+      : '✅ Kaydedildi'}
+  </p>
+</div>
+{/* PublicCard Önizlemesi - YENİ! */}
+<PublicCardPreview 
+  profile={profile}
+  themeColor={themeColor}
+/>
+
+{/* Background Image Upload - YENİ! */}
+<div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+    🖼️ Arka Plan Resmi
+  </label>
+  
+  <ImageUpload
+    currentImageUrl={profile?.background_image_url}
+    onUploadSuccess={async (url) => {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ background_image_url: url })
+          .eq('user_id', session.user.id)
+
+        if (error) throw error
+
+        setProfile(prev => ({ ...prev, background_image_url: url }))
+        alert('✅ Arka plan resmi güncellendi!')
+      } catch (error) {
+        console.error('Background update error:', error)
+        alert('Hata: ' + error.message)
+      }
+    }}
+    bucket="backgrounds"
+    label="Arka Plan"
+    maxSize={5}
+  />
+  
+  <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+    Kartınızın arka plan resmini yükleyin (Maksimum 5MB)
+  </p>
+</div>
+  <div>
+    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+      Ad Soyad
+    </label>
                       {editing ? (
                         <input
                           type="text"

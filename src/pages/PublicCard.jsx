@@ -1,3 +1,4 @@
+import AvatarFlipCard from '../components/AvatarFlipCard'
 import { trackEvent } from '../utils/analyticsHelpers'
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -15,6 +16,19 @@ export default function PublicCard() {
   const [socialLinks, setSocialLinks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Helper: Rengi koyulaştır
+  const adjustColor = (color, percent) => {
+    if (!color) return '#1e40af' // fallback
+    const num = parseInt(color.replace("#",""), 16)
+    const amt = Math.round(2.55 * percent)
+    const R = (num >> 16) + amt
+    const G = (num >> 8 & 0x00FF) + amt
+    const B = (num & 0x0000FF) + amt
+    return "#" + (0x1000000 + (R<255?R<1?0:R:255)*0x10000 
+      + (G<255?G<1?0:G:255)*0x100 
+      + (B<255?B<1?0:B:255))
+      .toString(16).slice(1)
+  }
 
   useEffect(() => {
     if (username) {
@@ -143,7 +157,7 @@ END:VCARD`;
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/')}q
             className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
           >
             <ArrowLeft size={20} />
@@ -157,10 +171,17 @@ END:VCARD`;
         {/* Main Card */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
           {/* Profile Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-8 text-white text-center">
-            <div className="w-32 h-32 mx-auto mb-4 rounded-full bg-white flex items-center justify-center text-5xl font-bold text-blue-600 shadow-lg">
-              {profile.name?.charAt(0) || '?'}
-            </div>
+          <div 
+  className="p-8 text-white text-center"
+  style={{
+    background: `linear-gradient(to right, ${profile?.theme_color || '#3B82F6'}, ${adjustColor(profile?.theme_color || '#3B82F6', -40)})`
+  }}
+>
+            <AvatarFlipCard
+  profileImage={profile.avatar_url}
+  avatar3dUrl={profile.avatar_3d_url}
+  name={profile.name}
+/>
             <h1 className="text-3xl font-bold mb-2">{profile.name}</h1>
             {profile.title && (
               <p className="text-blue-100 text-lg mb-1">{profile.title}</p>
@@ -182,9 +203,14 @@ END:VCARD`;
               {profile.email && (
   <a
     href={`mailto:${profile.email}`}
-    className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-  >
-    <Mail className="text-blue-600" size={20} />
+  className="flex items-center gap-3 p-3 rounded-lg transition-colors"
+  style={{
+    '--hover-color': `${profile?.theme_color}15` // 15 = %10 opacity
+  }}
+  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${profile?.theme_color}15`}
+  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+>
+    <Mail size={20} style={{ color: profile?.theme_color || '#3B82F6' }} />
     <span className="text-gray-700 dark:text-gray-300">{profile.email}</span>
   </a>
 )}
@@ -192,10 +218,12 @@ END:VCARD`;
               {profile.phone && (
                 
                <a 
-                  href={`tel:${profile.phone}`}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <Phone className="text-green-600" size={20} />
+  href={`tel:${profile.phone}`}
+  className="flex items-center gap-3 p-3 rounded-lg transition-colors"
+  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${profile?.theme_color}15`}
+  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+>
+                  <Phone size={20} style={{ color: profile?.theme_color || '#10B981' }} />
                   <span className="text-gray-700 dark:text-gray-300">{profile.phone}</span>
                 </a>
               )}
@@ -207,7 +235,7 @@ END:VCARD`;
                 <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-3">Sosyal Medya</h3>
                 <div className="grid gap-2">
                   {socialLinks.map((link) => (
-                    
+
                     <a
                       key={link.id}
                       href={link.url}
@@ -221,11 +249,13 @@ END:VCARD`;
                           });
                         }
                       }}
-                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      className="flex items-center gap-3 p-3 rounded-lg transition-colors"
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${profile?.theme_color}15`}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      <span className="text-gray-600 dark:text-gray-400">
-                        {getSocialIcon(link.platform)}
-                      </span>
+                     <span style={{ color: profile?.theme_color || '#6B7280' }}>
+                      {getSocialIcon(link.platform)}
+                     </span>
                       <span className="text-gray-700 dark:text-gray-300 capitalize">{link.platform}</span>
                       <ExternalLink className="ml-auto text-gray-400" size={16} />
                     </a>
@@ -236,9 +266,12 @@ END:VCARD`;
 
             {/* vCard Download Button */}
             <button
-              onClick={downloadVCard}
-              className="w-full mt-6 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-semibold hover:shadow-xl transition-all"
-            >
+  onClick={downloadVCard}
+  className="w-full mt-6 flex items-center justify-center gap-2 px-6 py-3 text-white rounded-xl font-semibold hover:shadow-xl transition-all"
+  style={{
+    background: `linear-gradient(to right, ${profile?.theme_color || '#10B981'}, ${adjustColor(profile?.theme_color || '#10B981', -30)})`
+  }}
+>
               <Download size={20} />
               Kişilere Kaydet (vCard)
             </button>
