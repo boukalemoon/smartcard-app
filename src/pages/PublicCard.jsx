@@ -169,19 +169,31 @@ END:VCARD`;
         </div>
 
         {/* Main Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
-          {/* Profile Header */}
-          <div 
-  className="p-8 text-white text-center"
+        <div 
+  className="p-8 text-white text-center relative overflow-hidden"
   style={{
     background: `linear-gradient(to right, ${profile?.theme_color || '#3B82F6'}, ${adjustColor(profile?.theme_color || '#3B82F6', -40)})`
   }}
 >
-            <AvatarFlipCard
-  profileImage={profile.avatar_url}
-  avatar3dUrl={profile.avatar_3d_url}
-  name={profile.name}
-/>
+  {/* Background Image */}
+  {profile?.background_image_url && (
+    <div 
+      className="absolute inset-0 bg-cover bg-center"
+      style={{
+        backgroundImage: `url(${profile.background_image_url})`,
+        opacity: 0.3
+      }}
+    />
+  )}
+  
+  {/* Content - Z-index yükselt */}
+  <div className="relative z-10">
+    <AvatarFlipCard
+      profileImage={profile.avatar_url}
+      avatar3dUrl={profile.avatar_3d_url}
+      name={profile.name}
+    />
+           
             <h1 className="text-3xl font-bold mb-2">{profile.name}</h1>
             {profile.title && (
               <p className="text-blue-100 text-lg mb-1">{profile.title}</p>
@@ -189,7 +201,7 @@ END:VCARD`;
             {profile.company && (
               <p className="text-blue-200">{profile.company}</p>
             )}
-          </div>
+          </div> {/* z-10 kapatma */}
 
           {/* Contact Information */}
           <div className="p-6 space-y-4">

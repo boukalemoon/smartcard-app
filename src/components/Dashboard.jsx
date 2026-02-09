@@ -627,8 +627,120 @@ const handleThemeColorChange = async (color) => {
               {/* Sağ Panel - QR Kod ve Abonelik */}
               <div className="space-y-6">
                 {/* QR Kod ve NFC */}
-                {profile && profile.username && (
-                  <>
+{profile && profile.username && (
+  <>
+    {/* QR KOD ÖZELLEŞTİRME - YENİ! */}
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-6">
+      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+        🎨 QR Kod Özelleştirme
+      </h3>
+      
+      <div className="space-y-4">
+        {/* QR Foreground Color */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            QR Kod Rengi
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              type="color"
+              value={profile.qr_foreground_color || '#000000'}
+              onChange={async (e) => {
+                const color = e.target.value
+                try {
+                  const { error } = await supabase
+                    .from('profiles')
+                    .update({ qr_foreground_color: color })
+                    .eq('user_id', session.user.id)
+                  
+                  if (error) throw error
+                  setProfile(prev => ({ ...prev, qr_foreground_color: color }))
+                } catch (error) {
+                  console.error('QR color update error:', error)
+                }
+              }}
+              className="w-16 h-10 rounded cursor-pointer border-2 border-gray-300"
+            />
+            <span className="text-sm font-mono text-gray-600 dark:text-gray-400">
+              {profile.qr_foreground_color || '#000000'}
+            </span>
+          </div>
+        </div>
+
+        {/* QR Background Color */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            QR Arka Plan Rengi
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              type="color"
+              value={profile.qr_background_color || '#FFFFFF'}
+              onChange={async (e) => {
+                const color = e.target.value
+                try {
+                  const { error } = await supabase
+                    .from('profiles')
+                    .update({ qr_background_color: color })
+                    .eq('user_id', session.user.id)
+                  
+                  if (error) throw error
+                  setProfile(prev => ({ ...prev, qr_background_color: color }))
+                } catch (error) {
+                  console.error('QR bg color update error:', error)
+                }
+              }}
+              className="w-16 h-10 rounded cursor-pointer border-2 border-gray-300"
+            />
+            <span className="text-sm font-mono text-gray-600 dark:text-gray-400">
+              {profile.qr_background_color || '#FFFFFF'}
+            </span>
+          </div>
+        </div>
+
+        {/* QR Logo Toggle - YENİ! */}
+        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={profile.qr_logo_enabled || false}
+              onChange={async (e) => {
+                const enabled = e.target.checked
+                try {
+                  const { error } = await supabase
+                    .from('profiles')
+                    .update({ qr_logo_enabled: enabled })
+                    .eq('user_id', session.user.id)
+                  
+                  if (error) throw error
+                  setProfile(prev => ({ ...prev, qr_logo_enabled: enabled }))
+                } catch (error) {
+                  console.error('QR logo toggle error:', error)
+                }
+              }}
+              className="w-5 h-5 rounded border-gray-300"
+            />
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              QR Kod ortasına profil fotoğrafı ekle
+            </span>
+          </label>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-8">
+            {subscription?.plan === 'free' 
+              ? '⚠️ Premium özellik - Profesyonel plana yükseltin' 
+              : '✅ Profil fotoğrafınız QR kodun ortasında gösterilecek'}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <QRCodeDisplay 
+      username={profile.username} 
+      fullName={profile.name || session.user.email}
+      qrForegroundColor={profile.qr_foreground_color}
+      qrBackgroundColor={profile.qr_background_color}
+      qrLogoEnabled={profile.qr_logo_enabled}
+      profileImage={profile.avatar_url}
+    />
                     <QRCodeDisplay 
                       username={profile.username} 
                       fullName={profile.name || session.user.email} 

@@ -2,7 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { Download, Share2 } from 'lucide-react';
 
-export default function QRCodeDisplay({ username, fullName }) {
+export default function QRCodeDisplay({ 
+  username, 
+  fullName,
+  qrForegroundColor = '#1F2937',  // ← YENİ!
+  qrBackgroundColor = '#FFFFFF',  // ← YENİ!
+  qrLogoEnabled = false,          // ← YENİ!
+  profileImage = null             // ← YENİ!
+ }) {
   const canvasRef = useRef(null);
   const [qrDataUrl, setQrDataUrl] = useState('');
   const profileUrl = `${window.location.origin}/card/${username}`;
@@ -11,30 +18,76 @@ export default function QRCodeDisplay({ username, fullName }) {
     if (canvasRef.current && username) {
       generateQRCode();
     }
-  }, [username]);
+  }, [username, qrForegroundColor, qrBackgroundColor]);
 
   const generateQRCode = async () => {
     try {
+      const canvas = canvasRef.current;
+
       // Generate QR code on canvas
       await QRCode.toCanvas(canvasRef.current, profileUrl, {
         width: 300,
         margin: 2,
         color: {
-          dark: '#1F2937',
-          light: '#FFFFFF'
+          dark: qrForegroundColor,   // ← ÖZELLEŞ!
+          light: qrBackgroundColor   // ← ÖZELLEŞ!
         }
       });
+
+      // Add logo if enabled
+    if (qrLogoEnabled && profileImage) {
+      await addLogoToQR(canvas, profileImage);
+    }
+
+
 
       // Also get data URL for download
       const dataUrl = await QRCode.toDataURL(profileUrl, {
         width: 600,
-        margin: 2
+        margin: 2,
+        color: {
+          dark: qrForegroundColor,   // ← ÖZELLEŞ!
+          light: qrBackgroundColor   // ← ÖZELLEŞ!
+      }
       });
       setQrDataUrl(dataUrl);
     } catch (error) {
       console.error('QR kod oluşturma hatası:', error);
     }
   };
+
+ // YENİ FONKSIYON: Logo ekle
+const addLogoToQR = (canvas, logoUrl) => {
+  return new Promise((resolve, reject) => {
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    
+    img.onload = () => {
+      const logoSize = canvas.width * 0.2; // QR'nin %20'si
+      const x = (canvas.width - logoSize) / 2;
+      const y = (canvas.height - logoSize) / 2;
+      
+      // Beyaz arka plan (logo etrafında)
+      ctx.fillStyle = qrBackgroundColor;
+      ctx.fillRect(x - 5, y - 5, logoSize + 10, logoSize + 10);
+      
+      // Logo çiz (yuvarlak)
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x + logoSize/2, y + logoSize/2, logoSize/2, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(img, x, y, logoSize, logoSize);
+      ctx.restore();
+      
+      resolve();
+    };
+    
+    img.onerror = reject;
+    img.src = logoUrl;
+  });
+}; 
 
   const downloadQRCode = () => {
     if (qrDataUrl) {
