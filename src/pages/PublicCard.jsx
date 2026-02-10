@@ -295,18 +295,26 @@ END:VCARD`;
         </div>
 
         {/* Footer */}
-        <div className="mt-6 text-center">
-          <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">
-            Sen de dijital kartvizitini oluştur!
-          </p>
-          <button
-            onClick={() => navigate('/login')}
-            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
-          >
-            Ücretsiz Kaydol →
-          </button>
-        </div>
-      </div>
+<div className="mt-6 text-center">
+  <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">
+    Sen de dijital kartvizitini oluştur!
+  </p>
+  <button
+    onClick={() => {
+      // Referral kodu ile yönlendir
+      const referralCode = profile?.referral_code || profile?.id;
+      navigate(`/login?ref=${referralCode}`);  // ← /register değil /login!
+    }}
+    className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+  >
+    Ücretsiz Kaydol →
+  </button>
+  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+    {profile?.name} tarafından davet edildiniz! 🎁
+  </p>
+</div>  
+      </div>  
     </div>
   );
 }
+

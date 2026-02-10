@@ -17,8 +17,8 @@ export default function NFCCardsPage() {
       gradient: 'from-blue-500 to-purple-600',
       description: 'Dayanıklı plastik malzeme, canlı renkler',
       features: ['Su geçirmez', 'Çizilmeye dayanıklı', 'Uygun fiyat'],
-      price: '₺149',
-      comingSoon: true
+      price: '₺899',
+      priceValue: 899
     },
     {
       id: 'metal',
@@ -27,8 +27,8 @@ export default function NFCCardsPage() {
       gradient: 'from-gray-700 to-gray-900',
       description: 'Premium metal, lüks his',
       features: ['Prestijli görünüm', 'Ağır ve kaliteli', 'Uzun ömürlü'],
-      price: '₺299',
-      comingSoon: true,
+      price: '₺1499',
+      priceValue: 1499,
       popular: true
     },
     {
@@ -38,8 +38,8 @@ export default function NFCCardsPage() {
       gradient: 'from-cyan-400 to-blue-500',
       description: 'Modern şeffaf tasarım',
       features: ['Benzersiz görünüm', 'Hafif', 'Dikkat çekici'],
-      price: '₺199',
-      comingSoon: true
+      price: '₺1699',
+      priceValue: 1699
     },
     {
       id: 'bamboo',
@@ -48,8 +48,8 @@ export default function NFCCardsPage() {
       gradient: 'from-green-600 to-emerald-700',
       description: 'Doğa dostu, organik malzeme',
       features: ['Çevre dostu', 'Doğal doku', 'Sürdürülebilir'],
-      price: '₺179',
-      comingSoon: true
+      price: '₺2299',
+      priceValue: 2299
     },
     {
       id: 'custom',
@@ -59,7 +59,7 @@ export default function NFCCardsPage() {
       description: 'Tamamen size özel tasarım',
       features: ['İstediğiniz tasarım', 'Logo baskı', 'Özel renk'],
       price: 'Fiyat Teklifi',
-      comingSoon: true
+      priceValue: 0
     }
   ];
 
@@ -214,11 +214,19 @@ export default function NFCCardsPage() {
                     </div>
                     
                     <button
-                      disabled
-                      className="w-full py-3 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-xl font-semibold cursor-not-allowed"
-                    >
-                      Çok Yakında
-                    </button>
+  onClick={() => {
+    // Login kontrolü
+    const isLoggedIn = false // TODO: Auth kontrol et
+    if (isLoggedIn) {
+      navigate(`/nfc-designer?type=${card.id}`)
+    } else {
+      navigate('/login')
+    }
+  }}
+  className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+>
+  Sipariş Ver
+</button>
                   </div>
                 </div>
               );

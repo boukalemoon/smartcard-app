@@ -11,6 +11,8 @@ import PublicMemberDirectoryPage from './pages/PublicMemberDirectoryPage'
 import Auth from './components/Auth'
 import Dashboard from './components/Dashboard'
 import PublicCard from './pages/PublicCard'
+import NFCCard from './pages/NFCCard'
+
 
 // Auth Wrapper component
 function AuthWrapper() {
@@ -60,6 +62,7 @@ function App() {
             <Route path="/card/:username" element={<PublicCard />} />
 
             <Route path="/nfc-cards" element={<NFCCardsPage />} />  
+            <Route path="/nfc-designer" element={<NFCCard />} />
 
             <Route path="/org/:orgSlug/apply" element={<PublicApplicationPage />} />
             <Route path="/org/:orgSlug/members" element={<PublicMemberDirectoryPage />} />
@@ -75,7 +78,7 @@ function App() {
               path="/dashboard" 
               element={session ? <Dashboard session={session} /> : <Navigate to="/login" />} 
               
-           
+            
             />
             <Route 
               path="/admin" 

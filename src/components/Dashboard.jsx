@@ -733,6 +733,8 @@ const handleThemeColorChange = async (color) => {
       </div>
     </div>
 
+    {profile && profile.username && (
+  <>
     <QRCodeDisplay 
       username={profile.username} 
       fullName={profile.name || session.user.email}
@@ -741,11 +743,44 @@ const handleThemeColorChange = async (color) => {
       qrLogoEnabled={profile.qr_logo_enabled}
       profileImage={profile.avatar_url}
     />
-                    <QRCodeDisplay 
-                      username={profile.username} 
-                      fullName={profile.name || session.user.email} 
-                    />
-                    <NFCWriter username={profile.username} />
+    <NFCWriter username={profile.username} />
+  </>
+)}
+
+{/* NFC Kart - USERNAME OLMADAN! */}
+{profile && (
+  subscription?.plan === 'free' ? (
+    <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg p-6 text-white">
+      <h2 className="text-xl font-semibold mb-2">💳 NFC Kart</h2>
+      <p className="text-purple-100 text-sm mb-4">
+        Professional planla ücretsiz NFC kart kazanın!
+      </p>
+      <button
+        onClick={() => {
+          setSelectedPlan({ plan: 'professional', billingCycle: 'yearly' })
+          setShowPayment(true)
+        }}
+        className="w-full py-3 bg-white text-purple-600 rounded-xl font-semibold hover:shadow-xl transition-all"
+      >
+        Planı Yükselt
+      </button>
+    </div>
+  ) : (
+    <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg p-6 text-white">
+      <h2 className="text-xl font-semibold mb-2">💳 NFC Kartınız</h2>
+      <p className="text-purple-100 text-sm mb-4">
+        Dijital kartvizitinizi fiziksel karta dönüştürün
+      </p>
+      <button
+        onClick={() => window.location.href = '/nfc-designer'}
+        className="w-full py-3 bg-white text-purple-600 rounded-xl font-semibold hover:shadow-xl transition-all"
+      >
+        Kart Tasarla
+      </button>
+    </div>
+  )
+)}
+    <NFCWriter username={profile.username} />
                   </>
                 )}
 
