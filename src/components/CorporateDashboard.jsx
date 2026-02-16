@@ -21,87 +21,137 @@ export default function CorporateDashboard({ profile, subscription }) {
     activeMembers: 0
   })
 
+  const [orgAnalytics, setOrgAnalytics] = useState([])
+const [totalAnalytics, setTotalAnalytics] = useState({
+  qr_scans: 0,
+  profile_views: 0,
+  vcard_downloads: 0,
+  link_clicks: 0
+})
+
   useEffect(() => {
     loadOrganizations()
   }, [profile])
 
   const loadOrganizations = async () => {
-    if (!profile?.id) return
+  if (!profile?.id) return
 
-    try {
-      setLoading(true)
-      
-      const { data, error } = await supabase
-        .from('members')
-        .select(`
-          organization_id,
-          role,
-          organizations (
-            id,
-            name,
-            type,
-            description,
-            logo_url,
-            created_at
-          )
-        `)
-        .eq('profile_id', profile.id)
-        .order('created_at', { ascending: false })
+  try {
+    setLoading(true)
+    
+    const { data, error } = await supabase
+      .from('members')
+      .select(`
+        organization_id,
+        role,
+        organizations (
+          id,
+          name,
+          type,
+          description,
+          logo_url,
+          created_at
+        )
+      `)
+      .eq('profile_id', profile.id)
+      .order('created_at', { ascending: false })
 
-      if (error) throw error
+    if (error) throw error
 
-      const orgs = data?.map(item => ({
-        ...item.organizations,
-        role: item.role
-      })) || []
+    const orgs = data?.map(item => ({
+      ...item.organizations,
+      role: item.role
+    })) || []
 
-      setOrganizations(orgs)
+    setOrganizations(orgs)
 
-      let totalMembers = 0
-      let activeMembers = 0
+    let totalMembers = 0
+    let activeMembers = 0
 
-      if (orgs && orgs.length > 0) {
-        for (const org of orgs) {
-          const { data: members } = await supabase
-            .from('members')
-            .select('status')
-            .eq('organization_id', org.id)
+    if (orgs && orgs.length > 0) {
+      for (const org of orgs) {
+        const { data: members } = await supabase
+          .from('members')
+          .select('status')
+          .eq('organization_id', org.id)
 
-          if (members) {
-            totalMembers += members.length
-            activeMembers += members.filter(m => m.status === 'active').length
-          }
+        if (members) {
+          totalMembers += members.length
+          activeMembers += members.filter(m => m.status === 'active').length
         }
       }
+    }
 
-      setStats({
-        totalOrgs: orgs?.length || 0,
-        totalMembers,
-        activeMembers
+    setStats({
+      totalOrgs: orgs?.length || 0,
+      totalMembers,
+      activeMembers
+    })
+
+    // Organizational commissions yükle
+    if (orgs && orgs.length > 0) {
+      const orgIds = orgs.map(o => o.id)
+      
+      const { data: commissionsData } = await supabase
+        .from('organizational_commissions')
+        .select('*')
+        .in('organization_id', orgIds)
+        .order('created_at', { ascending: false })
+      
+      console.log('🔍 Org IDs:', orgIds)
+      console.log('💰 Org Commissions:', commissionsData)
+      
+      setOrgCommissions(commissionsData || [])
+      
+      // YENİ - Analytics yükle
+      await loadOrganizationAnalytics(orgs)
+    }
+
+  } catch (error) {
+    console.error('Error loading organizations:', error)
+  } finally {
+    setLoading(false)
+  }
+}
+
+// YENİ FONKSİYON - loadOrganizations'tan SONRA ekle
+const loadOrganizationAnalytics = async (orgs) => {
+  try {
+    const analyticsData = []
+    let totalQR = 0, totalProfile = 0, totalVCard = 0, totalLink = 0
+
+    for (const org of orgs) {
+      const { data } = await supabase.rpc('get_org_member_analytics', {
+        org_id: org.id
       })
 
-      // Organizational commissions yükle
-      if (orgs && orgs.length > 0) {
-        const orgIds = orgs.map(o => o.id)
-        
-        const { data: commissionsData } = await supabase
-          .from('organizational_commissions')
-          .select('*')
-          .in('organization_id', orgIds)
-          .order('created_at', { ascending: false })
-        
-        console.log('🔍 Org IDs:', orgIds)
-        console.log('💰 Org Commissions:', commissionsData)
-        
-        setOrgCommissions(commissionsData || [])
-      }
+      if (data && data.length > 0) {
+        analyticsData.push({
+          orgId: org.id,
+          orgName: org.name,
+          members: data
+        })
 
-    } catch (error) {
-      console.error('Error loading organizations:', error)
-    } finally {
-      setLoading(false)
+        data.forEach(member => {
+          totalQR += member.qr_scans || 0
+          totalProfile += member.profile_views || 0
+          totalVCard += member.vcard_downloads || 0
+          totalLink += member.link_clicks || 0
+        })
+      }
     }
+
+    setOrgAnalytics(analyticsData)
+    setTotalAnalytics({
+      qr_scans: totalQR,
+      profile_views: totalProfile,
+      vcard_downloads: totalVCard,
+      link_clicks: totalLink
+    })
+  } catch (error) {
+    console.error('Analytics loading error:', error)
   }
+}
 
   const selectOrganization = (org, showType = 'members') => {
     setSelectedOrg(org)
@@ -200,56 +250,126 @@ const handleExportCommissions = async () => {
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid md:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-                Toplam Organizasyon
-              </p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">
-                {stats.totalOrgs}
-              </p>
-            </div>
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <Building2 className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-green-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-                Toplam Üye
-              </p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">
-                {stats.totalMembers}
-              </p>
-            </div>
-            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-              <Users className="w-8 h-8 text-green-600 dark:text-green-400" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-                Aktif Üye
-              </p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">
-                {stats.activeMembers}
-              </p>
-            </div>
-            <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-              <UserCheck className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-            </div>
-          </div>
-        </div>
+        {/* ... mevcut 3 kart ... */}
       </div>
-{/* Export Buttons */}
-<div className="flex gap-2 mb-4">
+
+      {/* TOPLAM ANALYTICS KARTLARI - Sadece Premium */}
+      {(subscription?.plan === 'professional' || subscription?.plan === 'enterprise') && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            📊 Toplam Analytics
+          </h2>
+          <div className="grid md:grid-cols-4 gap-4">
+            {/* ... 4 kart ... */}
+          </div>
+        </div>
+      )}  {/* ← BURASI KAPANMALI! */}
+
+      {/* ÜYE BAZLI ANALYTICS - Sadece Premium */}
+      {(subscription?.plan === 'professional' || subscription?.plan === 'enterprise') && orgAnalytics.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+    <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+      👥 Üye Bazlı Analytics
+          </h2>
+
+          {/* FREE PLAN UYARISI */}
+{subscription?.plan === 'free' && (
+  <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg p-6 text-white">
+    <h3 className="text-xl font-bold mb-2">📊 Kurumsal Analytics</h3>
+    <p className="text-purple-100 mb-4">
+      Organizasyon üyelerinin detaylı istatistiklerini görmek için planınızı yükseltin
+    </p>
+    <button
+      onClick={() => window.location.href = '/dashboard'}
+      className="px-6 py-3 bg-white text-purple-600 rounded-xl font-semibold hover:shadow-xl transition-all"
+    >
+      Planı Yükselt
+    </button>
+  </div>
+)}
+          
+          {orgAnalytics.map((orgData) => (
+            <div key={orgData.orgId} className="mb-6 last:mb-0">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
+                {orgData.orgName}
+              </h3>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-700/50">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
+                        Üye
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
+                        QR Tarama
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
+                        Profil Görüntüleme
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
+                        vCard İndirme
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
+                        Link Tıklama
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {orgData.members.map((member) => (
+                      <tr key={member.profile_id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            {member.avatar_url ? (
+                              <img 
+                                src={member.avatar_url} 
+                                alt={member.name}
+                                className="w-8 h-8 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                                <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                                  {member.name?.charAt(0) || '?'}
+                                </span>
+                              </div>
+                            )}
+                            <span className="font-medium text-gray-900 dark:text-gray-100">
+                              {member.name || 'İsimsiz'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                            {member.qr_scans || 0}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                            {member.profile_views || 0}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                            {member.vcard_downloads || 0}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                            {member.link_clicks || 0}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Export Buttons */}
+      <div className="flex gap-2 mb-4">
   <button
     onClick={handleExportMembers}
     className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-all text-sm flex items-center gap-2"
