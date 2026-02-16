@@ -1,206 +1,276 @@
 import { useState } from 'react'
-import { PaymentService, PayTRService, IyzicoService } from '../services/paymentService'
-import { CreditCard, CheckCircle, AlertCircle } from 'lucide-react'
+import { X, CreditCard, Check } from 'lucide-react'
 
-export default function PaymentModal({ plan, billingCycle, profile, onSuccess, onClose }) {
+export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal = false, currentSubscription = null }) {
+  const [selectedPeriod, setSelectedPeriod] = useState('monthly')
+  const [includeNFC, setIncludeNFC] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const [paymentMethod, setPaymentMethod] = useState('paytr') // 'paytr' veya 'iyzico'
 
-  const amount = PaymentService.calculatePrice(plan, billingCycle)
-  const orderId = PaymentService.generateOrderId()
+  if (!isOpen) return null
 
-  const planNames = {
-    professional: 'Profesyonel',
-    stk: 'STK Özel',
-    corporate: 'Kurumsal'
+  // NFC kart fiyatları
+  const NFC_PRICE = 899
+
+  // Plan fiyatları
+  const planPricing = {
+    professional: {
+      monthly: 299,
+      yearly: 2990
+    },
+    enterprise: {
+      monthly: 999,
+      yearly: 9990
+    }
   }
 
+  // Yenileme kontrolü: Kullanıcı daha önce NFC kart almış mı?
+  const hasOrderedNFCBefore = currentSubscription?.nfc_cards_ordered > 0
+  
+  // Yenileme işlemiyse ve NFC kart almamışsa NFC seçeneğini göster
+  const showNFCOption = !isRenewal || !hasOrderedNFCBefore
+
+  // Seçilen plan fiyatı
+  const planPrice = planPricing[selectedPlan]?.[selectedPeriod] || 0
+  
+  // NFC kart fiyatı (sadece gösterilmesi gerekiyorsa)
+  const nfcPrice = (showNFCOption && includeNFC) ? NFC_PRICE : 0
+  
+  // Toplam fiyat
+  const totalPrice = planPrice + nfcPrice
+
+  // Yıllık indirim hesaplama
+  const monthlyTotal = planPricing[selectedPlan]?.monthly * 12
+  const yearlyDiscount = selectedPeriod === 'yearly' ? monthlyTotal - planPricing[selectedPlan]?.yearly : 0
+
   const handlePayment = async () => {
-    setLoading(true)
-    setError(null)
-
     try {
-      const paymentData = {
-        userEmail: profile.email,
-        userPhone: profile.phone || '+905551234567',
-        userName: profile.name || 'Kullanıcı',
-        userAddress: 'Türkiye',
-        userCity: 'Istanbul',
-        amount: paymentMethod === 'paytr' ? amount * 100 : amount, // PayTR kuruş, iyzico TL
-        orderId: orderId,
-        productName: `Qartim ${planNames[plan]} - ${billingCycle === 'yearly' ? 'Yıllık' : 'Aylık'}`,
-        successUrl: `${window.location.origin}/payment/success?order=${orderId}`,
-        failUrl: `${window.location.origin}/payment/fail?order=${orderId}`,
-        callbackUrl: `${window.location.origin}/api/payment/callback`
-      }
+      setLoading(true)
+      
+      // Ödeme işlemi burada yapılacak
+      // Şimdilik mock
+      console.log('Ödeme başlatılıyor:', {
+        plan: selectedPlan,
+        period: selectedPeriod,
+        includeNFC: showNFCOption ? includeNFC : false,
+        totalPrice: totalPrice,
+        isRenewal: isRenewal
+      })
 
-      if (paymentMethod === 'paytr') {
-        // PayTR ile ödeme
-        const token = await PayTRService.createPayment(paymentData)
-        PayTRService.openPaymentIframe(token)
-        
-        // Ödeme tamamlandıktan sonra subscription güncelle
-        // (Gerçekte callback'ten gelecek)
-        setTimeout(async () => {
-          await PaymentService.updateSubscriptionAfterPayment(
-            profile.id,
-            plan,
-            billingCycle,
-            amount
-          )
-          
-          // Referral commission oluştur
-          if (profile.referred_by) {
-            await PaymentService.createReferralCommission(
-              profile.referred_by,
-              profile.id,
-              plan,
-              billingCycle,
-              amount
-            )
-          }
-          
-          onSuccess()
-        }, 5000)
-        
-      } else if (paymentMethod === 'iyzico') {
-        // iyzico ile ödeme
-        const result = await IyzicoService.createPayment(paymentData)
-        IyzicoService.openCheckoutForm(result.checkoutFormContent)
-        
-        // Callback'ten sonra subscription güncelle
-      }
-    } catch (err) {
-      console.error('Payment error:', err)
-      setError(err.message || 'Ödeme başlatılamadı')
+      // Başarılı ödeme sonrası
+      alert(`${isRenewal ? 'Yenileme' : 'Ödeme'} başarılı! Toplam: ₺${totalPrice.toLocaleString('tr-TR')}`)
+      onClose()
+      
+    } catch (error) {
+      console.error('Ödeme hatası:', error)
+      alert('Ödeme işlemi başarısız oldu.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Ödeme
-          </h2>
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              {isRenewal ? '🔄 Abonelik Yenileme' : '💳 Ödeme'}
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              {selectedPlan === 'professional' ? 'Professional' : 'Enterprise'} Plan
+            </p>
+          </div>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center transition-colors"
           >
-            ✕
+            <X size={20} />
           </button>
         </div>
 
-        {/* Plan Özeti */}
-        <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-700 dark:text-gray-300 font-semibold">
-              {planNames[plan]} Plan
-            </span>
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              {billingCycle === 'yearly' ? 'Yıllık' : 'Aylık'}
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-gray-900 dark:text-white">
-              ₺{amount.toLocaleString('tr-TR')}
-            </span>
-            <span className="text-gray-600 dark:text-gray-400">
-              /{billingCycle === 'yearly' ? 'yıl' : 'ay'}
-            </span>
-          </div>
+        {/* Content */}
+        <div className="p-6 space-y-6">
           
-          {billingCycle === 'yearly' && (
-            <div className="mt-3 flex items-center gap-2 text-sm text-green-700 dark:text-green-300">
-              <CheckCircle size={16} />
-              <span>
-                {plan === 'professional' && '1 NFC kart hediye'}
-                {plan === 'stk' && '6 NFC kart hediye (Admin + 5 üye)'}
-                {plan === 'corporate' && '10 NFC kart hediye'}
-              </span>
+          {/* Yenileme Uyarısı */}
+          {isRenewal && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+              <p className="text-sm text-blue-900 dark:text-blue-100">
+                ℹ️ Mevcut aboneliğinizi yeniliyorsunuz. Yeni dönem mevcut sürenizin bitiminde başlayacaktır.
+              </p>
             </div>
           )}
-        </div>
 
-        {/* Ödeme Yöntemi Seçimi */}
-        <div className="mb-6">
-          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-            Ödeme Yöntemi
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => setPaymentMethod('paytr')}
-              className={`p-4 border-2 rounded-xl transition-all ${
-                paymentMethod === 'paytr'
-                  ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-blue-400'
-              }`}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <CreditCard size={20} className={paymentMethod === 'paytr' ? 'text-blue-600' : 'text-gray-600'} />
-                <span className={`font-semibold ${paymentMethod === 'paytr' ? 'text-blue-900 dark:text-blue-100' : 'text-gray-700 dark:text-gray-300'}`}>
-                  PayTR
+          {/* Periyot Seçimi */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+              Abonelik Periyodu
+            </label>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Aylık */}
+              <button
+                onClick={() => setSelectedPeriod('monthly')}
+                className={`p-4 rounded-xl border-2 transition-all ${
+                  selectedPeriod === 'monthly'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    📅 Aylık
+                  </span>
+                  {selectedPeriod === 'monthly' && <Check size={18} className="text-blue-500" />}
+                </div>
+                <p className="text-2xl font-bold text-blue-600">
+                  ₺{planPricing[selectedPlan]?.monthly.toLocaleString('tr-TR')}
+                  <span className="text-sm text-gray-500">/ay</span>
+                </p>
+              </button>
+
+              {/* Yıllık */}
+              <button
+                onClick={() => setSelectedPeriod('yearly')}
+                className={`p-4 rounded-xl border-2 transition-all relative ${
+                  selectedPeriod === 'yearly'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                }`}
+              >
+                {yearlyDiscount > 0 && (
+                  <div className="absolute -top-3 -right-3 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                    ₺{yearlyDiscount.toLocaleString('tr-TR')} İndirim
+                  </div>
+                )}
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    🎯 Yıllık
+                  </span>
+                  {selectedPeriod === 'yearly' && <Check size={18} className="text-blue-500" />}
+                </div>
+                <p className="text-2xl font-bold text-blue-600">
+                  ₺{planPricing[selectedPlan]?.yearly.toLocaleString('tr-TR')}
+                  <span className="text-sm text-gray-500">/yıl</span>
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  Aylık ~₺{Math.round(planPricing[selectedPlan]?.yearly / 12).toLocaleString('tr-TR')}
+                </p>
+              </button>
+            </div>
+          </div>
+
+          {/* NFC Kart Seçeneği - Sadece ilk alımda veya daha önce almamışsa göster */}
+          {showNFCOption && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                NFC Kart (Opsiyonel)
+              </label>
+              <div 
+                onClick={() => setIncludeNFC(!includeNFC)}
+                className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                  includeNFC
+                    ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <CreditCard size={24} className={includeNFC ? 'text-purple-600' : 'text-gray-400'} />
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">
+                        Premium NFC Kart Ekle
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Fiziksel akıllı kartvizit
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-bold text-purple-600">
+                      +₺{NFC_PRICE.toLocaleString('tr-TR')}
+                    </p>
+                    {includeNFC && <Check size={18} className="text-purple-500 ml-auto mt-1" />}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* NFC Kart Zaten Alınmış Bilgisi */}
+          {!showNFCOption && isRenewal && (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
+              <p className="text-sm text-green-900 dark:text-green-100">
+                ✅ NFC kartınız mevcut. Yenileme işleminde sadece abonelik ücretini ödeyeceksiniz.
+              </p>
+            </div>
+          )}
+
+          {/* Fiyat Özeti */}
+          <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 space-y-3">
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
+              Fiyat Özeti
+            </h3>
+            
+            {/* Plan Fiyatı */}
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600 dark:text-gray-400">
+                {selectedPlan === 'professional' ? 'Professional' : 'Enterprise'} Plan
+                ({selectedPeriod === 'yearly' ? 'Yıllık' : 'Aylık'})
+              </span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100">
+                ₺{planPrice.toLocaleString('tr-TR')}
+              </span>
+            </div>
+
+            {/* NFC Kart (varsa) */}
+            {showNFCOption && includeNFC && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400">
+                  Premium NFC Kart
+                </span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                  ₺{NFC_PRICE.toLocaleString('tr-TR')}
                 </span>
               </div>
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                Tüm kartlar
-              </p>
-            </button>
+            )}
 
-            <button
-              onClick={() => setPaymentMethod('iyzico')}
-              className={`p-4 border-2 rounded-xl transition-all ${
-                paymentMethod === 'iyzico'
-                  ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-blue-400'
-              }`}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <CreditCard size={20} className={paymentMethod === 'iyzico' ? 'text-blue-600' : 'text-gray-600'} />
-                <span className={`font-semibold ${paymentMethod === 'iyzico' ? 'text-blue-900 dark:text-blue-100' : 'text-gray-700 dark:text-gray-300'}`}>
-                  iyzico
+            {/* Divider */}
+            <div className="border-t border-gray-200 dark:border-gray-600 pt-3">
+              <div className="flex items-center justify-between">
+                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  Toplam
+                </span>
+                <span className="text-2xl font-bold text-blue-600">
+                  ₺{totalPrice.toLocaleString('tr-TR')}
                 </span>
               </div>
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                Güvenli ödeme
-              </p>
-            </button>
+            </div>
           </div>
-        </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
-            <AlertCircle className="text-red-600 dark:text-red-400 flex-shrink-0" size={20} />
-            <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
-          >
-            İptal
-          </button>
+          {/* Ödeme Butonu */}
           <button
             onClick={handlePayment}
             disabled={loading}
-            className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-bold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Yükleniyor...' : 'Ödemeye Geç'}
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                İşleniyor...
+              </span>
+            ) : (
+              `${isRenewal ? 'Yenile' : 'Ödemeyi Tamamla'} - ₺${totalPrice.toLocaleString('tr-TR')}`
+            )}
           </button>
-        </div>
 
-        {/* Info */}
-        <p className="mt-4 text-xs text-center text-gray-500 dark:text-gray-400">
-          Ödeme güvenli bir şekilde {paymentMethod === 'paytr' ? 'PayTR' : 'iyzico'} üzerinden yapılacaktır.
-        </p>
+          {/* Güvenlik Bilgisi */}
+          <div className="text-center">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              🔒 Güvenli ödeme altyapısı ile korunmaktasınız
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )
