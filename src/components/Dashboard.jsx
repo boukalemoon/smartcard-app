@@ -17,6 +17,8 @@ import QRCodeDisplay from './QRCodeDisplay'
 import NFCWriter from './NFCWriter'
 import SocialLinksManager from './SocialLinksManager'
 import UsernameEditor from './UsernameEditor'
+import { validateCatalogLink, validateService, validateProfile } from '../utils/inputValidation'
+import { checkProfileUpdateRateLimit } from '../utils/rateLimiting'
 
 export default function Dashboard({ session }) {
   const [profile, setProfile] = useState(null)
@@ -125,48 +127,65 @@ useEffect(() => {
 }, [profile])
 
   const saveProfile = async () => {
-    try {
-      setLoading(true)
-      
-      if (profile) {
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            name,
-            title,
-            company,
-            phone,
-            bio,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('user_id', session.user.id)
-
-        if (error) throw error
-      } else {
-        const { error } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: session.user.id,
-            email: session.user.email,
-            name,
-            title,
-            company,
-            phone,
-            bio,
-          })
-
-        if (error) throw error
-      }
-
-      alert('Profil kaydedildi!')
-      setEditing(false)
-      loadProfile()
-    } catch (error) {
-      alert('Hata: ' + error.message)
-    } finally {
+  try {
+    setLoading(true)
+    
+    // Rate limiting kontrolü
+    const rateCheck = checkProfileUpdateRateLimit(session.user.id)
+    if (!rateCheck.allowed) {
+      alert(`⏳ ${rateCheck.message}`)
       setLoading(false)
+      return
     }
+    
+    // Input validation
+    const validation = validateProfile({
+      name,
+      title,
+      company,
+      phone,
+      bio
+    })
+    
+    if (!validation.valid) {
+      const errorMessages = Object.values(validation.errors).join('\n')
+      alert('❌ Hata:\n' + errorMessages)
+      setLoading(false)
+      return
+    }
+    
+    if (profile) {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          ...validation.sanitized,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', session.user.id)
+
+      if (error) throw error
+    } else {
+      const { error } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: session.user.id,
+          email: session.user.email,
+          ...validation.sanitized,
+        })
+
+      if (error) throw error
+    }
+
+    alert('✅ Profil kaydedildi!')
+    setEditing(false)
+    loadProfile()
+  } catch (error) {
+    console.error('Profil kaydetme hatası:', error)
+    alert('❌ Hata: ' + error.message)
+  } finally {
+    setLoading(false)
   }
+}
 const updateAvatar = async (avatarUrl) => {
   try {
     const { error } = await supabase
@@ -781,28 +800,46 @@ const handleThemeColorChange = async (color) => {
     ))}
   </div>
 
+  {/* BUTON - TEK VE DOĞRU */}
   <button
-    onClick={() => {
+    onClick={async () => {
+      // Rate limiting kontrolü
+      const rateCheck = checkProfileUpdateRateLimit(session.user.id)
+      if (!rateCheck.allowed) {
+        alert(`⏳ ${rateCheck.message}`)
+        return
+      }
+
       const title = prompt('Döküman başlığı (örn: Ürün Kataloğu):')
       if (!title) return
       
       const url = prompt('Döküman linki (Google Drive, Dropbox, vb.):')
       if (!url) return
       
-      const newLink = { title, url, type: 'document' }
-      const newLinks = [...(profile.catalog_links || []), newLink]
+      // Validation
+      const validation = validateCatalogLink({ title, url, type: 'document' })
       
-      supabase
-        .from('profiles')
-        .update({ catalog_links: newLinks })
-        .eq('user_id', session.user.id)
-        .then(({ error }) => {
-          if (error) {
-            alert('Hata: ' + error.message)
-            return
-          }
-          setProfile(prev => ({ ...prev, catalog_links: newLinks }))
-        })
+      if (!validation.valid) {
+        alert('❌ Hata:\n' + validation.errors.join('\n'))
+        return
+      }
+      
+      const newLinks = [...(profile.catalog_links || []), validation.sanitized]
+      
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ catalog_links: newLinks })
+          .eq('user_id', session.user.id)
+        
+        if (error) throw error
+        
+        setProfile(prev => ({ ...prev, catalog_links: newLinks }))
+        alert('✅ Katalog eklendi!')
+      } catch (error) {
+        console.error('Katalog ekleme hatası:', error)
+        alert('❌ Hata: ' + error.message)
+      }
     }}
     className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
   >
@@ -816,93 +853,109 @@ const handleThemeColorChange = async (color) => {
 
 {/* Hizmetler/Mağaza */}
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
-        🛍️ Hizmetlerim
-      </h3>
-      
-      <div className="space-y-3 mb-4">
-        {(profile.services || []).map((service, index) => (
-          <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex-1">
-                <h4 className="font-semibold text-gray-900 dark:text-gray-100">{service.title}</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{service.description}</p>
-              </div>
-              <button
-                onClick={async () => {
-                  const newServices = profile.services.filter((_, i) => i !== index)
-                  const { error } = await supabase
-                    .from('profiles')
-                    .update({ services: newServices })
-                    .eq('user_id', session.user.id)
-                  
-                  if (error) {
-                    alert('Hata: ' + error.message)
-                    return
-                  }
-                  setProfile(prev => ({ ...prev, services: newServices }))
-                }}
-                className="text-red-600 hover:text-red-700 text-sm font-semibold shrink-0"
-              >
-                Sil
-              </button>
-            </div>
-            <div className="flex items-center gap-4 text-sm">
-              <span className="font-bold text-blue-600">₺{service.price}</span>
-              {service.delivery_time && (
-                <span className="text-gray-500">⏱️ {service.delivery_time}</span>
-              )}
-            </div>
+  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+    🛍️ Hizmetlerim
+  </h3>
+  
+  <div className="space-y-3 mb-4">
+    {(profile.services || []).map((service, index) => (
+      <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex-1">
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100">{service.title}</h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{service.description}</p>
           </div>
-        ))}
-      </div>
-
-      <button
-        onClick={() => {
-          const title = prompt('Hizmet adı (örn: Logo Tasarımı):')
-          if (!title) return
-          
-          const description = prompt('Açıklama:')
-          if (!description) return
-          
-          const price = prompt('Fiyat (TL):')
-          if (!price) return
-          
-          const delivery_time = prompt('Teslim süresi (örn: 3-5 gün):')
-          
-          const newService = {
-            title,
-            description,
-            price: parseFloat(price),
-            currency: 'TRY',
-            delivery_time: delivery_time || null,
-            category: 'general'
-          }
-          
-          const newServices = [...(profile.services || []), newService]
-          
-          supabase
-            .from('profiles')
-            .update({ services: newServices })
-            .eq('user_id', session.user.id)
-            .then(({ error }) => {
+          <button
+            onClick={async () => {
+              const newServices = profile.services.filter((_, i) => i !== index)
+              const { error } = await supabase
+                .from('profiles')
+                .update({ services: newServices })
+                .eq('user_id', session.user.id)
+              
               if (error) {
                 alert('Hata: ' + error.message)
                 return
               }
               setProfile(prev => ({ ...prev, services: newServices }))
-              alert('✅ Hizmet eklendi!')
-            })
-        }}
-        className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
-      >
-        + Hizmet Ekle
-      </button>
+            }}
+            className="text-red-600 hover:text-red-700 text-sm font-semibold shrink-0"
+          >
+            Sil
+          </button>
+        </div>
+        <div className="flex items-center gap-4 text-sm">
+          <span className="font-bold text-blue-600">₺{service.price}</span>
+          {service.delivery_time && (
+            <span className="text-gray-500">⏱️ {service.delivery_time}</span>
+          )}
+        </div>
+      </div>
+    ))}
+  </div>
+
+  {/* BUTON - TEK VE DOĞRU */}
+  <button
+    onClick={async () => {
+      // Rate limiting kontrolü
+      const rateCheck = checkProfileUpdateRateLimit(session.user.id)
+      if (!rateCheck.allowed) {
+        alert(`⏳ ${rateCheck.message}`)
+        return
+      }
+
+      const title = prompt('Hizmet adı (örn: Logo Tasarımı):')
+      if (!title) return
       
-      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-        💡 Freelance hizmetlerinizi ekleyin ve profilinizde sergileyin
-      </p>
-    </div>
+      const description = prompt('Açıklama:')
+      if (!description) return
+      
+      const price = prompt('Fiyat (TL):')
+      if (!price) return
+      
+      const delivery_time = prompt('Teslim süresi (örn: 3-5 gün):')
+      
+      // Validation
+      const validation = validateService({
+        title,
+        description,
+        price,
+        delivery_time,
+        currency: 'TRY',
+        category: 'general'
+      })
+      
+      if (!validation.valid) {
+        alert('❌ Hata:\n' + validation.errors.join('\n'))
+        return
+      }
+      
+      const newServices = [...(profile.services || []), validation.sanitized]
+      
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ services: newServices })
+          .eq('user_id', session.user.id)
+        
+        if (error) throw error
+        
+        setProfile(prev => ({ ...prev, services: newServices }))
+        alert('✅ Hizmet eklendi!')
+      } catch (error) {
+        console.error('Hizmet ekleme hatası:', error)
+        alert('❌ Hata: ' + error.message)
+      }
+    }}
+    className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
+  >
+    + Hizmet Ekle
+  </button>
+  
+  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+    💡 Freelance hizmetlerinizi ekleyin ve profilinizde sergileyin
+  </p>
+</div>
 
     {/* Google Yorum Entegrasyonu */}
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
