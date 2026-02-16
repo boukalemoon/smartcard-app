@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabaseClient'
 import { Users, TrendingUp, Gift, Copy, Check } from 'lucide-react'
 
 export default function ReferralDashboard({ userId }) {
@@ -15,15 +16,98 @@ export default function ReferralDashboard({ userId }) {
     try {
       setLoading(true)
       
-      // API endpoint'ten referral verilerini al
-      const response = await fetch(`/api/referrals/${userId}`)
-      if (!response.ok) throw new Error('Referral verileri alınamadı')
-      
-      const data = await response.json()
-      
-      setReferralCode(data.referralCode)
-      setReferralData(data.stats)
-      
+      // Kullanıcının referral kodunu al
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .select('referral_code')
+        .eq('id', userId)
+        .single()
+
+      if (userError) throw userError
+      setReferralCode(userData.referral_code)
+
+      // Referral istatistiklerini al
+      const { data: referrals, error: referralsError } = await supabase
+        .from('referrals')
+        .select(`
+          *,
+          referred_user:profiles!referrals_referred_user_id_fkey(
+            name,
+            email,
+            subscription_tier,
+            subscription_period
+          )
+        `)
+        .eq('referrer_id', userId)
+
+      if (referralsError) throw referralsError
+
+      // İstatistikleri hesapla
+      const stats = {
+        totalReferrals: referrals.length,
+        activeReferrals: referrals.filter(r => r.status === 'active').length,
+        totalEarnings: 0,
+        pendingEarnings: 0,
+        referralsList: []
+      }
+
+      // Fiyatlandırma tablosu
+      const pricing = {
+        professional: {
+          monthly: 299,
+          yearly: 2990
+        },
+        enterprise: {
+          monthly: 999,
+          yearly: 9990
+        }
+      }
+
+      // Her referral için kazanç hesapla
+      referrals.forEach(referral => {
+        const tier = referral.referred_user?.subscription_tier
+        const period = referral.referred_user?.subscription_period || 'monthly'
+
+        let monthlyEarning = 0
+        let displayEarning = 0
+
+        if (tier === 'professional') {
+          if (period === 'yearly') {
+            // Yıllık abonelik: Yıllık kazancı göster
+            monthlyEarning = pricing.professional.yearly * 0.10 / 12 // Aylık dağılım
+            displayEarning = pricing.professional.yearly * 0.10 // Toplam yıllık kazanç
+          } else {
+            // Aylık abonelik: Aylık kazancı göster
+            monthlyEarning = pricing.professional.monthly * 0.10
+            displayEarning = pricing.professional.monthly * 0.10
+          }
+        } else if (tier === 'enterprise') {
+          if (period === 'yearly') {
+            // Yıllık abonelik: Yıllık kazancı göster
+            monthlyEarning = pricing.enterprise.yearly * 0.10 / 12 // Aylık dağılım
+            displayEarning = pricing.enterprise.yearly * 0.10 // Toplam yıllık kazanç
+          } else {
+            // Aylık abonelik: Aylık kazancı göster
+            monthlyEarning = pricing.enterprise.monthly * 0.10
+            displayEarning = pricing.enterprise.monthly * 0.10
+          }
+        }
+
+        // Toplam kazanç hesaplama (aylık bazda)
+        if (referral.status === 'active') {
+          stats.totalEarnings += monthlyEarning
+        } else if (referral.status === 'pending') {
+          stats.pendingEarnings += monthlyEarning
+        }
+
+        stats.referralsList.push({
+          ...referral,
+          earning: displayEarning,
+          period: period
+        })
+      })
+
+      setReferralData(stats)
     } catch (error) {
       console.error('Referral verileri alınamadı:', error)
     } finally {
