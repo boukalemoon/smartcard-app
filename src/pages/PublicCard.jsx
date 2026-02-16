@@ -254,35 +254,80 @@ END:VCARD`;
             {/* Social Links */}
             {socialLinks.length > 0 && (
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-3">Sosyal Medya</h3>
-                <div className="grid gap-2">
-                  {socialLinks.map((link) => (
+                ...
+              </div>
+            )}
 
+         {/* Katalog & Dökümanlar */}
+            {profile.catalog_links && profile.catalog_links.length > 0 && (
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-3">📁 Katalog & Dökümanlar</h3>
+                <div className="grid gap-2">
+                  {profile.catalog_links.map((link, index) => (
                     <a
-                      key={link.id}
+                      key={index}
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      onClick={() => {
-                        if (profile?.id) {
-                          trackEvent(profile.id, 'link_click', { 
-                            platform: link.platform,
-                            url: link.url 
-                          });
-                        }
-                      }}
                       className="flex items-center gap-3 p-3 rounded-lg transition-colors"
                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${profile?.theme_color}15`}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                     <span style={{ color: profile?.theme_color || '#6B7280' }}>
-                      {getSocialIcon(link.platform)}
-                     </span>
-                      <span className="text-gray-700 dark:text-gray-300 capitalize">{link.platform}</span>
+                      <span style={{ color: profile?.theme_color || '#6B7280' }}>📄</span>
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">{link.title}</span>
                       <ExternalLink className="ml-auto text-gray-400" size={16} />
                     </a>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Hizmetler */}
+            {profile.services && profile.services.length > 0 && (
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-3">🛍️ Hizmetlerim</h3>
+                <div className="grid gap-3">
+                  {profile.services.map((service, index) => (
+                    <div
+                      key={index}
+                      className="p-4 rounded-lg transition-colors"
+                      style={{ backgroundColor: `${profile?.theme_color}10` }}
+                    >
+                      <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                        {service.title}
+                      </h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        {service.description}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold" style={{ color: profile?.theme_color || '#10B981' }}>
+                          ₺{service.price}
+                        </span>
+                        {service.delivery_time && (
+                          <span className="text-sm text-gray-500">⏱️ {service.delivery_time}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Google Yorum */}
+            {profile.google_review_link && (
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+               <a 
+                  href={profile.google_review_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 p-4 rounded-lg transition-all"
+                  style={{
+                    background: `linear-gradient(to right, ${profile?.theme_color || '#10B981'}, ${adjustColor(profile?.theme_color || '#10B981', -30)})`
+                  }}
+                >
+                  <span className="text-white text-2xl">⭐</span>
+                  <span className="text-white font-semibold">Google'da Yorum Yap</span>
+                </a>
               </div>
             )}
 

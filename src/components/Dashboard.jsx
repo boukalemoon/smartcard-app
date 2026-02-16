@@ -27,6 +27,9 @@ export default function Dashboard({ session }) {
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [analytics, setAnalytics] = useState(null)
+  const [orgAnalytics, setOrgAnalytics] = useState([])
+  const [totalAnalytics, setTotalAnalytics] = useState({ views: 0, downloads: 0 })
+  
   
   
   // Dashboard mode
@@ -733,6 +736,255 @@ const handleThemeColorChange = async (color) => {
       </div>
     </div>
 
+
+
+{/* Katalog & Dökümanlar */}
+<div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+    📁 Katalog & Dökümanlar
+  </h3>
+  
+  <div className="space-y-3 mb-4">
+    {(profile.catalog_links || []).map((link, index) => (
+      <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <p className="font-semibold text-gray-900 dark:text-gray-100 mb-1">{link.title}</p>
+          <a 
+            href={link.url} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-sm text-blue-600 hover:underline block truncate"
+            title={link.url}
+          >
+            {link.url}
+          </a>
+        </div>
+        <button
+          onClick={async () => {
+            const newLinks = profile.catalog_links.filter((_, i) => i !== index)
+            const { error } = await supabase
+              .from('profiles')
+              .update({ catalog_links: newLinks })
+              .eq('user_id', session.user.id)
+            
+            if (error) {
+              alert('Hata: ' + error.message)
+              return
+            }
+            setProfile(prev => ({ ...prev, catalog_links: newLinks }))
+          }}
+          className="text-red-600 hover:text-red-700 text-sm font-semibold shrink-0 mt-1"
+        >
+          Sil
+        </button>
+      </div>
+    ))}
+  </div>
+
+  <button
+    onClick={() => {
+      const title = prompt('Döküman başlığı (örn: Ürün Kataloğu):')
+      if (!title) return
+      
+      const url = prompt('Döküman linki (Google Drive, Dropbox, vb.):')
+      if (!url) return
+      
+      const newLink = { title, url, type: 'document' }
+      const newLinks = [...(profile.catalog_links || []), newLink]
+      
+      supabase
+        .from('profiles')
+        .update({ catalog_links: newLinks })
+        .eq('user_id', session.user.id)
+        .then(({ error }) => {
+          if (error) {
+            alert('Hata: ' + error.message)
+            return
+          }
+          setProfile(prev => ({ ...prev, catalog_links: newLinks }))
+        })
+    }}
+    className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
+  >
+    + Döküman Ekle
+  </button>
+  
+  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+    💡 Google Drive, Dropbox veya kendi web sitenizden link ekleyin
+  </p>
+</div>
+
+{/* Hizmetler/Mağaza */}
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+        🛍️ Hizmetlerim
+      </h3>
+      
+      <div className="space-y-3 mb-4">
+        {(profile.services || []).map((service, index) => (
+          <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex-1">
+                <h4 className="font-semibold text-gray-900 dark:text-gray-100">{service.title}</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{service.description}</p>
+              </div>
+              <button
+                onClick={async () => {
+                  const newServices = profile.services.filter((_, i) => i !== index)
+                  const { error } = await supabase
+                    .from('profiles')
+                    .update({ services: newServices })
+                    .eq('user_id', session.user.id)
+                  
+                  if (error) {
+                    alert('Hata: ' + error.message)
+                    return
+                  }
+                  setProfile(prev => ({ ...prev, services: newServices }))
+                }}
+                className="text-red-600 hover:text-red-700 text-sm font-semibold shrink-0"
+              >
+                Sil
+              </button>
+            </div>
+            <div className="flex items-center gap-4 text-sm">
+              <span className="font-bold text-blue-600">₺{service.price}</span>
+              {service.delivery_time && (
+                <span className="text-gray-500">⏱️ {service.delivery_time}</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={() => {
+          const title = prompt('Hizmet adı (örn: Logo Tasarımı):')
+          if (!title) return
+          
+          const description = prompt('Açıklama:')
+          if (!description) return
+          
+          const price = prompt('Fiyat (TL):')
+          if (!price) return
+          
+          const delivery_time = prompt('Teslim süresi (örn: 3-5 gün):')
+          
+          const newService = {
+            title,
+            description,
+            price: parseFloat(price),
+            currency: 'TRY',
+            delivery_time: delivery_time || null,
+            category: 'general'
+          }
+          
+          const newServices = [...(profile.services || []), newService]
+          
+          supabase
+            .from('profiles')
+            .update({ services: newServices })
+            .eq('user_id', session.user.id)
+            .then(({ error }) => {
+              if (error) {
+                alert('Hata: ' + error.message)
+                return
+              }
+              setProfile(prev => ({ ...prev, services: newServices }))
+              alert('✅ Hizmet eklendi!')
+            })
+        }}
+        className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
+      >
+        + Hizmet Ekle
+      </button>
+      
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+        💡 Freelance hizmetlerinizi ekleyin ve profilinizde sergileyin
+      </p>
+    </div>
+
+    {/* Google Yorum Entegrasyonu */}
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+        ⭐ Google Yorumlar
+      </h3>
+      
+      {profile.google_review_link ? (
+        <div className="space-y-3">
+          <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Google Yorum Linki:</p>
+            <a 
+              href={profile.google_review_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline text-sm block truncate"
+            >
+              {profile.google_review_link}
+            </a>
+          </div>
+          
+          <button
+            onClick={async () => {
+              if (!confirm('Google yorum linkini kaldırmak istediğinize emin misiniz?')) return
+              
+              const { error } = await supabase
+                .from('profiles')
+                .update({ google_review_link: null, google_place_id: null })
+                .eq('user_id', session.user.id)
+              
+              if (error) {
+                alert('Hata: ' + error.message)
+                return
+              }
+              setProfile(prev => ({ ...prev, google_review_link: null, google_place_id: null }))
+            }}
+            className="w-full py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+          >
+            Linki Kaldır
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Profilinize Google İşletme yorumlarınızı ekleyin
+          </p>
+          
+          <button
+            onClick={() => {
+              const link = prompt('Google İşletme yorum sayfası linkini yapıştırın:\n\n(Örnek: https://g.page/r/...)')
+              if (!link) return
+              
+              supabase
+                .from('profiles')
+                .update({ google_review_link: link })
+                .eq('user_id', session.user.id)
+                .then(({ error }) => {
+                  if (error) {
+                    alert('Hata: ' + error.message)
+                    return
+                  }
+                  setProfile(prev => ({ ...prev, google_review_link: link }))
+                  alert('✅ Google yorum linki eklendi!')
+                })
+            }}
+            className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
+          >
+            + Google Yorum Linki Ekle
+          </button>
+          
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
+            <p className="text-xs text-blue-800 dark:text-blue-200">
+              💡 <strong>Nasıl bulunur?</strong><br/>
+              1. Google'da işletmenizi arayın<br/>
+              2. "Yorum yaz" butonuna tıklayın<br/>
+              3. Açılan sayfanın linkini kopyalayın
+            </p>
+          </div>
+        </div>
+      )}
+    </div>  
+
     {profile && profile.username && (
   <>
     <QRCodeDisplay 
@@ -746,6 +998,8 @@ const handleThemeColorChange = async (color) => {
     <NFCWriter username={profile.username} />
   </>
 )}
+
+
 
 {/* NFC Kart - USERNAME OLMADAN! */}
 {profile && (
