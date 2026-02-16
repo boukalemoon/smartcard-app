@@ -93,12 +93,18 @@ export default function PublicCard() {
   };
 
   const downloadVCard = () => {
-    if (!profile) return;
+  if (!profile) return;
 
-    // vCard formatı oluştur
-    const vCard = `BEGIN:VCARD
+  // İsmi böl (Ad Soyad)
+  const nameParts = (profile.name || 'Unknown').split(' ');
+  const lastName = nameParts.length > 1 ? nameParts.pop() : '';
+  const firstName = nameParts.join(' ') || 'Unknown';
+
+  // vCard formatı oluştur (Apple uyumlu)
+  const vCard = `BEGIN:VCARD
 VERSION:3.0
 FN:${profile.name || 'Unknown'}
+N:${lastName};${firstName};;;
 TEL:${profile.phone || ''}
 EMAIL:${profile.email || ''}
 TITLE:${profile.title || ''}
@@ -107,20 +113,20 @@ NOTE:${profile.bio || ''}
 URL:${window.location.origin}/card/${profile.username}
 END:VCARD`;
 
-    // Blob oluştur ve indir
-    const blob = new Blob([vCard], { type: 'text/vcard;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${profile.username || 'contact'}.vcf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // Blob oluştur ve indir
+  const blob = new Blob([vCard], { type: 'text/vcard;charset=utf-8' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `${profile.username || 'contact'}.vcf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 
-    // Analytics tracking
-    if (profile?.id) {
-      trackEvent(profile.id, 'vcard_download');
-    }
-  };
+  // Analytics tracking
+  if (profile?.id) {
+    trackEvent(profile.id, 'vcard_download');
+  }
+};
 
   if (loading) {
     return (
