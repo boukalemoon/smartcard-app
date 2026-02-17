@@ -1,3 +1,5 @@
+import FAQ from '../components/landing/FAQ';
+import ScrollAnimations from '../components/landing/ScrollAnimations';
 import AnimatedHero from '../components/landing/AnimatedHero';
 import UseCases from '../components/landing/UseCases';
 import ComparisonTable from '../components/landing/ComparisonTable';
@@ -135,10 +137,10 @@ export default function LandingPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <img 
-                src="/qartim-logo.jpg" 
-                alt="Qartim Logo" 
-                className="h-16 w-auto"
-              />
+  src="/qartim-new-logo.png"
+  alt="Qartim Logo" 
+  className="h-16 w-auto"
+/>
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -392,6 +394,9 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* YENİ: FAQ */}
+<FAQ />
+
       {/* CTA Section */}
       <section className="py-20 px-4 bg-gradient-to-r from-blue-600 to-purple-600">
         <div className="max-w-4xl mx-auto text-center">
@@ -452,6 +457,9 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* YENİ: Scroll Animations */}
+      <ScrollAnimations />
     </div>
   );
 }

@@ -32,7 +32,7 @@ export default function AnimatedHero() {
   }, [isDigital]);
 
   return (
-    <div className="relative w-full max-w-md mx-auto h-96 flex items-center justify-center">
+    <div className="relative w-full max-w-md mx-auto h-[500px] flex items-center justify-center">
       
       {/* Kağıt Kartvizit */}
       <div
@@ -136,7 +136,7 @@ export default function AnimatedHero() {
 
       {/* Eco Indicator (floating) */}
       <div
-        className={`absolute -bottom-8 -right-8 transition-all duration-700 ${
+        className={`absolute -bottom-8 -right-8 z-20 transition-all duration-700 ${
           showEcoIndicator 
             ? 'opacity-100 translate-y-0' 
             : 'opacity-0 translate-y-4'
@@ -174,7 +174,7 @@ export default function AnimatedHero() {
       )}
 
       {/* CSS animasyonları için stil */}
-      <style jsx>{`
+      <style>{`
         @keyframes float {
           0%, 100% {
             transform: translateY(0);

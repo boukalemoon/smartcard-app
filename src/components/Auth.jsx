@@ -7,20 +7,18 @@ export default function Auth() {
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
-  const [mode, setMode] = useState('signup') // Referral gelince direkt signup
+  const [mode, setMode] = useState('signup')
   const [referralCode, setReferralCode] = useState(null)
 
   useEffect(() => {
-    // URL'den ref al
     const urlParams = new URLSearchParams(window.location.search)
     const ref = urlParams.get('ref')
     if (ref) {
       setReferralCode(ref)
-      setMode('signup') // Referral varsa direkt signup
+      setMode('signup')
       console.log('✅ Referral code captured:', ref)
     }
 
-    // LocalStorage'dan da kontrol et (backup)
     const savedRef = localStorage.getItem('qartim_referral_code')
     if (savedRef && !ref) {
       setReferralCode(savedRef)
@@ -29,7 +27,6 @@ export default function Auth() {
     }
   }, [])
 
-  // Ref varsa localStorage'a kaydet (page refresh'te kaybolmasın)
   useEffect(() => {
     if (referralCode) {
       localStorage.setItem('qartim_referral_code', referralCode)
@@ -39,54 +36,60 @@ export default function Auth() {
   const handleAuth = async (e) => {
     e.preventDefault()
     setLoading(true)
-try {
-    if (mode === 'signup') {
-      // Signup rate limiting
-      const signupCheck = checkSignupRateLimit('client')
-      if (!signupCheck.allowed) {
-        alert(`⏳ ${signupCheck.message}`)
-        setLoading(false)
-        return
-      }
 
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: name || email.split('@')[0]
-          }
+    try {
+      if (mode === 'signup') {
+        // Signup rate limiting
+        const signupCheck = checkSignupRateLimit('client')
+        if (!signupCheck.allowed) {
+          alert(`⏳ ${signupCheck.message}`)
+          setLoading(false)
+          return
         }
-      })
+
+        // 1. Auth signup
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name: name || email.split('@')[0]
+            }
+          }
+        })
         
         if (authError) throw authError
 
         if (authData.user) {
-          // Profile oluştur
-          const { data: profileData, error: profileError } = await supabase
-  .from('profiles')
-  .upsert(
-    {
-      user_id: authData.user.id,
-      email: email,
-      name: name || email.split('@')[0],
-      subscription_plan: 'free',
-      subscription_status: 'active'
-    },
-    {
-      onConflict: 'user_id'
-    }
-  )
-  .select()
-  .single()
-          
-          if (profileError) throw profileError
+          console.log('✅ Auth user created:', authData.user.id)
 
-          // Free subscription oluştur
-          await supabase
+          // 2. Profile oluştur
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: authData.user.id,
+              email: email,
+              name: name || email.split('@')[0],
+              subscription_plan: 'free',
+              subscription_status: 'active'
+            })
+            .select()
+
+          if (profileError) {
+            console.error('❌ Profile error:', profileError)
+            throw profileError
+          }
+
+          console.log('✅ Profile created:', profileData)
+
+          // profileData array olabilir, ilk elemanı al
+          const profile = Array.isArray(profileData) ? profileData[0] : profileData
+
+          // 3. Free subscription oluştur
+          const { error: subError } = await supabase
             .from('subscriptions')
             .insert({
-              profile_id: profileData.id,
+              profile_id: profile.id,
               plan: 'free',
               status: 'active',
               organizations_limit: 2,
@@ -97,42 +100,50 @@ try {
               nfc_cards_used: 0
             })
 
-          // Referral code varsa kaydet
+          if (subError) {
+            console.error('❌ Subscription error:', subError)
+            throw subError
+          }
+
+          console.log('✅ Subscription created')
+
+          // 4. Referral code varsa kaydet
           if (referralCode) {
             console.log('💾 Saving referral with code:', referralCode)
-            await saveReferral(profileData.id, referralCode)
+            await saveReferral(profile.id, referralCode)
           }
         }
         
         alert('🎉 Kayıt başarılı!\n\n📧 Email adresinize doğrulama linki gönderdik.\n\nLütfen email kutunuzu kontrol edin ve linke tıklayarak hesabınızı aktif edin.\n\n💡 Email gelmedi mi? Spam klasörünü kontrol edin.')
-        localStorage.removeItem('qartim_referral_code') // Temizle
+        localStorage.removeItem('qartim_referral_code')
         setMode('login')
-     } else {
-      // Login rate limiting
-      const loginCheck = checkLoginRateLimit(email)
-      if (!loginCheck.allowed) {
-        alert(`⏳ ${loginCheck.message}`)
-        setLoading(false)
-        return
-      }
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      })
-      
-      if (error) throw error
+      } else {
+        // Login rate limiting
+        const loginCheck = checkLoginRateLimit(email)
+        if (!loginCheck.allowed) {
+          alert(`⏳ ${loginCheck.message}`)
+          setLoading(false)
+          return
+        }
+
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        })
+        
+        if (error) throw error
+      }
+    } catch (error) {
+      console.error('Auth error:', error)
+      alert('Hata: ' + error.message)
+    } finally {
+      setLoading(false)
     }
-  } catch (error) {
-    alert('Hata: ' + error.message)
-  } finally {
-    setLoading(false)
   }
-}
 
   const saveReferral = async (newProfileId, refCode) => {
     try {
-      // Referral code'dan referrer profile'i bul
       const { data: referrer, error: refError } = await supabase
         .from('referral_codes')
         .select('profile_id')
@@ -146,7 +157,6 @@ try {
 
       console.log('✅ Referrer found:', referrer.profile_id)
 
-      // Referral kaydı oluştur
       const { error: referralError } = await supabase
         .from('referrals')
         .insert({
@@ -162,7 +172,6 @@ try {
         throw referralError
       }
 
-      // Referral code usage_count güncelle
       await supabase
         .from('referral_codes')
         .update({ usage_count: supabase.rpc('increment', { x: 1 }) })
@@ -186,7 +195,6 @@ try {
           </p>
         </div>
 
-        {/* Referral Badge */}
         {referralCode && mode === 'signup' && (
           <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-center">
             <p className="text-sm text-green-800 font-medium">
