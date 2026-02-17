@@ -1,3 +1,6 @@
+import UseCases from '../components/landing/UseCases';
+import ComparisonTable from '../components/landing/ComparisonTable';
+import ImpactMetrics from '../components/landing/ImpactMetrics';
 import { useNavigate } from 'react-router-dom';
 import { 
   QrCode, Nfc, Share2, BarChart3, 
@@ -131,7 +134,7 @@ export default function LandingPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <img 
-                src="/qartim-logo.png" 
+                src="/qartim-logo.jpg" 
                 alt="Qartim Logo" 
                 className="h-16 w-auto"
               />
@@ -257,6 +260,9 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* YENİ: Impact Metrics */}
+<ImpactMetrics />
+
       {/* Features Section */}
       <section className="py-20 bg-white dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4">
@@ -292,6 +298,12 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* YENİ: Comparison Table */}
+<ComparisonTable />
+
+{/* YENİ: Use Cases */}
+<UseCases />
 
       {/* Pricing Section */}
       <section className="py-20 px-4" id="pricing">

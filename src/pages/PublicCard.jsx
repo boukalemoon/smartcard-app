@@ -1,3 +1,5 @@
+import { sanitizeHtml } from '../utils/inputvalidation'  // ✅ DO NOT REMOVE - Güvenli input için
+import { checkLoginRateLimit } from '../utils/rateLimiting'  // ✅ DO NOT REMOVE - Login rate limiting    
 import AvatarFlipCard from '../components/AvatarFlipCard'
 import { trackEvent } from '../utils/analyticsHelpers'
 import { useEffect, useState } from 'react';
@@ -16,9 +18,10 @@ export default function PublicCard() {
   const [socialLinks, setSocialLinks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
   // Helper: Rengi koyulaştır
   const adjustColor = (color, percent) => {
-    if (!color) return '#1e40af' // fallback
+    if (!color) return '#1e40af'
     const num = parseInt(color.replace("#",""), 16)
     const amt = Math.round(2.55 * percent)
     const R = (num >> 16) + amt
@@ -40,7 +43,6 @@ export default function PublicCard() {
     try {
       setLoading(true);
 
-      // Load profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -51,11 +53,9 @@ export default function PublicCard() {
 
       setProfile(profileData);
 
-      // Analytics tracking - Profile view
       if (profileData?.id) {
         trackEvent(profileData.id, 'profile_view');
         
-        // Update card_views counter
         await supabase
           .from('profiles')
           .update({
@@ -65,7 +65,6 @@ export default function PublicCard() {
           .eq('id', profileData.id);
       }
 
-      // Load social links
       const { data: linksData } = await supabase
         .from('social_links')
         .select('*')
@@ -93,15 +92,14 @@ export default function PublicCard() {
   };
 
   const downloadVCard = () => {
-  if (!profile) return;
+    if (!profile) return;
 
-  // İsmi böl (Ad Soyad)
-  const nameParts = (profile.name || 'Unknown').split(' ');
-  const lastName = nameParts.length > 1 ? nameParts.pop() : '';
-  const firstName = nameParts.join(' ') || 'Unknown';
+    const nameParts = (profile.name || 'Unknown').split(' ');
+    const lastName = nameParts.length > 1 ? nameParts.pop() : '';
+    const firstName = nameParts.join(' ') || 'Unknown';
 
-  // vCard formatı oluştur (Apple uyumlu)
-  const vCard = `BEGIN:VCARD
+    // vCard - RAW data, sanitize yok!
+    const vCard = `BEGIN:VCARD
 VERSION:3.0
 FN:${profile.name || 'Unknown'}
 N:${lastName};${firstName};;;
@@ -113,20 +111,18 @@ NOTE:${profile.bio || ''}
 URL:${window.location.origin}/card/${profile.username}
 END:VCARD`;
 
-  // Blob oluştur ve indir
-  const blob = new Blob([vCard], { type: 'text/vcard;charset=utf-8' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `${profile.username || 'contact'}.vcf`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+    const blob = new Blob([vCard], { type: 'text/vcard;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${profile.username || 'contact'}.vcf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
-  // Analytics tracking
-  if (profile?.id) {
-    trackEvent(profile.id, 'vcard_download');
-  }
-};
+    if (profile?.id) {
+      trackEvent(profile.id, 'vcard_download');
+    }
+  };
 
   if (loading) {
     return (
@@ -163,7 +159,7 @@ END:VCARD`;
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <button
-            onClick={() => navigate('/')}q
+            onClick={() => navigate('/')}
             className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
           >
             <ArrowLeft size={20} />
@@ -175,90 +171,77 @@ END:VCARD`;
         </div>
 
         {/* Main Card */}
-<div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
-  
-  {/* Profile Header */}
-  <div 
-    className="p-8 text-white text-center relative overflow-hidden"
-    style={{
-      background: `linear-gradient(to right, ${profile?.theme_color || '#3B82F6'}, ${adjustColor(profile?.theme_color || '#3B82F6', -40)})`
-    }}
-  >
-    {/* Background Image */}
-    {profile?.background_image_url && (
-      <div 
-        className="absolute inset-0 bg-cover bg-center"
-        style={{
-          backgroundImage: `url(${profile.background_image_url})`,
-          opacity: 0.3
-        }}
-      />
-    )}
-    
-    {/* Content - Z-index yükselt */}
-    <div className="relative z-10">
-      <AvatarFlipCard
-        profileImage={profile.avatar_url}
-        avatar3dUrl={profile.avatar_3d_url}
-        name={profile.name}
-      />
-     
-      <h1 className="text-3xl font-bold mb-2">{profile.name}</h1>
-      {profile.title && (
-        <p className="text-blue-100 text-lg mb-1">{profile.title}</p>
-      )}
-      {profile.company && (
-        <p className="text-blue-200">{profile.company}</p>
-      )}
-    </div>
-  </div> {/* Profile Header kapatma */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+          
+          {/* Profile Header */}
+          <div 
+            className="p-8 text-white text-center relative overflow-hidden"
+            style={{
+              background: `linear-gradient(to right, ${profile?.theme_color || '#3B82F6'}, ${adjustColor(profile?.theme_color || '#3B82F6', -40)})`
+            }}
+          >
+            {profile?.background_image_url && (
+              <div 
+                className="absolute inset-0 bg-cover bg-center"
+                style={{
+                  backgroundImage: `url(${profile.background_image_url})`,
+                  opacity: 0.3
+                }}
+              />
+            )}
+            
+            <div className="relative z-10">
+              <AvatarFlipCard
+                profileImage={profile.avatar_url}
+                avatar3dUrl={profile.avatar_3d_url}
+                name={profile.name || ''}
+              />
+             
+              <h1 className="text-3xl font-bold mb-2">{sanitizeHtml(profile.name || '')}</h1>
+              {profile.title && (
+                <p className="text-blue-100 text-lg mb-1">{sanitizeHtml(profile.title || '')}</p>
+              )}
+              {profile.company && (
+                <p className="text-blue-200">{sanitizeHtml(profile.company || '')}</p>
+              )}
+            </div>
+          </div>
 
-  {/* Contact Information */}
-  <div className="p-6 space-y-4">
+          {/* Contact Information */}
+          <div className="p-6 space-y-4">
             {profile.bio && (
               <div className="pb-4 border-b border-gray-200 dark:border-gray-700">
-                <p className="text-gray-700 dark:text-gray-300 text-center">{profile.bio}</p>
+                <p className="text-gray-700 dark:text-gray-300 text-center">{sanitizeHtml(profile.bio || '')}</p>
               </div>
             )}
 
             <div className="grid gap-3">
               {profile.email && (
-  <a
-    href={`mailto:${profile.email}`}
-  className="flex items-center gap-3 p-3 rounded-lg transition-colors"
-  style={{
-    '--hover-color': `${profile?.theme_color}15` // 15 = %10 opacity
-  }}
-  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${profile?.theme_color}15`}
-  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
->
-    <Mail size={20} style={{ color: profile?.theme_color || '#3B82F6' }} />
-    <span className="text-gray-700 dark:text-gray-300">{profile.email}</span>
-  </a>
-)}
+                <a
+                  href={`mailto:${profile.email}`}
+                  className="flex items-center gap-3 p-3 rounded-lg transition-colors"
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${profile?.theme_color}15`}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <Mail size={20} style={{ color: profile?.theme_color || '#3B82F6' }} />
+                  <span className="text-gray-700 dark:text-gray-300">{profile.email}</span>
+                </a>
+              )}
 
               {profile.phone && (
-                
-               <a 
-  href={`tel:${profile.phone}`}
-  className="flex items-center gap-3 p-3 rounded-lg transition-colors"
-  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${profile?.theme_color}15`}
-  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
->
+                <a 
+                  href={`tel:${profile.phone}`}
+                  className="flex items-center gap-3 p-3 rounded-lg transition-colors"
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${profile?.theme_color}15`}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
                   <Phone size={20} style={{ color: profile?.theme_color || '#10B981' }} />
                   <span className="text-gray-700 dark:text-gray-300">{profile.phone}</span>
                 </a>
               )}
             </div>
 
-            {/* Social Links */}
-            {socialLinks.length > 0 && (
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                ...
-              </div>
-            )}
-
-         {/* Katalog & Dökümanlar */}
+            {/* Katalog & Dökümanlar */}
             {profile.catalog_links && profile.catalog_links.length > 0 && (
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                 <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-3">📁 Katalog & Dökümanlar</h3>
@@ -274,7 +257,7 @@ END:VCARD`;
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                       <span style={{ color: profile?.theme_color || '#6B7280' }}>📄</span>
-                      <span className="text-gray-700 dark:text-gray-300 font-medium">{link.title}</span>
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">{sanitizeHtml(link.title || '')}</span>
                       <ExternalLink className="ml-auto text-gray-400" size={16} />
                     </a>
                   ))}
@@ -294,10 +277,10 @@ END:VCARD`;
                       style={{ backgroundColor: `${profile?.theme_color}10` }}
                     >
                       <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                        {service.title}
+                        {sanitizeHtml(service.title || '')}
                       </h4>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                        {service.description}
+                        {sanitizeHtml(service.description || '')}
                       </p>
                       <div className="flex items-center justify-between">
                         <span className="font-bold" style={{ color: profile?.theme_color || '#10B981' }}>
@@ -316,7 +299,7 @@ END:VCARD`;
             {/* Google Yorum */}
             {profile.google_review_link && (
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-               <a 
+                <a 
                   href={profile.google_review_link}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -333,12 +316,12 @@ END:VCARD`;
 
             {/* vCard Download Button */}
             <button
-  onClick={downloadVCard}
-  className="w-full mt-6 flex items-center justify-center gap-2 px-6 py-3 text-white rounded-xl font-semibold hover:shadow-xl transition-all"
-  style={{
-    background: `linear-gradient(to right, ${profile?.theme_color || '#10B981'}, ${adjustColor(profile?.theme_color || '#10B981', -30)})`
-  }}
->
+              onClick={downloadVCard}
+              className="w-full mt-6 flex items-center justify-center gap-2 px-6 py-3 text-white rounded-xl font-semibold hover:shadow-xl transition-all"
+              style={{
+                background: `linear-gradient(to right, ${profile?.theme_color || '#10B981'}, ${adjustColor(profile?.theme_color || '#10B981', -30)})`
+              }}
+            >
               <Download size={20} />
               Kişilere Kaydet (vCard)
             </button>
@@ -346,26 +329,24 @@ END:VCARD`;
         </div>
 
         {/* Footer */}
-<div className="mt-6 text-center">
-  <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">
-    Sen de dijital kartvizitini oluştur!
-  </p>
-  <button
-    onClick={() => {
-      // Referral kodu ile yönlendir
-      const referralCode = profile?.referral_code || profile?.id;
-      navigate(`/login?ref=${referralCode}`);  // ← /register değil /login!
-    }}
-    className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
-  >
-    Ücretsiz Kaydol →
-  </button>
-  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-    {profile?.name} tarafından davet edildiniz! 🎁
-  </p>
-</div>  
+        <div className="mt-6 text-center">
+          <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">
+            Sen de dijital kartvizitini oluştur!
+          </p>
+          <button
+            onClick={() => {
+              const referralCode = profile?.referral_code || profile?.id;
+              navigate(`/login?ref=${referralCode}`);
+            }}
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+          >
+            Ücretsiz Kaydol →
+          </button>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            {sanitizeHtml(profile?.name || '')} tarafından davet edildiniz! 🎁
+          </p>
+        </div>
       </div>  
     </div>
   );
 }
-

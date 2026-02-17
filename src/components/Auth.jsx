@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { checkLoginRateLimit, checkSignupRateLimit } from '../utils/rateLimiting'
 
 export default function Auth() {
   const [email, setEmail] = useState('')
@@ -38,18 +39,25 @@ export default function Auth() {
   const handleAuth = async (e) => {
     e.preventDefault()
     setLoading(true)
+try {
+    if (mode === 'signup') {
+      // Signup rate limiting
+      const signupCheck = checkSignupRateLimit('client')
+      if (!signupCheck.allowed) {
+        alert(`⏳ ${signupCheck.message}`)
+        setLoading(false)
+        return
+      }
 
-    try {
-      if (mode === 'signup') {
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              name: name || email.split('@')[0]
-            }
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: name || email.split('@')[0]
           }
-        })
+        }
+      })
         
         if (authError) throw authError
 
@@ -99,20 +107,28 @@ export default function Auth() {
         alert('🎉 Kayıt başarılı!\n\n📧 Email adresinize doğrulama linki gönderdik.\n\nLütfen email kutunuzu kontrol edin ve linke tıklayarak hesabınızı aktif edin.\n\n💡 Email gelmedi mi? Spam klasörünü kontrol edin.')
         localStorage.removeItem('qartim_referral_code') // Temizle
         setMode('login')
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        })
-        
-        if (error) throw error
+     } else {
+      // Login rate limiting
+      const loginCheck = checkLoginRateLimit(email)
+      if (!loginCheck.allowed) {
+        alert(`⏳ ${loginCheck.message}`)
+        setLoading(false)
+        return
       }
-    } catch (error) {
-      alert('Hata: ' + error.message)
-    } finally {
-      setLoading(false)
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+      
+      if (error) throw error
     }
+  } catch (error) {
+    alert('Hata: ' + error.message)
+  } finally {
+    setLoading(false)
   }
+}
 
   const saveReferral = async (newProfileId, refCode) => {
     try {

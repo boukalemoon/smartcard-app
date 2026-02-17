@@ -17,7 +17,7 @@ import QRCodeDisplay from './QRCodeDisplay'
 import NFCWriter from './NFCWriter'
 import SocialLinksManager from './SocialLinksManager'
 import UsernameEditor from './UsernameEditor'
-import { validateCatalogLink, validateService, validateProfile } from '../utils/inputValidation'
+import { validateCatalogLink, validateService, validateProfile } from '../utils/inputvalidation'
 import { checkProfileUpdateRateLimit } from '../utils/rateLimiting'
 
 export default function Dashboard({ session }) {
