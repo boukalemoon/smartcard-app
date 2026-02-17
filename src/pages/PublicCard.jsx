@@ -1,4 +1,4 @@
-import { sanitizeHtml } from '../utils/inputvalidation'  // ✅ DO NOT REMOVE - Güvenli input için
+import { sanitizeHtml } from '../utils/inputValidation'  // ✅ DO NOT REMOVE - Güvenli input için
 import { checkLoginRateLimit } from '../utils/rateLimiting'  // ✅ DO NOT REMOVE - Login rate limiting    
 import AvatarFlipCard from '../components/AvatarFlipCard'
 import { trackEvent } from '../utils/analyticsHelpers'
