@@ -1,3 +1,4 @@
+import AnimatedHero from '../components/landing/AnimatedHero';
 import UseCases from '../components/landing/UseCases';
 import ComparisonTable from '../components/landing/ComparisonTable';
 import ImpactMetrics from '../components/landing/ImpactMetrics';
@@ -225,37 +226,11 @@ export default function LandingPage() {
           </div>
 
           {/* Hero Image/Mockup */}
-          <div className="mt-16 relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 blur-3xl opacity-20"></div>
-            <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-4xl mx-auto border border-gray-200 dark:border-gray-700">
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-6 rounded-xl">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
-                        B
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-gray-900 dark:text-white">Burak Akmeşe</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Founder @ TrendTech</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="px-3 py-1 bg-blue-600 text-white text-xs rounded-full">LinkedIn</span>
-                      <span className="px-3 py-1 bg-pink-600 text-white text-xs rounded-full">Instagram</span>
-                      <span className="px-3 py-1 bg-gray-800 dark:bg-gray-700 text-white text-xs rounded-full">Website</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center justify-center">
-                  <div className="w-48 h-48 bg-white dark:bg-gray-700 p-4 rounded-xl shadow-lg">
-                    <div className="w-full h-full bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                      <QrCode className="text-white" size={120} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Hero Animation */}
+<div className="mt-16 relative">
+  <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 blur-3xl opacity-20"></div>
+  <AnimatedHero />
+           
           </div>
         </div>
       </section>
