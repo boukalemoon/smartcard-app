@@ -137,7 +137,7 @@ export default function LandingPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <img 
-  src="/qartim-new-logo.png?v=123"  // ?v=123 ekle
+  src="/qartim-new-logo.png"
   alt="Qartim Logo" 
   className="h-16 w-auto"
 />
@@ -229,7 +229,7 @@ export default function LandingPage() {
 
           {/* Hero Image/Mockup */}
           {/* Hero Animation */}
-<div className="mt-16 relative">
+<div className="mt-32 relative">
   <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 blur-3xl opacity-20"></div>
   <AnimatedHero />
            

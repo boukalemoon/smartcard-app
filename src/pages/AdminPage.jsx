@@ -59,7 +59,7 @@ export default function AdminPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img 
-                src="/qartim-logo.png" 
+                src="/qartim-logo.jpg" 
                 alt="Qartım" 
                 className="h-16 w-auto"
               />

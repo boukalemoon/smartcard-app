@@ -32,7 +32,7 @@ export default function AnimatedHero() {
   }, [isDigital]);
 
   return (
-    <div className="relative w-full max-w-md mx-auto h-[500px] flex items-center justify-center">
+    <div className="relative w-full max-w-md mx-auto h-[96px] flex items-center justify-center">
       
       {/* Kağıt Kartvizit */}
       <div
@@ -81,7 +81,7 @@ export default function AnimatedHero() {
             : 'opacity-0 scale-75 -rotate-12 blur-sm'
         }`}
       >
-        <div className="w-80 h-52 bg-gradient-to-br from-blue-600 via-purple-600 to-blue-700 rounded-2xl shadow-2xl p-6 relative overflow-hidden">
+        <div className="w-80 h-52 bg-gradient-to-br from-blue-600 via-purple-600 to-blue-700 rounded-2xl shadow-2xl p-6 relative overflow-visible">
           {/* Parlama efekti */}
           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent animate-pulse"></div>
           
