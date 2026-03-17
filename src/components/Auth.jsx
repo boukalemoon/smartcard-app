@@ -2,28 +2,29 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { checkLoginRateLimit, checkSignupRateLimit } from '../utils/rateLimiting'
 
-export default function Auth() {
+export default function Auth({ initialMode = 'signup' }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
-  const [mode, setMode] = useState('signup')
+  const [mode, setMode] = useState(initialMode)
   const [referralCode, setReferralCode] = useState(null)
 
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const ref = urlParams.get('ref')
-    if (ref) {
-      setReferralCode(ref)
-      setMode('signup')
-    }
+ useEffect(() => {
+  const urlParams = new URLSearchParams(window.location.search)
+  const ref = urlParams.get('ref')
+  if (ref) {
+    setReferralCode(ref)
+    setMode('signup')
+  }
 
-    const savedRef = localStorage.getItem('qartim_referral_code')
-    if (savedRef && !ref) {
-      setReferralCode(savedRef)
-      setMode('signup')
-    }
-  }, [])
+  const savedRef = localStorage.getItem('qartim_referral_code')
+  if (savedRef && !ref) {
+    setReferralCode(savedRef)
+    // initialMode'u bozmamak için sadece referral varsa signup yap
+    if (initialMode === 'signup') setMode('signup')
+  }
+}, [])
 
   useEffect(() => {
     if (referralCode) {

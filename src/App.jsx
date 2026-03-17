@@ -61,9 +61,10 @@ function App() {
             
             {/* Auth routes */}
             <Route 
-              path="/login" 
-              element={!session ? <Auth /> : <Navigate to="/dashboard" />} 
-            />
+              path="/login" element={!session ? <Auth initialMode="login" /> : <Navigate to="/dashboard" />} />
+
+            <Route 
+            path="/signup" element={!session ? <Auth initialMode="signup" /> : <Navigate to="/dashboard" />} />
             <Route path="/auth/confirm" element={<AuthConfirm />} />
             
             {/* Protected routes */}

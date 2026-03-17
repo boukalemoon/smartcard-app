@@ -167,7 +167,7 @@ export default function LandingPage() {
               <button
                 onClick={() => {
                   const ref = new URLSearchParams(window.location.search).get('ref')
-                  navigate(ref ? `/login?ref=${ref}` : '/login')
+                  navigate(ref ? `/signup?ref=${ref}` : '/signup')
                 }}
                 className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium"
               >
@@ -176,7 +176,7 @@ export default function LandingPage() {
               <button
                 onClick={() => {
                   const ref = new URLSearchParams(window.location.search).get('ref')
-                  navigate(ref ? `/login?ref=${ref}` : '/login')
+                  navigate(ref ? `/signup?ref=${ref}` : '/signup')
                 }}
                   className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
               >
@@ -212,7 +212,7 @@ export default function LandingPage() {
             <button
               onClick={() => {
                 const ref = new URLSearchParams(window.location.search).get('ref')
-                navigate(ref ? `/login?ref=${ref}` : '/login')
+                navigate(ref ? `/signup?ref=${ref}` : '/signup')
               }}
               className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold text-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
             >
@@ -358,7 +358,7 @@ export default function LandingPage() {
                 <button
                   onClick={() => {
                     const ref = new URLSearchParams(window.location.search).get('ref')
-                    navigate(ref ? `/login?ref=${ref}` : '/login')
+                    navigate(ref ? `/signup?ref=${ref}` : '/signup')
                   }}
                   className={`w-full py-2.5 rounded-xl font-semibold transition-all text-sm ${
                     plan.popular
@@ -409,7 +409,7 @@ export default function LandingPage() {
           <button
             onClick={() => {
               const ref = new URLSearchParams(window.location.search).get('ref')
-              navigate(ref ? `/login?ref=${ref}` : '/login')
+              navigate(ref ? `/signup?ref=${ref}` : '/signup')
           }}
           className="px-8 py-4 bg-white text-blue-600 rounded-xl font-semibold text-lg hover:shadow-2xl transition-all inline-flex items-center gap-2"
           >
