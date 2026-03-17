@@ -16,14 +16,12 @@ export default function Auth() {
     if (ref) {
       setReferralCode(ref)
       setMode('signup')
-      console.log('✅ Referral code captured:', ref)
     }
 
     const savedRef = localStorage.getItem('qartim_referral_code')
     if (savedRef && !ref) {
       setReferralCode(savedRef)
       setMode('signup')
-      console.log('✅ Referral code from localStorage:', savedRef)
     }
   }, [])
 
@@ -39,7 +37,6 @@ export default function Auth() {
 
     try {
       if (mode === 'signup') {
-        // Signup rate limiting
         const signupCheck = checkSignupRateLimit('client')
         if (!signupCheck.allowed) {
           alert(`⏳ ${signupCheck.message}`)
@@ -47,8 +44,8 @@ export default function Auth() {
           return
         }
 
-        // 1. Auth signup
-        const { data: authData, error: authError } = await supabase.auth.signUp({
+        // SADECE AUTH SIGNUP YAP - Trigger profil oluşturacak
+        const { error: authError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -60,67 +57,13 @@ export default function Auth() {
         
         if (authError) throw authError
 
-        if (authData.user) {
-          console.log('✅ Auth user created:', authData.user.id)
-
-          // 2. Profile oluştur
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .insert({
-              id: authData.user.id,
-              user_id: authData.user.id,
-              email: email,
-              name: name || email.split('@')[0],
-              subscription_plan: 'free',
-              subscription_status: 'active'
-            })
-            .select()
-
-          if (profileError) {
-            console.error('❌ Profile error:', profileError)
-            throw profileError
-          }
-
-          console.log('✅ Profile created:', profileData)
-
-          // profileData array olabilir, ilk elemanı al
-          const profile = Array.isArray(profileData) ? profileData[0] : profileData
-
-          // 3. Free subscription oluştur
-          const { error: subError } = await supabase
-            .from('subscriptions')
-            .insert({
-              profile_id: profile.id,
-              plan: 'free',
-              status: 'active',
-              organizations_limit: 2,
-              social_links_limit: 3,
-              nfc_cards_included: 0,
-              organizations_used: 0,
-              social_links_used: 0,
-              nfc_cards_used: 0
-            })
-
-          if (subError) {
-            console.error('❌ Subscription error:', subError)
-            throw subError
-          }
-
-          console.log('✅ Subscription created')
-
-          // 4. Referral code varsa kaydet
-          if (referralCode) {
-            console.log('💾 Saving referral with code:', referralCode)
-            await saveReferral(profile.id, referralCode)
-          }
-        }
-        
+        // ✅ BAŞARILI!
         alert('🎉 Kayıt başarılı!\n\n📧 Email adresinize doğrulama linki gönderdik.\n\nLütfen email kutunuzu kontrol edin ve linke tıklayarak hesabınızı aktif edin.\n\n💡 Email gelmedi mi? Spam klasörünü kontrol edin.')
+        
         localStorage.removeItem('qartim_referral_code')
         setMode('login')
 
       } else {
-        // Login rate limiting
         const loginCheck = checkLoginRateLimit(email)
         if (!loginCheck.allowed) {
           alert(`⏳ ${loginCheck.message}`)
@@ -137,62 +80,9 @@ export default function Auth() {
       }
     } catch (error) {
       console.error('Auth error:', error)
-      alert('Hata: ' + error.message)
+      alert('Hata: ' + (error.message || 'Bilinmeyen hata oluştu'))
     } finally {
       setLoading(false)
-    }
-  }
-
-  const saveReferral = async (newProfileId, refCode) => {
-    try {
-      const { data: referrer, error: refError } = await supabase
-        .from('referral_codes')
-        .select('profile_id')
-        .eq('code', refCode)
-        .single()
-
-      if (refError || !referrer) {
-        console.log('❌ Referral code not found:', refCode)
-        return
-      }
-
-      console.log('✅ Referrer found:', referrer.profile_id)
-
-      const { error: referralError } = await supabase
-        .from('referrals')
-        .insert({
-          referrer_id: referrer.profile_id,
-          referee_id: newProfileId,
-          referral_code: refCode,
-          status: 'pending',
-          commission_amount: 0
-        })
-
-      if (referralError) {
-        console.error('❌ Referral insert error:', referralError)
-        throw referralError
-      }
-
-      await supabase
-        .from('referral_codes')
-        .update({ usage_count: supabase.rpc('increment', { x: 1 }) })
-        .eq('code', refCode)
-
-      console.log('✅ Referral saved successfully!')
-    } catch (error) {
-      console.error('❌ FULL ERROR:', error)
-  console.error('❌ ERROR TYPE:', error.constructor.name)
-  console.error('❌ ERROR MESSAGE:', error.message)
-  console.error('❌ ERROR STATUS:', error.status)
-   // Detaylı alert
-  alert(`HATA DETAYI:
-Type: ${error.constructor.name}
-Message: ${error.message || 'Bilinmeyen hata'}
-Status: ${error.status || 'Yok'}
-`)
-} finally {
-  setLoading(false)
-
     }
   }
 
@@ -212,9 +102,6 @@ Status: ${error.status || 'Yok'}
           <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-center">
             <p className="text-sm text-green-800 font-medium">
               🎉 Referans kod ile kayıt oluyorsunuz!
-            </p>
-            <p className="text-xs text-green-600 mt-1">
-              Kayıt sonrası her iki taraf da kazanacak!
             </p>
           </div>
         )}
