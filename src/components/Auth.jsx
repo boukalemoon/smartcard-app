@@ -180,7 +180,19 @@ export default function Auth() {
 
       console.log('✅ Referral saved successfully!')
     } catch (error) {
-      console.error('❌ Error saving referral:', error)
+      console.error('❌ FULL ERROR:', error)
+  console.error('❌ ERROR TYPE:', error.constructor.name)
+  console.error('❌ ERROR MESSAGE:', error.message)
+  console.error('❌ ERROR STATUS:', error.status)
+   // Detaylı alert
+  alert(`HATA DETAYI:
+Type: ${error.constructor.name}
+Message: ${error.message || 'Bilinmeyen hata'}
+Status: ${error.status || 'Yok'}
+`)
+} finally {
+  setLoading(false)
+
     }
   }
 
