@@ -68,6 +68,7 @@ export default function Auth() {
             .from('profiles')
             .insert({
               id: authData.user.id,
+              user_id: authData.user.id,
               email: email,
               name: name || email.split('@')[0],
               subscription_plan: 'free',
