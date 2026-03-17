@@ -137,7 +137,7 @@ export default function LandingPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <img 
-  src="/qartim-new-logo.png"
+  src="/qrtım-logo.png?v=2"
   alt="Qartim Logo" 
   className="h-16 w-auto"
 />
