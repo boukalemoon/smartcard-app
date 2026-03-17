@@ -12,35 +12,9 @@ import Auth from './components/Auth'
 import Dashboard from './components/Dashboard'
 import PublicCard from './pages/PublicCard'
 import NFCCard from './pages/NFCCard'
+import AuthConfirm from './components/AuthConfirm' 
 
-// Auth Confirm Component
-function AuthConfirm() {
-  const navigate = useNavigate()
 
-  useEffect(() => {
-    // URL'den token al ve confirm et
-    const hashParams = new URLSearchParams(window.location.hash.substring(1))
-    const access_token = hashParams.get('access_token')
-    
-    if (access_token) {
-      // Token varsa dashboard'a yönlendir
-      navigate('/dashboard')
-    } else {
-      // Token yoksa login'e yönlendir
-      navigate('/login')
-    }
-  }, [navigate])
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
-      <div className="text-center bg-white p-8 rounded-2xl shadow-2xl">
-        <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <h2 className="text-2xl font-bold mb-2">Email Doğrulanıyor...</h2>
-        <p className="text-gray-600">Lütfen bekleyin, yönlendiriliyorsunuz...</p>
-      </div>
-    </div>
-  )
-}
 
 function App() {
   const [session, setSession] = useState(null)
