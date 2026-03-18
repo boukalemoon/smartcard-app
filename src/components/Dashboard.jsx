@@ -457,12 +457,44 @@ const handleThemeColorChange = async (color) => {
   themeColor={themeColor}
 />
 
-{/* Background Image Upload - YENİ! */}
+{/* Background Image Upload */}
 <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
-    🖼️ Arka Plan Resmi
-  </label>
-  
+  <div className="flex items-center justify-between">
+    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+      🖼️ Arka Plan Resmi
+    </label>
+    {profile?.background_image_url && (
+      <button
+        onClick={async () => {
+          try {
+            const { error } = await supabase
+              .from('profiles')
+              .update({ background_image_url: null })
+              .eq('user_id', session.user.id)
+            if (error) throw error
+            setProfile(prev => ({ ...prev, background_image_url: null }))
+            alert('✅ Arka plan resmi kaldırıldı!')
+          } catch (error) {
+            alert('Hata: ' + error.message)
+          }
+        }}
+        className="px-3 py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-xs font-semibold hover:bg-red-100 transition-colors"
+      >
+        🗑️ Resmi Kaldır
+      </button>
+    )}
+  </div>
+
+  {profile?.background_image_url && (
+    <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+      <img
+        src={profile.background_image_url}
+        alt="Arka plan önizleme"
+        className="w-full h-24 object-cover"
+      />
+    </div>
+  )}
+
   <ImageUpload
     currentImageUrl={profile?.background_image_url}
     onUploadSuccess={async (url) => {
@@ -471,9 +503,7 @@ const handleThemeColorChange = async (color) => {
           .from('profiles')
           .update({ background_image_url: url })
           .eq('user_id', session.user.id)
-
         if (error) throw error
-
         setProfile(prev => ({ ...prev, background_image_url: url }))
         alert('✅ Arka plan resmi güncellendi!')
       } catch (error) {

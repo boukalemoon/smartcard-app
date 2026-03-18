@@ -175,20 +175,26 @@ END:VCARD`;
           
           {/* Profile Header */}
           <div 
-            className="p-8 text-white text-center relative overflow-hidden"
-            style={{
-              background: `linear-gradient(to right, ${profile?.theme_color || '#3B82F6'}, ${adjustColor(profile?.theme_color || '#3B82F6', -40)})`
-            }}
-          >
-            {profile?.background_image_url && (
-              <div 
-                className="absolute inset-0 bg-cover bg-center"
-                style={{
-                  backgroundImage: `url(${profile.background_image_url})`,
-                  opacity: 0.3
-                }}
-              />
-            )}
+  className="p-8 text-white text-center relative overflow-hidden"
+  style={{
+    background: profile?.background_image_url
+      ? 'transparent'
+      : `linear-gradient(to right, ${profile?.theme_color || '#3B82F6'}, ${adjustColor(profile?.theme_color || '#3B82F6', -40)})`
+  }}
+>
+  {profile?.background_image_url && (
+    <div 
+      className="absolute inset-0 bg-cover bg-center"
+      style={{
+        backgroundImage: `url(${profile.background_image_url})`,
+        opacity: 1
+      }}
+    />
+  )}
+  {/* Resim varsa üstüne hafif karartma — yazılar okunsun */}
+  {profile?.background_image_url && (
+    <div className="absolute inset-0 bg-black/40" />
+  )}
             
             <div className="relative z-10">
               <AvatarFlipCard

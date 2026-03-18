@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { 
-  Building2, Plus, Users, Settings, Crown,
-  Edit2, Trash2, Check, X, ChevronRight
+  Building2, Plus, Users, Crown,
+  Edit2, Trash2, Check, X, ChevronRight,
+  ChevronLeft, UserPlus, UserMinus, Mail, Phone
 } from 'lucide-react';
 
 const FREE_PLAN_LIMIT = 2;
@@ -12,6 +13,18 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
+
+  // Üye yönetimi state
+  const [selectedOrg, setSelectedOrg] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviting, setInviting] = useState(false);
+
+  // Düzenleme state
+  const [editingOrg, setEditingOrg] = useState(null);
+  const [editForm, setEditForm] = useState({});
+
   const [newOrg, setNewOrg] = useState({
     name: '',
     type: 'company',
@@ -30,19 +43,14 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
 
   const loadOrganizations = async () => {
     try {
-      // Load organizations where user is a member
       const { data, error } = await supabase
         .from('members')
         .select(`
           organization_id,
           role,
           organizations (
-            id,
-            name,
-            type,
-            description,
-            logo_url,
-            created_at
+            id, name, type, description,
+            logo_url, website, email, phone, created_at
           )
         `)
         .eq('profile_id', profileId)
@@ -50,7 +58,6 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
 
       if (error) throw error;
 
-      // Extract organizations from nested structure
       const orgs = data?.map(item => ({
         ...item.organizations,
         role: item.role
@@ -61,6 +68,119 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
       console.error('Error loading organizations:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMembers = async (orgId) => {
+    setMembersLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('members')
+        .select(`
+          id,
+          role,
+          created_at,
+          profiles (
+            id, name, email, avatar_url, title, company
+          )
+        `)
+        .eq('organization_id', orgId);
+
+      if (error) throw error;
+      setMembers(data || []);
+    } catch (error) {
+      console.error('Error loading members:', error);
+      alert('Üyeler yüklenemedi: ' + error.message);
+    } finally {
+      setMembersLoading(false);
+    }
+  };
+
+  const openMemberManager = (org) => {
+    setSelectedOrg(org);
+    loadMembers(org.id);
+  };
+
+  const closeMemberManager = () => {
+    setSelectedOrg(null);
+    setMembers([]);
+    setInviteEmail('');
+  };
+
+  const inviteMember = async () => {
+    if (!inviteEmail.trim()) return;
+    setInviting(true);
+
+    try {
+      // Email ile profil bul
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .eq('email', inviteEmail.trim().toLowerCase())
+        .single();
+
+      if (profileError || !profile) {
+        alert('❌ Bu email adresiyle kayıtlı kullanıcı bulunamadı.\n\nKullanıcının önce QRtım hesabı oluşturması gerekiyor.');
+        return;
+      }
+
+      // Zaten üye mi?
+      const alreadyMember = members.some(m => m.profiles?.id === profile.id);
+      if (alreadyMember) {
+        alert('⚠️ Bu kullanıcı zaten organizasyon üyesi.');
+        return;
+      }
+
+      // Üye ekle
+      const { error: memberError } = await supabase
+        .from('members')
+        .insert({
+          organization_id: selectedOrg.id,
+          profile_id: profile.id,
+          role: 'member'
+        });
+
+      if (memberError) throw memberError;
+
+      alert(`✅ ${profile.name || profile.email} organizasyona eklendi!`);
+      setInviteEmail('');
+      loadMembers(selectedOrg.id);
+    } catch (error) {
+      alert('Hata: ' + error.message);
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const removeMember = async (memberId, memberName) => {
+    if (!confirm(`${memberName} adlı üyeyi organizasyondan çıkarmak istediğinizden emin misiniz?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('members')
+        .delete()
+        .eq('id', memberId);
+
+      if (error) throw error;
+
+      alert('✅ Üye organizasyondan çıkarıldı.');
+      loadMembers(selectedOrg.id);
+    } catch (error) {
+      alert('Hata: ' + error.message);
+    }
+  };
+
+  const changeRole = async (memberId, newRole) => {
+    try {
+      const { error } = await supabase
+        .from('members')
+        .update({ role: newRole })
+        .eq('id', memberId);
+
+      if (error) throw error;
+      loadMembers(selectedOrg.id);
+    } catch (error) {
+      alert('Hata: ' + error.message);
     }
   };
 
@@ -78,7 +198,6 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
     try {
       setLoading(true);
 
-      // Create organization
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
         .insert({
@@ -94,7 +213,6 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
 
       if (orgError) throw orgError;
 
-      // Add creator as admin member
       const { error: memberError } = await supabase
         .from('members')
         .insert({
@@ -105,17 +223,10 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
 
       if (memberError) throw memberError;
 
-      setNewOrg({
-        name: '',
-        type: 'company',
-        description: '',
-        website: '',
-        email: '',
-        phone: ''
-      });
+      setNewOrg({ name: '', type: 'company', description: '', website: '', email: '', phone: '' });
       setCreating(false);
       loadOrganizations();
-      alert('Organizasyon oluşturuldu!');
+      alert('✅ Organizasyon oluşturuldu!');
     } catch (error) {
       alert('Hata: ' + error.message);
     } finally {
@@ -123,10 +234,37 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
     }
   };
 
-  const deleteOrganization = async (orgId) => {
-    if (!confirm('Bu organizasyonu silmek istediğinizden emin misiniz?')) {
-      return;
+  const startEditing = (org) => {
+    setEditingOrg(org.id);
+    setEditForm({
+      name: org.name || '',
+      type: org.type || 'company',
+      description: org.description || '',
+      website: org.website || '',
+      email: org.email || '',
+      phone: org.phone || ''
+    });
+  };
+
+  const saveEdit = async (orgId) => {
+    try {
+      const { error } = await supabase
+        .from('organizations')
+        .update(editForm)
+        .eq('id', orgId);
+
+      if (error) throw error;
+
+      setEditingOrg(null);
+      loadOrganizations();
+      alert('✅ Organizasyon güncellendi!');
+    } catch (error) {
+      alert('Hata: ' + error.message);
     }
+  };
+
+  const deleteOrganization = async (orgId) => {
+    if (!confirm('Bu organizasyonu silmek istediğinizden emin misiniz?')) return;
 
     try {
       const { error } = await supabase
@@ -177,6 +315,143 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
     );
   }
 
+  // ÜYE YÖNETİMİ EKRANI
+  if (selectedOrg) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            onClick={closeMemberManager}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            <ChevronLeft size={20} className="text-gray-600 dark:text-gray-400" />
+          </button>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              Üye Yönetimi
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{selectedOrg.name}</p>
+          </div>
+        </div>
+
+        {/* Üye Davet Et */}
+        {selectedOrg.role === 'admin' && (
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+              <UserPlus size={18} className="text-blue-600" />
+              Üye Ekle
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              Eklemek istediğiniz kişinin QRtım hesabında kayıtlı email adresini girin.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && inviteMember()}
+                placeholder="ornek@email.com"
+                className="flex-1 px-4 py-2 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:border-blue-500 outline-none"
+              />
+              <button
+                onClick={inviteMember}
+                disabled={inviting || !inviteEmail.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium"
+              >
+                {inviting ? '...' : 'Ekle'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Üye Listesi */}
+        {membersLoading ? (
+          <div className="text-center py-8 text-gray-400">
+            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+            <p className="text-sm">Üyeler yükleniyor...</p>
+          </div>
+        ) : members.length === 0 ? (
+          <div className="text-center py-8 text-gray-400">
+            <Users size={40} className="mx-auto mb-2 opacity-40" />
+            <p>Henüz üye yok</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+              Toplam {members.length} üye
+            </p>
+            {members.map((member) => {
+              const roleBadge = getRoleBadge(member.role);
+              const isCurrentUser = member.profiles?.id === profileId;
+              return (
+                <div
+                  key={member.id}
+                  className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-xl"
+                >
+                  {/* Avatar */}
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                    {member.profiles?.name?.charAt(0) || member.profiles?.email?.charAt(0) || '?'}
+                  </div>
+
+                  {/* Bilgi */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">
+                      {member.profiles?.name || 'İsimsiz'}
+                      {isCurrentUser && <span className="ml-1 text-xs text-gray-400">(Siz)</span>}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {member.profiles?.email}
+                    </p>
+                    {member.profiles?.title && (
+                      <p className="text-xs text-gray-400 truncate">{member.profiles.title}</p>
+                    )}
+                  </div>
+
+                  {/* Rol badge */}
+                  <span className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${roleBadge.color}`}>
+                    {roleBadge.label}
+                  </span>
+
+                  {/* Admin aksiyonları */}
+                  {selectedOrg.role === 'admin' && !isCurrentUser && (
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {member.role === 'member' ? (
+                        <button
+                          onClick={() => changeRole(member.id, 'admin')}
+                          title="Yönetici yap"
+                          className="p-1.5 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors text-xs"
+                        >
+                          <Crown size={14} />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => changeRole(member.id, 'member')}
+                          title="Üye yap"
+                          className="p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                        >
+                          <Users size={14} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => removeMember(member.id, member.profiles?.name || member.profiles?.email)}
+                        title="Üyeyi çıkar"
+                        className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                      >
+                        <UserMinus size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ANA EKRAN
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
       {/* Header */}
@@ -190,21 +465,13 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
                 Sınırsız organizasyon oluşturabilirsiniz
               </span>
             ) : (
-              <span>
-                {organizations.length}/{FREE_PLAN_LIMIT} organizasyon kullanıldı (Ücretsiz Plan)
-              </span>
+              <span>{organizations.length}/{FREE_PLAN_LIMIT} organizasyon kullanıldı (Ücretsiz Plan)</span>
             )}
           </p>
         </div>
         {!creating && (
           <button
-            onClick={() => {
-              if (canAddMore) {
-                setCreating(true);
-              } else {
-                setShowUpgrade(true);
-              }
-            }}
+            onClick={() => canAddMore ? setCreating(true) : setShowUpgrade(true)}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Plus size={18} />
@@ -219,12 +486,9 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
           <div className="flex items-start gap-3">
             <Crown className="text-yellow-600 dark:text-yellow-400 mt-1" size={24} />
             <div className="flex-1">
-              <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1">
-                Ücretsiz Plan Limiti Doldu
-              </h3>
+              <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1">Ücretsiz Plan Limiti Doldu</h3>
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
                 Daha fazla organizasyon oluşturmak için premium plana yükseltin.
-                Premium ile sınırsız organizasyon yönetebilirsiniz!
               </p>
               <div className="flex gap-2">
                 <button
@@ -232,11 +496,6 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
                   className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium"
                 >
                   Kapat
-                </button>
-                <button
-                  className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:shadow-lg text-sm font-medium"
-                >
-                  Premium'a Yükselt
                 </button>
               </div>
             </div>
@@ -248,30 +507,24 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
       {creating && (
         <div className="mb-6 p-6 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl">
           <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">Yeni Organizasyon Oluştur</h3>
-          
           <div className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Organizasyon Adı *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Organizasyon Adı *</label>
                 <input
                   type="text"
                   value={newOrg.name}
                   onChange={(e) => setNewOrg({ ...newOrg, name: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 dark:focus:border-blue-400 transition-all outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none"
                   placeholder="Şirket / STK Adı"
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Organizasyon Tipi
-                </label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tip</label>
                 <select
                   value={newOrg.type}
                   onChange={(e) => setNewOrg({ ...newOrg, type: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 dark:focus:border-blue-400 transition-all outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none"
                 >
                   <option value="company">Şirket</option>
                   <option value="chamber">Esnaf Odası</option>
@@ -282,86 +535,36 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
                 </select>
               </div>
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Açıklama
-              </label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Açıklama</label>
               <textarea
                 value={newOrg.description}
                 onChange={(e) => setNewOrg({ ...newOrg, description: e.target.value })}
                 rows={3}
-                className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 dark:focus:border-blue-400 transition-all outline-none"
+                className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none"
                 placeholder="Organizasyon hakkında kısa bilgi..."
               />
             </div>
-
             <div className="grid md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Website
-                </label>
-                <input
-                  type="url"
-                  value={newOrg.website}
-                  onChange={(e) => setNewOrg({ ...newOrg, website: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 dark:focus:border-blue-400 transition-all outline-none"
-                  placeholder="https://..."
-                />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Website</label>
+                <input type="url" value={newOrg.website} onChange={(e) => setNewOrg({ ...newOrg, website: e.target.value })} className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none" placeholder="https://..." />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={newOrg.email}
-                  onChange={(e) => setNewOrg({ ...newOrg, email: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 dark:focus:border-blue-400 transition-all outline-none"
-                  placeholder="info@ornek.com"
-                />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email</label>
+                <input type="email" value={newOrg.email} onChange={(e) => setNewOrg({ ...newOrg, email: e.target.value })} className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none" placeholder="info@ornek.com" />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Telefon
-                </label>
-                <input
-                  type="tel"
-                  value={newOrg.phone}
-                  onChange={(e) => setNewOrg({ ...newOrg, phone: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 dark:focus:border-blue-400 transition-all outline-none"
-                  placeholder="+90 555 123 4567"
-                />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Telefon</label>
+                <input type="tel" value={newOrg.phone} onChange={(e) => setNewOrg({ ...newOrg, phone: e.target.value })} className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none" placeholder="+90 555 123 4567" />
               </div>
             </div>
-
             <div className="flex gap-3">
-              <button
-                onClick={createOrganization}
-                disabled={!newOrg.name || loading}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-              >
-                <Check size={18} />
-                Oluştur
+              <button onClick={createOrganization} disabled={!newOrg.name || loading} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 font-medium">
+                <Check size={18} /> Oluştur
               </button>
-              <button
-                onClick={() => {
-                  setCreating(false);
-                  setNewOrg({
-                    name: '',
-                    type: 'company',
-                    description: '',
-                    website: '',
-                    email: '',
-                    phone: ''
-                  });
-                }}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition-colors font-medium"
-              >
-                <X size={18} />
-                İptal
+              <button onClick={() => { setCreating(false); setNewOrg({ name: '', type: 'company', description: '', website: '', email: '', phone: '' }); }} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition-colors font-medium">
+                <X size={18} /> İptal
               </button>
             </div>
           </div>
@@ -379,78 +582,97 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
         <div className="space-y-3">
           {organizations.map((org) => {
             const roleBadge = getRoleBadge(org.role);
-            
+            const isEditing = editingOrg === org.id;
+
             return (
-              <div
-                key={org.id}
-                className="p-4 border-2 border-gray-100 dark:border-gray-700 rounded-xl hover:border-blue-200 dark:hover:border-blue-800 transition-all group"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl flex-shrink-0">
-                    {org.name?.charAt(0) || '?'}
+              <div key={org.id} className="p-4 border-2 border-gray-100 dark:border-gray-700 rounded-xl hover:border-blue-200 dark:hover:border-blue-800 transition-all">
+                
+                {/* Düzenleme Formu */}
+                {isEditing ? (
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      value={editForm.name}
+                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      className="w-full px-3 py-2 border-2 border-blue-300 dark:border-blue-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:border-blue-500 outline-none font-semibold"
+                      placeholder="Organizasyon adı"
+                    />
+                    <textarea
+                      value={editForm.description}
+                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      rows={2}
+                      className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:border-blue-500 outline-none text-sm"
+                      placeholder="Açıklama"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input type="url" value={editForm.website} onChange={(e) => setEditForm({ ...editForm, website: e.target.value })} className="px-3 py-2 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:border-blue-500 outline-none text-sm" placeholder="Website" />
+                      <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} className="px-3 py-2 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:border-blue-500 outline-none text-sm" placeholder="Email" />
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => saveEdit(org.id)} className="flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">
+                        <Check size={14} /> Kaydet
+                      </button>
+                      <button onClick={() => setEditingOrg(null)} className="flex items-center gap-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-sm font-medium">
+                        <X size={14} /> İptal
+                      </button>
+                    </div>
                   </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                          {org.name}
-                        </h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">
-                            {getOrgTypeLabel(org.type)}
-                          </span>
-                          <span className={`text-xs px-2 py-1 rounded-full ${roleBadge.color}`}>
-                            {roleBadge.label}
-                          </span>
+                ) : (
+                  /* Normal Görünüm */
+                  <div className="flex items-start gap-4">
+                    <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl flex-shrink-0">
+                      {org.name?.charAt(0) || '?'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{org.name}</h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-sm text-gray-600 dark:text-gray-400">{getOrgTypeLabel(org.type)}</span>
+                            <span className={`text-xs px-2 py-1 rounded-full ${roleBadge.color}`}>{roleBadge.label}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    
-                    {org.description && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                        {org.description}
-                      </p>
-                    )}
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => alert('Üye yönetimi çok yakında! Şimdilik organizasyonu oluşturabildiniz.')}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        <Users size={16} />
-                        Üyeleri Yönet
-                        <ChevronRight size={16} />
-                      </button>
-                      
-                      {org.role === 'admin' && (
-                        <>
-                          <button
-                            onClick={() => alert('Düzenleme özelliği çok yakında!')}
-                            className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                            title="Düzenle"
-                          >
-                            <Edit2 size={18} />
-                          </button>
-                          <button
-                            onClick={() => deleteOrganization(org.id)}
-                            className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                            title="Sil"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </>
+                      {org.description && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{org.description}</p>
                       )}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openMemberManager(org)}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          <Users size={16} />
+                          Üyeleri Yönet
+                          <ChevronRight size={16} />
+                        </button>
+                        {org.role === 'admin' && (
+                          <>
+                            <button
+                              onClick={() => startEditing(org)}
+                              className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                              title="Düzenle"
+                            >
+                              <Edit2 size={18} />
+                            </button>
+                            <button
+                              onClick={() => deleteOrganization(org.id)}
+                              className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                              title="Sil"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             );
           })}
         </div>
       )}
 
-      {/* Limit Warning for Free Users */}
       {!isPremium && organizations.length > 0 && organizations.length < FREE_PLAN_LIMIT && (
         <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
           <p className="text-sm text-blue-800 dark:text-blue-300">
