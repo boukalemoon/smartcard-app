@@ -176,7 +176,7 @@ export default function LandingPage() {
               <button
                 onClick={() => {
                   const ref = new URLSearchParams(window.location.search).get('ref')
-                  navigate(ref ? `/signup?ref=${ref}` : '/signup')
+                  navigate(ref ? `/login?ref=${ref}` : '/login')
                 }}
                   className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
               >

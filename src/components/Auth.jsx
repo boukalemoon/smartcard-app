@@ -163,18 +163,28 @@ export default function Auth({ initialMode = 'signup' }) {
         </form>
 
         <div className="mt-6 text-center">
-          <button
-            onClick={() => {
-              setMode(mode === 'login' ? 'signup' : 'login')
-              setName('')
-              setEmail('')
-              setPassword('')
-            }}
-            className="text-blue-600 hover:underline text-sm font-medium"
-            disabled={loading}
-          >
-            {mode === 'login' ? 'Hesabınız yok mu? Kayıt olun' : 'Zaten hesabınız var mı? Giriş yapın'}
-          </button>
+          import { useNavigate } from 'react-router-dom'  // ← dosyanın üstüne ekle
+
+// component içinde:
+const navigate = useNavigate()
+
+// buton:
+<button
+  onClick={() => {
+    setName('')
+    setEmail('')
+    setPassword('')
+    if (mode === 'login') {
+      navigate('/signup')
+    } else {
+      navigate('/login')
+    }
+  }}
+  className="text-blue-600 hover:underline text-sm font-medium"
+  disabled={loading}
+>
+  {mode === 'login' ? 'Hesabınız yok mu? Kayıt olun' : 'Zaten hesabınız var mı? Giriş yapın'}
+</button>
         </div>
       </div>
     </div>
