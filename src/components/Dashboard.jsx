@@ -1102,55 +1102,58 @@ const handleThemeColorChange = async (color) => {
                 )}
 
                 {/* Abonelik Kartı */}
-                <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg p-6 text-white">
-                  <h3 className="text-xl font-bold mb-2">Abonelik</h3>
-                  {subscription ? (
-                    <>
-                      <p className="text-blue-100 text-sm mb-4">
-                        {limits?.name || 'Yükleniyor...'}
-                      </p>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <span>✓</span>
-                          <span>
-                            {subscription.organizations_limit === 999 
-                              ? 'Sınırsız organizasyon' 
-                              : `${subscription.organizations_limit} organizasyon`}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span>✓</span>
-                          <span>
-                            {subscription.social_links_limit === 999 
-                              ? 'Sınırsız sosyal medya' 
-                              : `${subscription.social_links_limit} sosyal medya`}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span>✓</span>
-                          <span>
-                            {subscription.nfc_cards_included > 0 
-                              ? `${subscription.nfc_cards_included} NFC kart` 
-                              : 'Temel QR kod'}
-                          </span>
-                        </div>
-                      </div>
-                      {subscription.plan === 'free' && (
-                        <button 
-                          onClick={() => {
-                            setSelectedPlan({ plan: 'professional', billingCycle: 'yearly' })
-                            setShowPayment(true)
-                          }}
-                          className="w-full mt-4 py-3 bg-white text-blue-600 rounded-xl font-semibold hover:shadow-lg transition-all"
-                        >
-                          Planı Yükselt
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-blue-100 text-sm">Yükleniyor...</p>
-                  )}
-                </div>
+<div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg p-6 text-white">
+  <h3 className="text-xl font-bold mb-2">Abonelik</h3>
+  {subLoading ? (
+    <p className="text-blue-100 text-sm">Yükleniyor...</p>
+  ) : (
+    <>
+      <p className="text-blue-100 text-sm mb-1 font-semibold">
+        {subscription?.plan === 'professional' ? '⭐ Profesyonel Plan' :
+         subscription?.plan === 'stk' ? '🏢 STK Özel Plan' :
+         subscription?.plan === 'business' ? '🚀 Kurumsal Plan' :
+         '🆓 Başlangıç Planı'}
+      </p>
+      <div className="space-y-2 text-sm mt-3">
+        <div className="flex items-center gap-2">
+          <span>✓</span>
+          <span>
+            {(subscription?.organizations_limit ?? 2) === 999
+              ? 'Sınırsız organizasyon'
+              : `${subscription?.organizations_limit ?? 2} organizasyon`}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span>✓</span>
+          <span>
+            {(subscription?.social_links_limit ?? 3) === 999
+              ? 'Sınırsız sosyal medya'
+              : `${subscription?.social_links_limit ?? 3} sosyal medya`}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span>✓</span>
+          <span>
+            {(subscription?.nfc_cards_included ?? 0) > 0
+              ? `${subscription.nfc_cards_included} NFC kart`
+              : 'Temel QR kod'}
+          </span>
+        </div>
+      </div>
+      {(!subscription || subscription.plan === 'free') && (
+        <button
+          onClick={() => {
+            setSelectedPlan({ plan: 'professional', billingCycle: 'yearly' })
+            setShowPayment(true)
+          }}
+          className="w-full mt-4 py-3 bg-white text-blue-600 rounded-xl font-semibold hover:shadow-lg transition-all"
+        >
+          Planı Yükselt
+        </button>
+      )}
+    </>
+  )}
+</div>
               </div>
             </div>
           )}
