@@ -278,7 +278,7 @@ const handleThemeColorChange = async (color) => {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-bold text-blue-900 dark:text-blue-100">
-                    📊 {limits?.name || subscription.plan} Plan {isCorporate && '- Kurumsal Mod'}
+                    📊 {limits?.name || subscription.plan} {isCorporate && '- Kurumsal Mod'}
                   </h3>
                   <p className="text-sm text-blue-800 dark:text-blue-200">
                     Organizasyonlar: {orgCount}/{subscription.organizations_limit === 999 ? '∞' : subscription.organizations_limit} • 
