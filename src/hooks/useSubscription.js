@@ -1,6 +1,18 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
+const DEFAULT_FREE_SUBSCRIPTION = {
+  plan: 'free',
+  status: 'active',
+  organizations_limit: 2,
+  social_links_limit: 3,
+  nfc_cards_included: 0,
+  nfc_cards_used: 0,
+  organizations_used: 0,
+  social_links_used: 0,
+  billing_cycle: null
+};
+
 export function useSubscription(profileId) {
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -8,12 +20,9 @@ export function useSubscription(profileId) {
 
   useEffect(() => {
     if (!profileId) {
-      console.log('❌ No profileId provided to useSubscription');
       setLoading(false);
       return;
     }
-
-    console.log('🔍 Fetching subscription for profile_id:', profileId);
 
     const fetchSubscription = async () => {
       try {
@@ -26,15 +35,15 @@ export function useSubscription(profileId) {
           .single();
 
         if (error) {
-          console.error('❌ Subscription fetch error:', error);
-          setError(error.message);
+          // Kayıt bulunamazsa free plan varsayılan olarak set et
+          console.warn('Subscription not found, defaulting to free:', error.message);
+          setSubscription(DEFAULT_FREE_SUBSCRIPTION);
         } else {
-          console.log('✅ Subscription found:', data);
           setSubscription(data);
         }
       } catch (err) {
-        console.error('❌ Subscription error:', err);
-        setError(err.message);
+        console.error('Subscription error:', err);
+        setSubscription(DEFAULT_FREE_SUBSCRIPTION);
       } finally {
         setLoading(false);
       }
@@ -44,7 +53,12 @@ export function useSubscription(profileId) {
   }, [profileId]);
 
   const getLimits = () => {
-    if (!subscription) return null;
+    if (!subscription) return {
+      organizations: 2,
+      socialLinks: 3,
+      nfcCards: 0,
+      name: 'Başlangıç Planı'
+    };
 
     const limits = {
       free: {
@@ -78,17 +92,16 @@ export function useSubscription(profileId) {
 
   const canAdd = (type) => {
     if (!subscription) return false;
-
     const limits = getLimits();
     if (!limits) return false;
 
     switch (type) {
       case 'organization':
-        return subscription.organizations_used < limits.organizations;
+        return (subscription.organizations_used || 0) < limits.organizations;
       case 'socialLink':
-        return subscription.organizations_used < limits.socialLinks;
+        return (subscription.social_links_used || 0) < limits.socialLinks;
       case 'nfcCard':
-        return subscription.nfc_cards_used < limits.nfcCards;
+        return (subscription.nfc_cards_used || 0) < limits.nfcCards;
       default:
         return false;
     }
@@ -98,12 +111,5 @@ export function useSubscription(profileId) {
     return subscription && subscription.plan !== 'free';
   };
 
-  return {
-    subscription,
-    loading,
-    error,
-    getLimits,
-    canAdd,
-    isPremium
-  };
+  return { subscription, loading, error, getLimits, canAdd, isPremium };
 }
