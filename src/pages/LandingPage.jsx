@@ -16,6 +16,12 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
 
+  // Yardımcı fonksiyon — referral kodu varsa URL'e ekle
+  const goTo = (path) => {
+    const ref = new URLSearchParams(window.location.search).get('ref')
+    navigate(ref ? `${path}?ref=${ref}` : path)
+  }
+
   const features = [
     {
       icon: QrCode,
@@ -50,99 +56,101 @@ export default function LandingPage() {
   ];
 
   const plans = [
-  {
-    name: 'Başlangıç',  // ✅ DEĞİŞTİ
-    price: '₺0',
-    period: '/ay',
-    yearlyPrice: null,
-    nfcGift: null,
-    features: [
-      '1 dijital kartvizit',
-      '3 sosyal medya hesabı',
-      '2 organizasyon',
-      'Temel QR kod',
-      'Profil analytics'
-    ],
-    cta: 'Ücretsiz Başla',
-    popular: false,
-    badge: null
-  },
-  {
-    name: 'Profesyonel',  // ✅ ZATEN DOĞRU
-    price: '₺299',
-    period: '/ay',
-    yearlyPrice: '₺2.990/yıl',
-    nfcGift: '1 NFC Kart Hediye*',
-    nfcGiftNote: '* Renkli PVC kart',
-    features: [
-      'Sınırsız sosyal medya',
-      'Sınırsız organizasyon',  // ✅ DEĞİŞTİ (15 → Sınırsız)
-      'QR kod özelleştirme',
-      'Gelişmiş analytics',
-      'Öncelikli destek',
-      'Özel QR tasarımı'
-    ],
-    cta: 'Profesyonel\'e Geç',
-    popular: true,
-    badge: 'Popüler'
-  },
-  {
-    name: 'STK Özel',  // ✅ ZATEN DOĞRU
-    price: '₺499',
-    period: '/ay',
-    yearlyPrice: '₺4.490/yıl',
-    nfcGift: 'Admin + 5 Üye Kartı*',
-    nfcGiftNote: '* Renkli PVC kart',
-    features: [
-      'Sınırsız üye',
-      'Başvuru sistemi',
-      'Üye onay yönetimi',
-      'Toplu üye yönetimi',
-      'Public üye dizini',
-      'Rozet sistemi',
-      'Özel alan adı desteği'
-    ],
-    cta: 'STK Planına Geç',
-    popular: false,
-    badge: 'STK\'lar İçin'
-  },
-  {
-    name: 'Kurumsal',  // ✅ ZATEN DOĞRU
-    price: '₺999',
-    period: '/ay',
-    yearlyPrice: '₺9.990/yıl',
-    nfcGift: '10 NFC Kart Hediye*',
-    nfcGiftNote: '* Renkli PVC kart',
-    features: [
-      '50+ çalışan',
-      'API erişimi',
-      'White-label çözüm',
-      'Özel entegrasyon',
-      'Dedike destek',
-      'SLA garantisi',
-      'Özel eğitim',
-      'Kurumsal faturalama'
-    ],
-    cta: 'İletişime Geç',
-    popular: false,
-    badge: 'En Güçlü'
-  }
-];
+    {
+      name: 'Başlangıç',
+      price: '₺0',
+      period: '/ay',
+      yearlyPrice: null,
+      nfcGift: null,
+      features: [
+        '1 dijital kartvizit',
+        '3 sosyal medya hesabı',
+        '2 organizasyon',
+        'Temel QR kod',
+        'Profil analytics'
+      ],
+      cta: 'Ücretsiz Başla',
+      popular: false,
+      badge: null
+    },
+    {
+      name: 'Profesyonel',
+      price: '₺299',
+      period: '/ay',
+      yearlyPrice: '₺2.990/yıl',
+      nfcGift: '1 NFC Kart Hediye*',
+      nfcGiftNote: '* Renkli PVC kart',
+      features: [
+        'Sınırsız sosyal medya',
+        'Sınırsız organizasyon',
+        'QR kod özelleştirme',
+        'Gelişmiş analytics',
+        'Öncelikli destek',
+        'Özel QR tasarımı'
+      ],
+      cta: "Profesyonel'e Geç",
+      popular: true,
+      badge: 'Popüler'
+    },
+    {
+      name: 'STK Özel',
+      price: '₺499',
+      period: '/ay',
+      yearlyPrice: '₺4.490/yıl',
+      nfcGift: 'Admin + 5 Üye Kartı*',
+      nfcGiftNote: '* Renkli PVC kart',
+      features: [
+        'Sınırsız üye',
+        'Başvuru sistemi',
+        'Üye onay yönetimi',
+        'Toplu üye yönetimi',
+        'Public üye dizini',
+        'Rozet sistemi',
+        'Özel alan adı desteği'
+      ],
+      cta: 'STK Planına Geç',
+      popular: false,
+      badge: "STK'lar İçin"
+    },
+    {
+      name: 'Kurumsal',
+      price: '₺999',
+      period: '/ay',
+      yearlyPrice: '₺9.990/yıl',
+      nfcGift: '10 NFC Kart Hediye*',
+      nfcGiftNote: '* Renkli PVC kart',
+      features: [
+        '50+ çalışan',
+        'API erişimi',
+        'White-label çözüm',
+        'Özel entegrasyon',
+        'Dedike destek',
+        'SLA garantisi',
+        'Özel eğitim',
+        'Kurumsal faturalama'
+      ],
+      cta: 'İletişime Geç',
+      popular: false,
+      badge: 'En Güçlü'
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
+      
       {/* Header */}
       <header className="fixed top-0 w-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <img 
-  src="/qrtım-logo.png?v=2"
-  alt="Qartim Logo" 
-  className="h-16 w-auto"
-/>
+                src="/qrtım-logo.png?v=2"
+                alt="Qartim Logo" 
+                className="h-16 w-auto"
+              />
             </div>
             <div className="flex items-center gap-3">
+              {/* Tema Toggle */}
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
@@ -155,7 +163,7 @@ export default function LandingPage() {
                 )}
               </button>
               
-              {/* NFC Kartlar Link */}
+              {/* NFC Kartlar */}
               <button
                 onClick={() => navigate('/nfc-cards')}
                 className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium flex items-center gap-2 transition-colors"
@@ -164,21 +172,18 @@ export default function LandingPage() {
                 <span className="hidden sm:inline">NFC Kartlar</span>
               </button>
               
+              {/* Giriş Yap → /login */}
               <button
-                onClick={() => {
-                  const ref = new URLSearchParams(window.location.search).get('ref')
-                  navigate(ref ? `/signup?ref=${ref}` : '/signup')
-                }}
+                onClick={() => goTo('/login')}
                 className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium"
               >
                 Giriş Yap
               </button>
+
+              {/* Ücretsiz Başla → /signup */}
               <button
-                onClick={() => {
-                  const ref = new URLSearchParams(window.location.search).get('ref')
-                  navigate(ref ? `/login?ref=${ref}` : '/login')
-                }}
-                  className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
+                onClick={() => goTo('/signup')}
+                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
               >
                 Ücretsiz Başla
               </button>
@@ -209,11 +214,9 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            {/* Ücretsiz Başla → /signup */}
             <button
-              onClick={() => {
-                const ref = new URLSearchParams(window.location.search).get('ref')
-                navigate(ref ? `/signup?ref=${ref}` : '/signup')
-              }}
+              onClick={() => goTo('/signup')}
               className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold text-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
             >
               Ücretsiz Başla
@@ -227,18 +230,15 @@ export default function LandingPage() {
             </button>
           </div>
 
-          {/* Hero Image/Mockup */}
-          {/* Hero Animation */}
-<div className="mt-32 relative">
-  <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 blur-3xl opacity-20"></div>
-  <AnimatedHero />
-           
+          <div className="mt-32 relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 blur-3xl opacity-20"></div>
+            <AnimatedHero />
           </div>
         </div>
       </section>
 
-      {/* YENİ: Impact Metrics */}
-<ImpactMetrics />
+      {/* Impact Metrics */}
+      <ImpactMetrics />
 
       {/* Features Section */}
       <section className="py-20 bg-white dark:bg-gray-900">
@@ -276,11 +276,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* YENİ: Comparison Table */}
-<ComparisonTable />
+      {/* Comparison Table */}
+      <ComparisonTable />
 
-{/* YENİ: Use Cases */}
-<UseCases />
+      {/* Use Cases */}
+      <UseCases />
 
       {/* Pricing Section */}
       <section className="py-20 px-4" id="pricing">
@@ -355,11 +355,9 @@ export default function LandingPage() {
                   ))}
                 </ul>
 
+                {/* Tüm plan butonları → /signup */}
                 <button
-                  onClick={() => {
-                    const ref = new URLSearchParams(window.location.search).get('ref')
-                    navigate(ref ? `/signup?ref=${ref}` : '/signup')
-                  }}
+                  onClick={() => goTo('/signup')}
                   className={`w-full py-2.5 rounded-xl font-semibold transition-all text-sm ${
                     plan.popular
                       ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-xl'
@@ -372,7 +370,7 @@ export default function LandingPage() {
             ))}
           </div>
 
-          {/* Extra NFC Card Pricing */}
+          {/* Ekstra NFC Kart */}
           <div className="mt-12 text-center p-6 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl border border-gray-200 dark:border-gray-600">
             <div className="flex items-center justify-center gap-3 mb-2">
               <CreditCard className="text-blue-600" size={24} />
@@ -394,8 +392,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* YENİ: FAQ */}
-<FAQ />
+      {/* FAQ */}
+      <FAQ />
 
       {/* CTA Section */}
       <section className="py-20 px-4 bg-gradient-to-r from-blue-600 to-purple-600">
@@ -406,12 +404,10 @@ export default function LandingPage() {
           <p className="text-xl text-blue-100 mb-8">
             Dijital kartvizitinizi dakikalar içinde oluşturun ve paylaşmaya başlayın
           </p>
+          {/* CTA → /signup */}
           <button
-            onClick={() => {
-              const ref = new URLSearchParams(window.location.search).get('ref')
-              navigate(ref ? `/signup?ref=${ref}` : '/signup')
-          }}
-          className="px-8 py-4 bg-white text-blue-600 rounded-xl font-semibold text-lg hover:shadow-2xl transition-all inline-flex items-center gap-2"
+            onClick={() => goTo('/signup')}
+            className="px-8 py-4 bg-white text-blue-600 rounded-xl font-semibold text-lg hover:shadow-2xl transition-all inline-flex items-center gap-2"
           >
             Ücretsiz Kayıt Ol
             <ArrowRight size={20} />
@@ -458,7 +454,7 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      {/* YENİ: Scroll Animations */}
+      {/* Scroll Animations */}
       <ScrollAnimations />
     </div>
   );
