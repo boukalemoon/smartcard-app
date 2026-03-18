@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { checkLoginRateLimit, checkSignupRateLimit } from '../utils/rateLimiting'
 
 export default function Auth({ initialMode = 'signup' }) {
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -10,21 +12,20 @@ export default function Auth({ initialMode = 'signup' }) {
   const [mode, setMode] = useState(initialMode)
   const [referralCode, setReferralCode] = useState(null)
 
- useEffect(() => {
-  const urlParams = new URLSearchParams(window.location.search)
-  const ref = urlParams.get('ref')
-  if (ref) {
-    setReferralCode(ref)
-    setMode('signup')
-  }
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const ref = urlParams.get('ref')
+    if (ref) {
+      setReferralCode(ref)
+      setMode('signup')
+    }
 
-  const savedRef = localStorage.getItem('qartim_referral_code')
-  if (savedRef && !ref) {
-    setReferralCode(savedRef)
-    // initialMode'u bozmamak için sadece referral varsa signup yap
-    if (initialMode === 'signup') setMode('signup')
-  }
-}, [])
+    const savedRef = localStorage.getItem('qartim_referral_code')
+    if (savedRef && !ref) {
+      setReferralCode(savedRef)
+      if (initialMode === 'signup') setMode('signup')
+    }
+  }, [])
 
   useEffect(() => {
     if (referralCode) {
@@ -45,7 +46,6 @@ export default function Auth({ initialMode = 'signup' }) {
           return
         }
 
-        // SADECE AUTH SIGNUP YAP - Trigger profil oluşturacak
         const { error: authError } = await supabase.auth.signUp({
           email,
           password,
@@ -55,14 +55,12 @@ export default function Auth({ initialMode = 'signup' }) {
             }
           }
         })
-        
+
         if (authError) throw authError
 
-        // ✅ BAŞARILI!
         alert('🎉 Kayıt başarılı!\n\n📧 Email adresinize doğrulama linki gönderdik.\n\nLütfen email kutunuzu kontrol edin ve linke tıklayarak hesabınızı aktif edin.\n\n💡 Email gelmedi mi? Spam klasörünü kontrol edin.')
-        
         localStorage.removeItem('qartim_referral_code')
-        setMode('login')
+        navigate('/login')
 
       } else {
         const loginCheck = checkLoginRateLimit(email)
@@ -76,7 +74,7 @@ export default function Auth({ initialMode = 'signup' }) {
           email,
           password
         })
-        
+
         if (error) throw error
       }
     } catch (error) {
@@ -87,12 +85,23 @@ export default function Auth({ initialMode = 'signup' }) {
     }
   }
 
+  const switchMode = () => {
+    setName('')
+    setEmail('')
+    setPassword('')
+    if (mode === 'login') {
+      navigate('/signup')
+    } else {
+      navigate('/login')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            QRtım
+            Qartım
           </h1>
           <p className="text-gray-600">
             {mode === 'login' ? 'Hesabınıza giriş yapın' : 'Yeni hesap oluşturun'}
@@ -163,28 +172,13 @@ export default function Auth({ initialMode = 'signup' }) {
         </form>
 
         <div className="mt-6 text-center">
-          import { useNavigate } from 'react-router-dom'  // ← dosyanın üstüne ekle
-
-// component içinde:
-const navigate = useNavigate()
-
-// buton:
-<button
-  onClick={() => {
-    setName('')
-    setEmail('')
-    setPassword('')
-    if (mode === 'login') {
-      navigate('/signup')
-    } else {
-      navigate('/login')
-    }
-  }}
-  className="text-blue-600 hover:underline text-sm font-medium"
-  disabled={loading}
->
-  {mode === 'login' ? 'Hesabınız yok mu? Kayıt olun' : 'Zaten hesabınız var mı? Giriş yapın'}
-</button>
+          <button
+            onClick={switchMode}
+            className="text-blue-600 hover:underline text-sm font-medium"
+            disabled={loading}
+          >
+            {mode === 'login' ? 'Hesabınız yok mu? Kayıt olun' : 'Zaten hesabınız var mı? Giriş yapın'}
+          </button>
         </div>
       </div>
     </div>
