@@ -1,4 +1,4 @@
-// src/components/landing/UseCases.jsx
+﻿// src/components/landing/UseCases.jsx
 
 export default function UseCases() {
   const cases = [
@@ -8,7 +8,7 @@ export default function UseCases() {
       title: 'Çevre Aktivisti',
       name: 'Ayşe K.',
       role: 'Sürdürülebilirlik Danışmanı',
-      quote: '"1 yılda 500 kartvizit dağıtıyordum, bu 2.5 kg kağıt demek. Qartım ile artık sıfır atık üretiyorum ve müşterilerime çevre bilinciyle örnek oluyorum."',
+      quote: '"1 yılda 500 kartvizit dağıtıyordum, bu 2.5 kg kağıt demek. QRtım ile artık sıfır atık üretiyorum ve müşterilerime çevre bilinciyle örnek oluyorum."',
       benefit: 'Sıfır Karbon Ayak İzi',
       stats: '500 kart → 2.5 kg kağıt tasarrufu',
       color: 'green'
@@ -19,7 +19,7 @@ export default function UseCases() {
       title: 'Kurumsal Şirket',
       name: 'Mehmet Y.',
       role: 'İK Müdürü - 500 Çalışanlı Şirket',
-      quote: '"500 çalışan × 200 kart/yıl × ₺0.50 = Yıllık ₺50.000 harcıyorduk. Qartım ile hem maliyetten kurtulduk, hem de yeşil şirket imajı kazandık."',
+      quote: '"500 çalışan × 200 kart/yıl × ₺0.50 = Yıllık ₺50.000 harcıyorduk. QRtım ile hem maliyetten kurtulduk, hem de yeşil şirket imajı kazandık."',
       benefit: '₺50.000 Yıllık Tasarruf',
       stats: '100,000 kart → 500 kg kağıt → 12 ağaç',
       color: 'blue'
@@ -30,7 +30,7 @@ export default function UseCases() {
       title: 'Veri Güvenliği Uzmanı',
       name: 'Can D.',
       role: 'Siber Güvenlik Danışmanı',
-      quote: '"Kağıt kartvizit dağıtmak, müşteri verilerini açıkta bırakmak demek. Qartım ile 256-bit şifreleme + RLS koruması altında güvenli paylaşım yapıyorum."',
+      quote: '"Kağıt kartvizit dağıtmak, müşteri verilerini açıkta bırakmak demek. QRtım ile 256-bit şifreleme + RLS koruması altında güvenli paylaşım yapıyorum."',
       benefit: 'Kurumsal Güvenlik Standardı',
       stats: 'GDPR + ISO 27001 Uyumlu',
       color: 'purple'
@@ -160,7 +160,7 @@ export default function UseCases() {
               Siz de Hikayenizin Parçası Olun! 🌟
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Her gün yüzlerce profesyonel, Qartım ile dijitalleşerek hem çevreye katkı sağlıyor, 
+              Her gün yüzlerce profesyonel, QRtım ile dijitalleşerek hem çevreye katkı sağlıyor, 
               hem de iş süreçlerini geliştiriyor.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">

@@ -1,4 +1,4 @@
-import FAQ from '../components/landing/FAQ';
+﻿import FAQ from '../components/landing/FAQ';
 import ScrollAnimations from '../components/landing/ScrollAnimations';
 import AnimatedHero from '../components/landing/AnimatedHero';
 import UseCases from '../components/landing/UseCases';
@@ -420,7 +420,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
-              <h3 className="text-white font-bold mb-4">Qartım</h3>
+              <h3 className="text-white font-bold mb-4">QRtım</h3>
               <p className="text-sm">
                 Türkiye'nin dijital kartvizit platformu
               </p>
@@ -449,7 +449,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="pt-8 border-t border-gray-800 text-center text-sm">
-            <p>&copy; 2026 Qartım. Tüm hakları saklıdır.</p>
+            <p>&copy; 2026 QRtım. Tüm hakları saklıdır.</p>
           </div>
         </div>
       </footer>

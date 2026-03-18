@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useNavigate } from 'react-router-dom'
 import AdminCRM from '../components/AdminCRM'
@@ -60,7 +60,7 @@ export default function AdminPage() {
             <div className="flex items-center gap-3">
               <img 
                 src="/qartim-logo.jpg" 
-                alt="Qartım" 
+                alt="QRtım" 
                 className="h-16 w-auto"
               />
               <span className="px-3 py-1 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 text-sm font-semibold rounded-full">

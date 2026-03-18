@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { checkLoginRateLimit, checkSignupRateLimit } from '../utils/rateLimiting'
@@ -101,7 +101,7 @@ export default function Auth({ initialMode = 'signup' }) {
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Qartım
+            QRtım
           </h1>
           <p className="text-gray-600">
             {mode === 'login' ? 'Hesabınıza giriş yapın' : 'Yeni hesap oluşturun'}

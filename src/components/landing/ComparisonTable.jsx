@@ -1,4 +1,4 @@
-// src/components/landing/ComparisonTable.jsx
+﻿// src/components/landing/ComparisonTable.jsx
 // DOĞRU VERSİYON - 1 dijital kart = yıllık 200 fiziksel kart tasarrufu
 
 export default function ComparisonTable() {
@@ -103,7 +103,7 @@ export default function ComparisonTable() {
           <div className="grid grid-cols-3 gap-4 p-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
             <div className="font-bold text-lg">Özellik</div>
             <div className="font-bold text-lg text-center">📄 Kağıt Kartvizit</div>
-            <div className="font-bold text-lg text-center">💚 Qartım (Dijital)</div>
+            <div className="font-bold text-lg text-center">💚 QRtım (Dijital)</div>
           </div>
 
           {/* Table Rows */}
@@ -233,7 +233,7 @@ export default function ComparisonTable() {
                 <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
                   <div className="text-3xl mb-2">{item.digital.icon}</div>
                   <div className="font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    💚 Qartım
+                    💚 QRtım
                   </div>
                   <div className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">
                     {item.digital.text}

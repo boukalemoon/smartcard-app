@@ -1,4 +1,4 @@
-import { sanitizeHtml } from '../utils/inputValidation'  // ✅ DO NOT REMOVE - Güvenli input için
+﻿import { sanitizeHtml } from '../utils/inputValidation'  // ✅ DO NOT REMOVE - Güvenli input için
 import { checkLoginRateLimit } from '../utils/rateLimiting'  // ✅ DO NOT REMOVE - Login rate limiting    
 import AvatarFlipCard from '../components/AvatarFlipCard'
 import { trackEvent } from '../utils/analyticsHelpers'
@@ -166,7 +166,7 @@ END:VCARD`;
             <span>Ana Sayfa</span>
           </button>
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            Powered by Qartım
+            Powered by QRtım
           </div>
         </div>
 
