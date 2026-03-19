@@ -56,84 +56,84 @@ export default function LandingPage() {
   ];
 
   const plans = [
-    {
-      name: 'Başlangıç',
-      price: '₺0',
-      period: '/ay',
-      yearlyPrice: null,
-      nfcGift: null,
-      features: [
-        '1 dijital kartvizit',
-        '3 sosyal medya hesabı',
-        '2 organizasyon',
-        'Temel QR kod',
-        'Profil analytics'
-      ],
-      cta: 'Ücretsiz Başla',
-      popular: false,
-      badge: null
-    },
-    {
-      name: 'Profesyonel',
-      price: '₺299',
-      period: '/ay',
-      yearlyPrice: '₺2.990/yıl',
-      nfcGift: '1 NFC Kart Hediye*',
-      nfcGiftNote: '* Renkli PVC kart',
-      features: [
-        'Sınırsız sosyal medya',
-        'Sınırsız organizasyon',
-        'QR kod özelleştirme',
-        'Gelişmiş analytics',
-        'Öncelikli destek',
-        'Özel QR tasarımı'
-      ],
-      cta: "Profesyonel'e Geç",
-      popular: true,
-      badge: 'Popüler'
-    },
-    {
-      name: 'STK Özel',
-      price: '₺499',
-      period: '/ay',
-      yearlyPrice: '₺4.490/yıl',
-      nfcGift: 'Admin + 5 Üye Kartı*',
-      nfcGiftNote: '* Renkli PVC kart',
-      features: [
-        'Sınırsız üye',
-        'Başvuru sistemi',
-        'Üye onay yönetimi',
-        'Toplu üye yönetimi',
-        'Public üye dizini',
-        'Rozet sistemi',
-        'Özel alan adı desteği'
-      ],
-      cta: 'STK Planına Geç',
-      popular: false,
-      badge: "STK'lar İçin"
-    },
-    {
-      name: 'Kurumsal',
-      price: '₺999',
-      period: '/ay',
-      yearlyPrice: '₺9.990/yıl',
-      nfcGift: '10 NFC Kart Hediye*',
-      nfcGiftNote: '* Renkli PVC kart',
-      features: [
-        '50+ çalışan',
-        'API erişimi',
-        'White-label çözüm',
-        'Özel entegrasyon',
-        'Dedike destek',
-        'SLA garantisi',
-        'Özel eğitim',
-        'Kurumsal faturalama'
-      ],
-      cta: 'İletişime Geç',
-      popular: false,
-      badge: 'En Güçlü'
-    }
-  ];
+  {
+    name: 'Başlangıç',
+    price: '₺0',
+    period: '/ay',
+    yearlyPrice: null,
+    nfcGift: null,
+    features: [
+      '1 dijital kartvizit',
+      '3 sosyal medya hesabı',
+      '2 organizasyon',
+      'Temel QR kod',
+      'Profil analytics'
+    ],
+    cta: 'Ücretsiz Başla',
+    popular: false,
+    badge: null
+  },
+  {
+    name: 'Profesyonel',
+    price: '₺249',
+    period: '/ay',
+    yearlyPrice: '₺2.490/yıl',
+    nfcGift: '1 NFC Kart Hediye*',
+    nfcGiftNote: '* Standart PVC kart (₺799 değerinde)',
+    features: [
+      'Sınırsız sosyal medya',
+      'Sınırsız organizasyon',
+      'QR kod özelleştirme',
+      'Gelişmiş analytics',
+      'Öncelikli destek',
+      'Özel QR tasarımı'
+    ],
+    cta: "Profesyonel'e Geç",
+    popular: true,
+    badge: 'Popüler'
+  },
+  {
+    name: 'STK Özel',
+    price: '₺449',
+    period: '/ay',
+    yearlyPrice: '₺4.290/yıl',
+    nfcGift: 'Admin + 5 Üye Kartı*',
+    nfcGiftNote: '* 6 adet PVC kart (₺4.794 değerinde)',
+    features: [
+      'Sınırsız üye',
+      'Başvuru sistemi',
+      'Üye onay yönetimi',
+      'Toplu üye yönetimi',
+      'Public üye dizini',
+      'Rozet sistemi',
+      'Özel alan adı desteği'
+    ],
+    cta: 'STK Planına Geç',
+    popular: false,
+    badge: "STK'lar İçin"
+  },
+  {
+    name: 'Kurumsal',
+    price: '₺899',
+    period: '/ay',
+    yearlyPrice: '₺8.990/yıl',
+    nfcGift: '10 NFC Kart Hediye*',
+    nfcGiftNote: '* 10 adet PVC kart (₺7.990 değerinde)',
+    features: [
+      '50+ çalışan',
+      'API erişimi',
+      'White-label çözüm',
+      'Özel entegrasyon',
+      'Dedike destek',
+      'SLA garantisi',
+      'Özel eğitim',
+      'Kurumsal faturalama'
+    ],
+    cta: 'İletişime Geç',
+    popular: false,
+    badge: 'En Güçlü'
+  }
+]
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
@@ -371,24 +371,79 @@ export default function LandingPage() {
           </div>
 
           {/* Ekstra NFC Kart */}
-          <div className="mt-12 text-center p-6 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl border border-gray-200 dark:border-gray-600">
-            <div className="flex items-center justify-center gap-3 mb-2">
-              <CreditCard className="text-blue-600" size={24} />
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                Ekstra NFC Kart
-              </h3>
-            </div>
-            <p className="text-gray-600 dark:text-gray-400 mb-3">
-              İhtiyacınız olduğunda ekstra NFC kart sipariş edebilirsiniz
-            </p>
-            <div className="inline-flex items-center gap-2 mb-2">
-              <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">₺899</span>
-              <span className="text-gray-600 dark:text-gray-400">/adet</span>
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              * Renkli PVC kart için geçerlidir
-            </p>
+{/* NFC Kart Seçenekleri */}
+<div className="mt-12">
+  <h3 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-2">
+    Ekstra NFC Kart Siparişi
+  </h3>
+  <p className="text-center text-gray-500 dark:text-gray-400 text-sm mb-8">
+    Aboneliğinize NFC kart ekleyin veya yıllık planlarda ücretsiz kazanın
+  </p>
+  <div className="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
+    <div className="relative p-6 bg-white dark:bg-gray-800 rounded-2xl border-2 border-blue-200 dark:border-blue-800 hover:shadow-xl transition-all">
+      <div className="w-full h-28 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl mb-4 flex flex-col justify-between p-4 relative overflow-hidden shadow-lg">
+        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/20 rounded-xl" />
+        <div className="relative z-10 flex justify-between items-start">
+          <div>
+            <div className="text-white/60 text-xs">QRtım</div>
+            <div className="text-white font-bold text-sm">Ad Soyad</div>
           </div>
+          <div className="w-6 h-6 bg-white/20 rounded flex items-center justify-center">
+            <CreditCard size={12} className="text-white" />
+          </div>
+        </div>
+        <div className="relative z-10 text-white/50 text-xs">Standart PVC</div>
+      </div>
+      <h4 className="font-bold text-gray-900 dark:text-white mb-2">Standart PVC Kart</h4>
+      <ul className="space-y-1 mb-4">
+        {['Su geçirmez', 'Canlı renkli baskı', 'NFC çip dahil', 'Kargo ücretsiz'].map((f, i) => (
+          <li key={i} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+            <Check size={12} className="text-green-500" /> {f}
+          </li>
+        ))}
+      </ul>
+      <div className="flex items-baseline justify-between">
+        <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">₺799</span>
+        <span className="text-xs text-gray-500">/adet</span>
+      </div>
+    </div>
+
+    <div className="relative p-6 bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-300 dark:border-gray-600 hover:shadow-xl transition-all">
+      <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold rounded-full">
+        Popüler
+      </div>
+      <div className="w-full h-28 bg-gradient-to-br from-gray-600 to-gray-900 rounded-xl mb-4 flex flex-col justify-between p-4 relative overflow-hidden shadow-lg">
+        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/20 rounded-xl" />
+        <div className="absolute inset-0 opacity-10 rounded-xl" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(255,255,255,0.3) 2px, rgba(255,255,255,0.3) 4px)' }} />
+        <div className="relative z-10 flex justify-between items-start">
+          <div>
+            <div className="text-white/60 text-xs">QRtım</div>
+            <div className="text-white font-bold text-sm">Ad Soyad</div>
+          </div>
+          <div className="w-6 h-6 bg-white/20 rounded flex items-center justify-center">
+            <CreditCard size={12} className="text-white" />
+          </div>
+        </div>
+        <div className="relative z-10 text-white/50 text-xs">Premium Metal</div>
+      </div>
+      <h4 className="font-bold text-gray-900 dark:text-white mb-2">Premium Metal Kart</h4>
+      <ul className="space-y-1 mb-4">
+        {['Paslanmaz çelik', 'Lazer gravür baskı', 'NFC çip dahil', 'Kargo ücretsiz'].map((f, i) => (
+          <li key={i} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+            <Check size={12} className="text-green-500" /> {f}
+          </li>
+        ))}
+      </ul>
+      <div className="flex items-baseline justify-between">
+        <span className="text-2xl font-bold text-gray-800 dark:text-gray-200">₺1.490</span>
+        <span className="text-xs text-gray-500">/adet</span>
+      </div>
+    </div>
+  </div>
+  <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-4">
+    💡 Yıllık Profesyonel planında 1 PVC kart, STK planında 6 kart, Kurumsal planında 10 kart <strong>ücretsiz</strong> gelir.
+  </p>
+</div>
         </div>
       </section>
 

@@ -35,8 +35,6 @@ export function useSubscription(profileId) {
           .single();
 
         if (error) {
-          // Kayıt bulunamazsa free plan varsayılan olarak set et
-          console.warn('Subscription not found, defaulting to free:', error.message);
           setSubscription(DEFAULT_FREE_SUBSCRIPTION);
         } else {
           setSubscription(data);
@@ -53,41 +51,40 @@ export function useSubscription(profileId) {
   }, [profileId]);
 
   const getLimits = () => {
-    if (!subscription) return {
-      organizations: 2,
-      socialLinks: 3,
-      nfcCards: 0,
-      name: 'Başlangıç Planı'
-    };
+    if (!subscription) {
+      return { organizations: 2, socialLinks: 3, nfcCards: 0, name: 'Başlangıç Planı' };
+    }
 
-    const limits = {
-      free: {
-        organizations: 2,
-        socialLinks: 3,
-        nfcCards: 0,
-        name: 'Başlangıç Planı'
-      },
-      professional: {
+    const isYearly = subscription.billing_cycle === 'yearly';
+
+    if (subscription.plan === 'professional') {
+      return {
         organizations: 999,
         socialLinks: 999,
-        nfcCards: subscription.billing_cycle === 'yearly' ? 1 : 0,
+        nfcCards: isYearly ? 1 : 0,
         name: 'Profesyonel Plan'
-      },
-      stk: {
-        organizations: 999,
-        socialLinks: 999,
-        nfcCards: subscription.billing_cycle === 'yearly' ? 6 : 0,
-        name: 'STK Özel Plan'
-      },
-      business: {
-        organizations: 999,
-        socialLinks: 999,
-        nfcCards: subscription.billing_cycle === 'yearly' ? 10 : 0,
-        name: 'Kurumsal Plan'
-      }
-    };
+      };
+    }
 
-    return limits[subscription.plan] || limits.free;
+    if (subscription.plan === 'stk') {
+      return {
+        organizations: 999,
+        socialLinks: 999,
+        nfcCards: isYearly ? 6 : 0,
+        name: 'STK Özel Plan'
+      };
+    }
+
+    if (subscription.plan === 'business') {
+      return {
+        organizations: 999,
+        socialLinks: 999,
+        nfcCards: isYearly ? 10 : 0,
+        name: 'Kurumsal Plan'
+      };
+    }
+
+    return { organizations: 2, socialLinks: 3, nfcCards: 0, name: 'Başlangıç Planı' };
   };
 
   const canAdd = (type) => {
@@ -95,16 +92,16 @@ export function useSubscription(profileId) {
     const limits = getLimits();
     if (!limits) return false;
 
-    switch (type) {
-      case 'organization':
-        return (subscription.organizations_used || 0) < limits.organizations;
-      case 'socialLink':
-        return (subscription.social_links_used || 0) < limits.socialLinks;
-      case 'nfcCard':
-        return (subscription.nfc_cards_used || 0) < limits.nfcCards;
-      default:
-        return false;
+    if (type === 'organization') {
+      return (subscription.organizations_used || 0) < limits.organizations;
     }
+    if (type === 'socialLink') {
+      return (subscription.social_links_used || 0) < limits.socialLinks;
+    }
+    if (type === 'nfcCard') {
+      return (subscription.nfc_cards_used || 0) < limits.nfcCards;
+    }
+    return false;
   };
 
   const isPremium = () => {
