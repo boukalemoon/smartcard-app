@@ -29,6 +29,8 @@ export default function Dashboard({ session }) {
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [socialLinks, setSocialLinks] = useState([])
+  const [editingServiceIndex, setEditingServiceIndex] = useState(null)
+  const [editingService, setEditingService] = useState({})
   const [analytics, setAnalytics] = useState(null)
   const [orgAnalytics, setOrgAnalytics] = useState([])
   const [totalAnalytics, setTotalAnalytics] = useState({ views: 0, downloads: 0 })
@@ -899,13 +901,95 @@ const handleThemeColorChange = async (color) => {
   </h3>
   
   <div className="space-y-3 mb-4">
-    {(profile.services || []).map((service, index) => (
-      <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex-1">
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">{service.title}</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-400">{service.description}</p>
-          </div>
+   {(profile.services || []).map((service, index) => (
+  <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+    {editingServiceIndex === index ? (
+      // Düzenleme modu
+      <div className="space-y-2">
+        <input
+          type="text"
+          value={editingService.title}
+          onChange={(e) => setEditingService({ ...editingService, title: e.target.value })}
+          className="w-full px-3 py-2 border-2 border-blue-300 dark:border-blue-600 bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg outline-none text-sm font-semibold"
+          placeholder="Hizmet adı"
+        />
+        <textarea
+          value={editingService.description}
+          onChange={(e) => setEditingService({ ...editingService, description: e.target.value })}
+          rows={2}
+          className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg outline-none text-sm"
+          placeholder="Açıklama"
+        />
+        <div className="flex gap-2">
+          <input
+            type="number"
+            value={editingService.price}
+            onChange={(e) => setEditingService({ ...editingService, price: e.target.value })}
+            className="w-24 px-3 py-2 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg outline-none text-sm"
+            placeholder="Fiyat"
+          />
+          <input
+            type="text"
+            value={editingService.delivery_time}
+            onChange={(e) => setEditingService({ ...editingService, delivery_time: e.target.value })}
+            className="flex-1 px-3 py-2 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg outline-none text-sm"
+            placeholder="Teslim süresi (örn: 3-5 gün)"
+          />
+        </div>
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={async () => {
+              const newServices = [...(profile.services || [])]
+              newServices[index] = {
+                ...service,
+                title: editingService.title,
+                description: editingService.description,
+                price: Number(editingService.price),
+                delivery_time: editingService.delivery_time
+              }
+              const { error } = await supabase
+                .from('profiles')
+                .update({ services: newServices })
+                .eq('user_id', session.user.id)
+              if (error) { alert('Hata: ' + error.message); return }
+              setProfile(prev => ({ ...prev, services: newServices }))
+              setEditingServiceIndex(null)
+            }}
+            className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-semibold hover:bg-green-700"
+          >
+            ✓ Kaydet
+          </button>
+          <button
+            onClick={() => setEditingServiceIndex(null)}
+            className="flex items-center gap-1 px-3 py-1.5 bg-gray-500 text-white rounded-lg text-xs font-semibold hover:bg-gray-600"
+          >
+            İptal
+          </button>
+        </div>
+      </div>
+    ) : (
+      // Normal görünüm
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex-1">
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100">{service.title}</h4>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{service.description}</p>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={() => {
+              setEditingServiceIndex(index)
+              setEditingService({
+                title: service.title || '',
+                description: service.description || '',
+                price: service.price || '',
+                delivery_time: service.delivery_time || ''
+              })
+            }}
+            className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+            title="Düzenle"
+          >
+            ✏️
+          </button>
           <button
             onClick={async () => {
               const newServices = profile.services.filter((_, i) => i !== index)
@@ -913,11 +997,7 @@ const handleThemeColorChange = async (color) => {
                 .from('profiles')
                 .update({ services: newServices })
                 .eq('user_id', session.user.id)
-              
-              if (error) {
-                alert('Hata: ' + error.message)
-                return
-              }
+              if (error) { alert('Hata: ' + error.message); return }
               setProfile(prev => ({ ...prev, services: newServices }))
             }}
             className="text-red-600 hover:text-red-700 text-sm font-semibold shrink-0"
@@ -925,13 +1005,17 @@ const handleThemeColorChange = async (color) => {
             Sil
           </button>
         </div>
-        <div className="flex items-center gap-4 text-sm">
-          <span className="font-bold text-blue-600">₺{service.price}</span>
-          {service.delivery_time && (
-            <span className="text-gray-500">⏱️ {service.delivery_time}</span>
-          )}
-        </div>
       </div>
+    )}
+    {editingServiceIndex !== index && (
+      <div className="flex items-center gap-4 text-sm mt-2">
+        <span className="font-bold text-blue-600">₺{service.price}</span>
+        {service.delivery_time && (
+          <span className="text-gray-500">⏱️ {service.delivery_time}</span>
+        )}
+      </div>
+    )}
+  </div>
     ))}
   </div>
 
