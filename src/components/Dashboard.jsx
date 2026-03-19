@@ -28,6 +28,7 @@ export default function Dashboard({ session }) {
   const [showPayment, setShowPayment] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [socialLinks, setSocialLinks] = useState([])
   const [analytics, setAnalytics] = useState(null)
   const [orgAnalytics, setOrgAnalytics] = useState([])
   const [totalAnalytics, setTotalAnalytics] = useState({ views: 0, downloads: 0 })
@@ -77,6 +78,15 @@ console.log('📊 Loaded profile data:', data)
 
     if (data) {
       setProfile(data)
+      // Social links yükle
+      const { data: linksData } = await supabase
+        .from('social_links') 
+        .select('*')  
+        .eq('profile_id', data.id)  
+        .order('display_order')
+
+    if (linksData) setSocialLinks(linksData)
+      
       console.log('✅ Profile state set:', data.theme_color)
       setThemeColor(data.theme_color || '#3B82F6')
       setName(data.name || '')
@@ -455,6 +465,7 @@ const handleThemeColorChange = async (color) => {
 <PublicCardPreview 
   profile={profile}
   themeColor={themeColor}
+  socialLinks={socialLinks}
 />
 
 {/* Background Image Upload */}

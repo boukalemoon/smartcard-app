@@ -1,6 +1,22 @@
 import AvatarFlipCard from './AvatarFlipCard'
+import { Linkedin, Facebook, Twitter, Instagram, Youtube, Github, Globe, Twitch, Music, Camera, Send } from 'lucide-react'
 
-export default function PublicCardPreview({ profile, themeColor }) {
+const PLATFORM_CONFIG = {
+  linkedin:  { icon: Linkedin,  color: '#0A66C2', label: 'LinkedIn' },
+  facebook:  { icon: Facebook,  color: '#1877F2', label: 'Facebook' },
+  twitter:   { icon: Twitter,   color: '#000000', label: 'Twitter/X' },
+  instagram: { icon: Instagram, color: '#E4405F', label: 'Instagram' },
+  youtube:   { icon: Youtube,   color: '#FF0000', label: 'YouTube' },
+  tiktok:    { icon: Music,     color: '#000000', label: 'TikTok' },
+  pinterest: { icon: Camera,    color: '#E60023', label: 'Pinterest' },
+  twitch:    { icon: Twitch,    color: '#9146FF', label: 'Twitch' },
+  kick:      { icon: Send,      color: '#53FC18', label: 'Kick' },
+  snapchat:  { icon: Camera,    color: '#FFFC00', label: 'Snapchat' },
+  github:    { icon: Github,    color: '#333333', label: 'GitHub' },
+  website:   { icon: Globe,     color: '#6B7280', label: 'Website' },
+}
+
+export default function PublicCardPreview({ profile, themeColor, socialLinks = [] }) {
   const adjustColor = (color, percent) => {
     const num = parseInt(color.replace("#",""), 16)
     const amt = Math.round(2.55 * percent)
@@ -32,20 +48,15 @@ export default function PublicCardPreview({ profile, themeColor }) {
               : `linear-gradient(135deg, ${themeColor}, ${adjustColor(themeColor, -40)})`
           }}
         >
-          {/* Arka plan resmi */}
           {hasBackground && (
             <div
               className="absolute inset-0 bg-cover bg-center"
               style={{ backgroundImage: `url(${profile.background_image_url})` }}
             />
           )}
-
-          {/* Resim varsa karartma katmanı — yazılar okunsun */}
           {hasBackground && (
             <div className="absolute inset-0 bg-black/40" />
           )}
-
-          {/* İçerik */}
           <div className="relative z-10">
             <AvatarFlipCard
               profileImage={profile?.avatar_url}
@@ -58,16 +69,56 @@ export default function PublicCardPreview({ profile, themeColor }) {
           </div>
         </div>
 
-        {/* Contact Info */}
-        <div className="p-4 space-y-2">
+        {/* İletişim */}
+        <div className="px-4 pt-4 space-y-2">
           <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
             <span>📧</span>
-            <span>{profile?.email || 'email@example.com'}</span>
+            <span className="truncate">{profile?.email || 'email@example.com'}</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-            <span>📱</span>
-            <span>{profile?.phone || '+90 5XX XXX XX XX'}</span>
-          </div>
+          {profile?.phone && (
+            <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+              <span>📱</span>
+              <span>{profile.phone}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Sosyal Medya */}
+        <div className="px-4 pt-3 pb-4">
+          {socialLinks.length > 0 ? (
+            <>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-medium">
+                Sosyal Medya
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {socialLinks.map((link) => {
+                  const config = PLATFORM_CONFIG[link.platform] || {
+                    icon: Globe,
+                    color: '#6B7280',
+                    label: link.platform
+                  }
+                  const Icon = config.icon
+                  return (
+                    <a
+                      key={link.id}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={config.label}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-white hover:opacity-80 transition-opacity"
+                      style={{ backgroundColor: config.color }}
+                    >
+                      <Icon size={14} />
+                    </a>
+                  )
+                })}
+              </div>
+            </>
+          ) : (
+            <p className="text-xs text-gray-400 dark:text-gray-500 italic text-center pt-1">
+              Sosyal medya hesabı eklenmedi
+            </p>
+          )}
         </div>
 
       </div>
