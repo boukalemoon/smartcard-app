@@ -17,7 +17,7 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const [billingCycle, setBillingCycle] = useState('monthly') // monthly | yearly
-const [includeCard, setIncludeCard] = useState(false)
+  const [includeCard, setIncludeCard] = useState(false)
 
   // Yardımcı fonksiyon — referral kodu varsa URL'e ekle
   const goTo = (path) => {

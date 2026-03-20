@@ -7,6 +7,15 @@ export function DashboardModeProvider({ children }) {
     return localStorage.getItem('dashboardMode') || 'individual'
   })
 
+  // Subscription plan gelince otomatik mod belirle
+  const initMode = (plan) => {
+    const saved = localStorage.getItem('dashboardMode')
+    // STK veya Kurumsal planı → kurumsal mod varsayılan
+    if (!saved && (plan === 'stk' || plan === 'business')) {
+      setMode('corporate')
+    }
+  }
+
   useEffect(() => {
     localStorage.setItem('dashboardMode', mode)
   }, [mode])
@@ -24,7 +33,8 @@ export function DashboardModeProvider({ children }) {
     isCorporate: mode === 'corporate',
     toggleMode,
     setIndividual,
-    setCorporate
+    setCorporate,
+    initMode
   }
 
   return (

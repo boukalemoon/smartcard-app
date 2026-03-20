@@ -41,7 +41,7 @@ export default function Dashboard({ session }) {
   const [editingCatalog, setEditingCatalog] = useState({})
 
   // Dashboard mode
-  const { isIndividual, isCorporate } = useDashboardMode()
+  const { mode, isIndividual, isCorporate, initMode } = useDashboardMode()
 
   // Form states
   const [name, setName] = useState('')
@@ -58,6 +58,13 @@ export default function Dashboard({ session }) {
     canAdd,
     isPremium
   } = useSubscription(profile?.id)
+
+// Subscription plan gelince modu otomatik ayarla
+useEffect(() => {
+  if (subscription?.plan) {
+    initMode(subscription.plan)
+  }
+}, [subscription?.plan])
 
   useEffect(() => {
     loadProfile()
