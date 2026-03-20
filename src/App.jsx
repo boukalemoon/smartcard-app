@@ -13,6 +13,11 @@ import Dashboard from './components/Dashboard'
 import PublicCard from './pages/PublicCard'
 import NFCCard from './pages/NFCCard'
 import AuthConfirm from './components/AuthConfirm' 
+import GizlilikPolitikasi from './pages/GizlilikPolitikasi'
+import KullanimSartlari from './pages/KullanimSartlari'
+import KVKKAydinlatma from './pages/KVKKAydinlatma'
+import CerezPolitikasi from './pages/CerezPolitikasi'
+
 
 
 
@@ -58,6 +63,11 @@ function App() {
             <Route path="/nfc-designer" element={<NFCCard />} />
             <Route path="/org/:orgSlug/apply" element={<PublicApplicationPage />} />
             <Route path="/org/:orgSlug/members" element={<PublicMemberDirectoryPage />} />
+
+            <Route path="/gizlilik" element={<GizlilikPolitikasi />} />
+            <Route path="/kullanim-sartlari" element={<KullanimSartlari />} />
+            <Route path="/kvkk" element={<KVKKAydinlatma />} />
+            <Route path="/cerez-politikasi" element={<CerezPolitikasi />} />
             
             {/* Auth routes */}
             <Route 

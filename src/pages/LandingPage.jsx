@@ -521,8 +521,10 @@ export default function LandingPage() {
             <div>
               <h4 className="text-white font-semibold mb-4">Yasal</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white">Gizlilik</a></li>
-                <li><a href="#" className="hover:text-white">Şartlar</a></li>
+                <li><a href="/gizlilik" className="hover:text-white">Gizlilik</a></li>
+                <li><a href="/kullanim-sartlari" className="hover:text-white">Şartlar</a></li>
+                <li><a href="/kvkk" className="hover:text-white">KVKK Aydınlatma</a></li>
+                <li><a href="/cerez-politikasi" className="hover:text-white">Çerez Politikası</a></li>
               </ul>
             </div>
           </div>
