@@ -156,12 +156,14 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <img 
-                src="/qrtım-logo.png?v=2"
-                alt="Qartim Logo" 
-                className="h-16 w-auto"
-              />
-            </div>
+  <a href="/" aria-label="Anasayfa">
+    <img 
+      src="/qrtım-logo.png?v=2"
+      alt="Qartim Logo" 
+      className="h-16 w-auto cursor-pointer"
+    />
+  </a>
+</div>
             <div className="flex items-center gap-3">
               {/* Tema Toggle */}
               <button
