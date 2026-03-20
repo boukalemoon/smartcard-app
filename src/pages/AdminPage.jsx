@@ -76,7 +76,10 @@ export default function AdminPage() {
               </button>
               <ThemeToggle />
               <button
-                onClick={() => supabase.auth.signOut()}
+                onClick={async () => {
+                await supabase.auth.signOut()
+                navigate('/')
+                }}
                 className="px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-all"
               >
                 Çıkış Yap

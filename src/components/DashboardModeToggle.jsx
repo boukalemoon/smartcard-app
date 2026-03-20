@@ -4,12 +4,11 @@ import { User, Building2 } from 'lucide-react'
 export default function DashboardModeToggle({ subscription }) {
   const { mode, toggleMode, isIndividual, isCorporate } = useDashboardMode()
 
-  // Premium kontrolü - sadece paid planlar görsün
-  const isPremium = subscription && subscription.plan !== 'free'
+  // Sadece STK ve Kurumsal planlarda göster
+  const canSeeCorporate = subscription && 
+    (subscription.plan === 'stk' || subscription.plan === 'business')
 
-  if (!isPremium) {
-    return null // Free plan kullanıcılarına gösterme
-  }
+  if (!canSeeCorporate) return null
 
   return (
     <button

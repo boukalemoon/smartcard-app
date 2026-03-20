@@ -63,7 +63,6 @@ export default function LandingPage() {
     id: 'free',
     name: 'Başlangıç',
     price: { monthly: 0, yearly: 0, yearlyWithCard: null },
-    period: '/ay',
     cardGift: null,
     features: [
       '1 dijital kartvizit',
@@ -80,8 +79,7 @@ export default function LandingPage() {
     id: 'student',
     name: 'Öğrenci',
     price: { monthly: 99, yearly: 990, yearlyWithCard: 1789 },
-    period: '/ay',
-    cardGift: '1 PVC Kart Hediye',
+    cardGift: '1 PVC Kart dahil',
     studentOnly: true,
     features: [
       '1 dijital kartvizit',
@@ -99,13 +97,12 @@ export default function LandingPage() {
     id: 'professional',
     name: 'Profesyonel',
     price: { monthly: 249, yearly: 2490, yearlyWithCard: 3289 },
-    period: '/ay',
-    cardGift: '1 PVC Kart Hediye',
+    cardGift: '1 PVC Kart dahil',
     features: [
       'Sınırsız sosyal medya',
-      'Sınırsız organizasyon',
+      'Detaylı kişisel analytics',
       'QR kod özelleştirme',
-      'Gelişmiş analytics',
+      'Referral & Davet et kazan',
       'Öncelikli destek',
       'Özel QR tasarımı'
     ],
@@ -117,16 +114,15 @@ export default function LandingPage() {
     id: 'stk',
     name: 'STK Özel',
     price: { monthly: 449, yearly: 4290, yearlyWithCard: 5089 },
-    period: '/ay',
-    cardGift: 'Admin + 5 Üye Kartı',
+    cardGift: '6 PVC Kart dahil',
     features: [
       'Sınırsız üye',
       'Başvuru sistemi',
       'Üye onay yönetimi',
+      'Rol atama (Yönetici/Üye)',
       'Toplu üye yönetimi',
       'Public üye dizini',
-      'Rozet sistemi',
-      'Özel alan adı desteği'
+      'Öncelikli destek ticket'
     ],
     cta: 'STK Planına Geç',
     popular: false,
@@ -136,17 +132,15 @@ export default function LandingPage() {
     id: 'business',
     name: 'Kurumsal',
     price: { monthly: 899, yearly: 8990, yearlyWithCard: 9789 },
-    period: '/ay',
-    cardGift: '10 NFC Kart Hediye',
+    cardGift: '10 NFC Kart dahil',
     features: [
-      '50+ çalışan',
+      'Sınırsız üye',
       'API erişimi',
-      'White-label çözüm',
+      'Dedike destek & SLA',
       'Özel entegrasyon',
-      'Dedike destek',
-      'SLA garantisi',
-      'Özel eğitim',
-      'Kurumsal faturalama'
+      'Kurumsal faturalama',
+      'Üye analytics & export',
+      'Özel eğitim'
     ],
     cta: 'İletişime Geç',
     popular: false,

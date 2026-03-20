@@ -18,6 +18,7 @@ import NFCWriter from './NFCWriter'
 import SocialLinksManager from './SocialLinksManager'
 import UsernameEditor from './UsernameEditor'
 import { validateCatalogLink, validateService, validateProfile } from '../utils/inputValidation'
+import { useNavigate } from 'react-router-dom'
 import { checkProfileUpdateRateLimit } from '../utils/rateLimiting'
 
 export default function Dashboard({ session }) {
@@ -31,6 +32,7 @@ export default function Dashboard({ session }) {
   const [socialLinks, setSocialLinks] = useState([])
   const [analytics, setAnalytics] = useState(null)
   const [orgCount, setOrgCount] = useState(0)
+  const navigate = useNavigate()
 
   // Hizmet düzenleme
   const [editingServiceIndex, setEditingServiceIndex] = useState(null)
@@ -203,7 +205,10 @@ useEffect(() => {
                 <DashboardModeToggle subscription={subscription} />
                 <ThemeToggle />
                 <button
-                  onClick={() => supabase.auth.signOut()}
+                  onClick={async () => {
+                    await supabase.auth.signOut()
+                    navigate('/')
+                  }}
                   className="px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-all"
                 >
                   Çıkış Yap
