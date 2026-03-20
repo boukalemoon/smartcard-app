@@ -246,6 +246,34 @@ const handleExportCommissions = async () => {
     )
   }
 
+  const handleExportAnalytics = async () => {
+  const verified = await verifyPasswordForExport(supabase)
+  if (!verified) return
+
+  if (orgAnalytics.length === 0) {
+    alert('Export edilecek analytics verisi bulunamadı.')
+    return
+  }
+
+  const exportData = []
+
+  orgAnalytics.forEach(org => {
+    org.members.forEach(member => {
+      exportData.push({
+        'Organizasyon': org.orgName,
+        'Ad Soyad': member.name || '-',
+        'Email': member.email || '-',
+        'Profil Görüntülenme': member.profile_views || 0,
+        'QR Kod Tarama': member.qr_scans || 0,
+        'vCard İndirme': member.vcard_downloads || 0,
+        'Link Tıklama': member.link_clicks || 0
+      })
+    })
+  })
+
+  exportToCSV(exportData, 'uye_bazli_analytics')
+}
+
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
@@ -369,13 +397,24 @@ const handleExportCommissions = async () => {
       )}
 
       {/* Export Buttons */}
-      <div className="flex gap-2 mb-4">
+<div className="flex gap-2 mb-4">
   <button
     onClick={handleExportMembers}
     className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-all text-sm flex items-center gap-2"
   >
     📥 Üyeleri Export Et
   </button>
+
+  {/* YENİ — Analytics Export */}
+  {orgAnalytics.length > 0 && (
+    <button
+      onClick={handleExportAnalytics}
+      className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all text-sm flex items-center gap-2"
+    >
+      📊 Üye Analytics Export Et
+    </button>
+  )}
+
   {orgCommissions.length > 0 && (
     <button
       onClick={handleExportCommissions}

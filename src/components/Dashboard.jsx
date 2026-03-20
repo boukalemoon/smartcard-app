@@ -718,12 +718,12 @@ export default function Dashboard({ session }) {
                               </div>
                             ) : (
                               <>
-                                <div className="flex items-start justify-between mb-2">
-                                  <div className="flex-1">
-                                    <h4 className="font-semibold text-gray-900 dark:text-gray-100">{service.title}</h4>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">{service.description}</p>
-                                  </div>
-                                  <div className="flex items-center gap-1 shrink-0">
+                                <div className="flex items-start justify-between mb-2 gap-2">
+  <div className="flex-1 min-w-0 overflow-hidden">
+    <h4 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{service.title}</h4>
+    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{service.description}</p>
+  </div>
+  <div className="flex items-center gap-1 shrink-0">
                                     <button
                                       onClick={() => { setEditingServiceIndex(index); setEditingService({ title: service.title || '', description: service.description || '', price: service.price || '', delivery_time: service.delivery_time || '' }) }}
                                       className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
