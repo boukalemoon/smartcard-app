@@ -5,6 +5,7 @@ import UseCases from '../components/landing/UseCases';
 import ComparisonTable from '../components/landing/ComparisonTable';
 import ImpactMetrics from '../components/landing/ImpactMetrics';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react' // zaten var
 import { 
   QrCode, Nfc, Share2, BarChart3, 
   Building2, Users, Zap, Shield,
@@ -15,6 +16,8 @@ import { useTheme } from '../contexts/ThemeContext';
 export default function LandingPage() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const [billingCycle, setBillingCycle] = useState('monthly') // monthly | yearly
+const [includeCard, setIncludeCard] = useState(false)
 
   // Yardımcı fonksiyon — referral kodu varsa URL'e ekle
   const goTo = (path) => {
@@ -57,11 +60,11 @@ export default function LandingPage() {
 
   const plans = [
   {
+    id: 'free',
     name: 'Başlangıç',
-    price: '₺0',
+    price: { monthly: 0, yearly: 0, yearlyWithCard: null },
     period: '/ay',
-    yearlyPrice: null,
-    nfcGift: null,
+    cardGift: null,
     features: [
       '1 dijital kartvizit',
       '3 sosyal medya hesabı',
@@ -74,12 +77,30 @@ export default function LandingPage() {
     badge: null
   },
   {
-    name: 'Profesyonel',
-    price: '₺249',
+    id: 'student',
+    name: 'Öğrenci',
+    price: { monthly: 99, yearly: 990, yearlyWithCard: 1789 },
     period: '/ay',
-    yearlyPrice: '₺2.490/yıl',
-    nfcGift: '1 NFC Kart Hediye*',
-    nfcGiftNote: '* Standart PVC kart (₺799 değerinde)',
+    cardGift: '1 PVC Kart Hediye',
+    studentOnly: true,
+    features: [
+      '1 dijital kartvizit',
+      '5 sosyal medya hesabı',
+      '1 organizasyon',
+      'Temel QR kod',
+      'Profil analytics',
+      '.edu mail doğrulaması'
+    ],
+    cta: 'Öğrenci Planı',
+    popular: false,
+    badge: '🎓 Öğrenci'
+  },
+  {
+    id: 'professional',
+    name: 'Profesyonel',
+    price: { monthly: 249, yearly: 2490, yearlyWithCard: 3289 },
+    period: '/ay',
+    cardGift: '1 PVC Kart Hediye',
     features: [
       'Sınırsız sosyal medya',
       'Sınırsız organizasyon',
@@ -93,12 +114,11 @@ export default function LandingPage() {
     badge: 'Popüler'
   },
   {
+    id: 'stk',
     name: 'STK Özel',
-    price: '₺449',
+    price: { monthly: 449, yearly: 4290, yearlyWithCard: 5089 },
     period: '/ay',
-    yearlyPrice: '₺4.290/yıl',
-    nfcGift: 'Admin + 5 Üye Kartı*',
-    nfcGiftNote: '* 6 adet PVC kart (₺4.794 değerinde)',
+    cardGift: 'Admin + 5 Üye Kartı',
     features: [
       'Sınırsız üye',
       'Başvuru sistemi',
@@ -113,12 +133,11 @@ export default function LandingPage() {
     badge: "STK'lar İçin"
   },
   {
+    id: 'business',
     name: 'Kurumsal',
-    price: '₺899',
+    price: { monthly: 899, yearly: 8990, yearlyWithCard: 9789 },
     period: '/ay',
-    yearlyPrice: '₺8.990/yıl',
-    nfcGift: '10 NFC Kart Hediye*',
-    nfcGiftNote: '* 10 adet PVC kart (₺7.990 değerinde)',
+    cardGift: '10 NFC Kart Hediye',
     features: [
       '50+ çalışan',
       'API erişimi',
@@ -283,169 +302,179 @@ export default function LandingPage() {
       <UseCases />
 
       {/* Pricing Section */}
-      <section className="py-20 px-4" id="pricing">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Planlar ve Fiyatlar
-            </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-400 mb-4">
-              İhtiyacınıza uygun planı seçin
-            </p>
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full">
-              <Gift size={18} />
-              <span className="text-sm font-semibold">Yıllık aboneliklerde NFC kart hediye!</span>
-            </div>
+<section className="py-20 px-4" id="pricing">
+  <div className="max-w-7xl mx-auto">
+    <div className="text-center mb-10">
+      <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+        Planlar ve Fiyatlar
+      </h2>
+      <p className="text-xl text-gray-600 dark:text-gray-400 mb-8">
+        İhtiyacınıza uygun planı seçin
+      </p>
+
+      {/* Toggle grubu */}
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+        
+        {/* Aylık / Yıllık */}
+        <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+          <button
+            onClick={() => setBillingCycle('monthly')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              billingCycle === 'monthly'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow'
+                : 'text-gray-500 dark:text-gray-400'
+            }`}
+          >
+            Aylık
+          </button>
+          <button
+            onClick={() => setBillingCycle('yearly')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              billingCycle === 'yearly'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow'
+                : 'text-gray-500 dark:text-gray-400'
+            }`}
+          >
+            Yıllık
+            <span className="ml-1.5 px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded-md">
+              %17 İndirim
+            </span>
+          </button>
+        </div>
+
+        {/* Dijital Only / + NFC Kart */}
+        {billingCycle === 'yearly' && (
+          <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+            <button
+              onClick={() => setIncludeCard(false)}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                !includeCard
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow'
+                  : 'text-gray-500 dark:text-gray-400'
+              }`}
+            >
+              💻 Dijital Only
+            </button>
+            <button
+              onClick={() => setIncludeCard(true)}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                includeCard
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow'
+                  : 'text-gray-500 dark:text-gray-400'
+              }`}
+            >
+              💳 + NFC Kart
+            </button>
           </div>
+        )}
+      </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {plans.map((plan, index) => (
-              <div
-                key={index}
-                className={`relative p-6 rounded-2xl border-2 transition-all ${
-                  plan.popular
-                    ? 'border-blue-600 bg-white dark:bg-gray-800 shadow-2xl scale-105'
-                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-400 dark:hover:border-blue-500'
-                }`}
-              >
-                {plan.badge && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-semibold rounded-full whitespace-nowrap">
-                    {plan.badge}
-                  </div>
-                )}
+      {/* Kart toggle aktifken bilgi notu */}
+      {billingCycle === 'yearly' && includeCard && (
+        <div className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full text-sm font-semibold">
+          <Gift size={16} />
+          Yıllık + NFC Kart paketlerinde kart bedava gelir!
+        </div>
+      )}
+    </div>
 
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                  {plan.name}
-                </h3>
-                
-                <div className="mb-4">
-                  <div className="flex items-baseline">
-                    <span className="text-4xl font-bold text-gray-900 dark:text-white">
-                      {plan.price}
-                    </span>
-                    <span className="text-gray-600 dark:text-gray-400 ml-1">{plan.period}</span>
-                  </div>
-                  {plan.yearlyPrice && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      veya {plan.yearlyPrice}
-                    </p>
-                  )}
-                </div>
+    {/* Plan kartları */}
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
+      {plans.map((plan) => {
+        // Fiyat hesapla
+        let displayPrice
+        let displayPeriod
+        if (billingCycle === 'monthly') {
+          displayPrice = plan.price.monthly === 0 ? '₺0' : `₺${plan.price.monthly}`
+          displayPeriod = '/ay'
+        } else if (includeCard && plan.price.yearlyWithCard) {
+          displayPrice = `₺${plan.price.yearlyWithCard}`
+          displayPeriod = '/yıl'
+        } else {
+          displayPrice = plan.price.yearly === 0 ? '₺0' : `₺${plan.price.yearly}`
+          displayPeriod = '/yıl'
+        }
 
-                {plan.nfcGift && (
-                  <div className="mb-4 p-2 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                    <div className="flex items-center gap-2 text-xs font-semibold text-yellow-800 dark:text-yellow-300">
-                      <Gift size={14} />
-                      <span>{plan.nfcGift}</span>
-                    </div>
-                    {plan.nfcGiftNote && (
-                      <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-1 ml-5">
-                        {plan.nfcGiftNote}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                <ul className="space-y-2.5 mb-6">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <Check className="text-green-600 flex-shrink-0 mt-0.5" size={16} />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* Tüm plan butonları → /signup */}
-                <button
-                  onClick={() => goTo('/signup')}
-                  className={`w-full py-2.5 rounded-xl font-semibold transition-all text-sm ${
-                    plan.popular
-                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-xl'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  {plan.cta}
-                </button>
+        return (
+          <div
+            key={plan.id}
+            className={`relative p-6 rounded-2xl border-2 transition-all flex flex-col ${
+              plan.popular
+                ? 'border-blue-600 bg-white dark:bg-gray-800 shadow-2xl scale-105'
+                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-400'
+            }`}
+          >
+            {plan.badge && (
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-semibold rounded-full whitespace-nowrap">
+                {plan.badge}
               </div>
-            ))}
-          </div>
+            )}
 
-          {/* Ekstra NFC Kart */}
-{/* NFC Kart Seçenekleri */}
-<div className="mt-12">
-  <h3 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-2">
-    Ekstra NFC Kart Siparişi
-  </h3>
-  <p className="text-center text-gray-500 dark:text-gray-400 text-sm mb-8">
-    Aboneliğinize NFC kart ekleyin veya yıllık planlarda ücretsiz kazanın
-  </p>
-  <div className="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
-    <div className="relative p-6 bg-white dark:bg-gray-800 rounded-2xl border-2 border-blue-200 dark:border-blue-800 hover:shadow-xl transition-all">
-      <div className="w-full h-28 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl mb-4 flex flex-col justify-between p-4 relative overflow-hidden shadow-lg">
-        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/20 rounded-xl" />
-        <div className="relative z-10 flex justify-between items-start">
-          <div>
-            <div className="text-white/60 text-xs">QRtım</div>
-            <div className="text-white font-bold text-sm">Ad Soyad</div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
+              {plan.name}
+            </h3>
+
+            <div className="mb-4">
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {displayPrice}
+                </span>
+                <span className="text-gray-500 dark:text-gray-400 text-sm">{displayPeriod}</span>
+              </div>
+              {billingCycle === 'monthly' && plan.price.yearly > 0 && (
+                <p className="text-xs text-gray-500 mt-1">
+                  veya ₺{plan.price.yearly}/yıl
+                </p>
+              )}
+            </div>
+
+            {/* NFC kart hediye bilgisi */}
+            {billingCycle === 'yearly' && includeCard && plan.cardGift && (
+              <div className="mb-4 p-2 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-yellow-800 dark:text-yellow-300">
+                  <Gift size={12} />
+                  {plan.cardGift}
+                </div>
+              </div>
+            )}
+
+            {/* Öğrenci notu */}
+            {plan.studentOnly && (
+              <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <p className="text-xs text-blue-700 dark:text-blue-300">
+                  🎓 .edu uzantılı mail ile doğrulama gerekir
+                </p>
+              </div>
+            )}
+
+            <ul className="space-y-2 mb-6 flex-1">
+              {plan.features.map((feature, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <Check className="text-green-600 flex-shrink-0 mt-0.5" size={14} />
+                  <span className="text-xs text-gray-700 dark:text-gray-300">{feature}</span>
+                </li>
+              ))}
+            </ul>
+
+            <button
+              onClick={() => goTo('/signup')}
+              className={`w-full py-2.5 rounded-xl font-semibold transition-all text-sm ${
+                plan.popular
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-xl'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              {plan.cta}
+            </button>
           </div>
-          <div className="w-6 h-6 bg-white/20 rounded flex items-center justify-center">
-            <CreditCard size={12} className="text-white" />
-          </div>
-        </div>
-        <div className="relative z-10 text-white/50 text-xs">Standart PVC</div>
-      </div>
-      <h4 className="font-bold text-gray-900 dark:text-white mb-2">Standart PVC Kart</h4>
-      <ul className="space-y-1 mb-4">
-        {['Su geçirmez', 'Canlı renkli baskı', 'NFC çip dahil', 'Kargo ücretsiz'].map((f, i) => (
-          <li key={i} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-            <Check size={12} className="text-green-500" /> {f}
-          </li>
-        ))}
-      </ul>
-      <div className="flex items-baseline justify-between">
-        <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">₺799</span>
-        <span className="text-xs text-gray-500">/adet</span>
-      </div>
+        )
+      })}
     </div>
 
-    <div className="relative p-6 bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-300 dark:border-gray-600 hover:shadow-xl transition-all">
-      <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold rounded-full">
-        Popüler
-      </div>
-      <div className="w-full h-28 bg-gradient-to-br from-gray-600 to-gray-900 rounded-xl mb-4 flex flex-col justify-between p-4 relative overflow-hidden shadow-lg">
-        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/20 rounded-xl" />
-        <div className="absolute inset-0 opacity-10 rounded-xl" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(255,255,255,0.3) 2px, rgba(255,255,255,0.3) 4px)' }} />
-        <div className="relative z-10 flex justify-between items-start">
-          <div>
-            <div className="text-white/60 text-xs">QRtım</div>
-            <div className="text-white font-bold text-sm">Ad Soyad</div>
-          </div>
-          <div className="w-6 h-6 bg-white/20 rounded flex items-center justify-center">
-            <CreditCard size={12} className="text-white" />
-          </div>
-        </div>
-        <div className="relative z-10 text-white/50 text-xs">Premium Metal</div>
-      </div>
-      <h4 className="font-bold text-gray-900 dark:text-white mb-2">Premium Metal Kart</h4>
-      <ul className="space-y-1 mb-4">
-        {['Paslanmaz çelik', 'Lazer gravür baskı', 'NFC çip dahil', 'Kargo ücretsiz'].map((f, i) => (
-          <li key={i} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-            <Check size={12} className="text-green-500" /> {f}
-          </li>
-        ))}
-      </ul>
-      <div className="flex items-baseline justify-between">
-        <span className="text-2xl font-bold text-gray-800 dark:text-gray-200">₺1.490</span>
-        <span className="text-xs text-gray-500">/adet</span>
-      </div>
-    </div>
+    {/* NFC Kart ayrı sipariş */}
+    {/* ... mevcut NFC kart bölümü buraya gelecek */}
   </div>
-  <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-4">
-    💡 Yıllık Profesyonel planında 1 PVC kart, STK planında 6 kart, Kurumsal planında 10 kart <strong>ücretsiz</strong> gelir.
-  </p>
-</div>
-        </div>
-      </section>
+</section>
 
       {/* FAQ */}
       <FAQ />
