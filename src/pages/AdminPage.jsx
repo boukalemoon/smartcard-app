@@ -58,10 +58,11 @@ export default function AdminPage() {
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img 
-                src="/qrtım-logo.png" 
-                alt="QRtım" 
-                className="h-16 w-auto"
+              <img
+                src="/qrtım-logo.png"
+                alt="QRtım"
+                className="h-16 w-auto cursor-pointer"
+                onClick={() => navigate('/')}
               />
               <span className="px-3 py-1 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 text-sm font-semibold rounded-full">
                 ADMIN

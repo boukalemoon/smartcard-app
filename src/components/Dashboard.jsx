@@ -200,7 +200,12 @@ useEffect(() => {
         <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 sticky top-0 z-10">
           <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between">
-              <img src="/qrtım-logo.png" alt="QRtım" className="h-16 w-auto" />
+              <img
+                src="/qrtım-logo.png"
+                alt="QRtım"
+                className="h-16 w-auto cursor-pointer"
+                onClick={() => navigate('/')}
+/>
               <div className="flex items-center gap-3">
                 <DashboardModeToggle subscription={subscription} />
                 <ThemeToggle />
