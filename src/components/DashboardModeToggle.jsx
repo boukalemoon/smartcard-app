@@ -1,12 +1,12 @@
 import { useDashboardMode } from '../contexts/DashboardModeContext'
 import { User, Building2 } from 'lucide-react'
 
-export default function DashboardModeToggle({ subscription }) {
+export default function DashboardModeToggle({ subscription, profile }) {
   const { mode, toggleMode, isIndividual, isCorporate } = useDashboardMode()
 
-  // Sadece STK ve Kurumsal planlarda göster
-  const canSeeCorporate = subscription && 
-    (subscription.plan === 'stk' || subscription.plan === 'business')
+  const canSeeCorporate = (
+    subscription && (subscription.plan === 'stk' || subscription.plan === 'business')
+  ) || ['admin', 'superadmin'].includes(profile?.role)
 
   if (!canSeeCorporate) return null
 

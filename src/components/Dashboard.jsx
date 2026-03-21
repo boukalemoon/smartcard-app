@@ -2,7 +2,6 @@ import ReadyPlayerMeAvatar from './ReadyPlayerMeAvatar'
 import ImageUpload from './ImageUpload'
 import PublicCardPreview from './PublicCardPreview'
 import { getAnalyticsSummary } from '../utils/analyticsHelpers'
-import AdminCRM from './AdminCRM'
 import ReferralDashboard from './ReferralDashboard'
 import OrganizationManager from './OrganizationManager'
 import CorporateDashboard from './CorporateDashboard'
@@ -73,7 +72,7 @@ useEffect(() => {
   }, [])
 
   useEffect(() => {
-    if (profile?.role === 'admin') setIsAdmin(true)
+    if (['admin', 'superadmin'].includes(profile?.role)) setIsAdmin(true)
   }, [profile])
 
   useEffect(() => {
@@ -207,7 +206,7 @@ useEffect(() => {
                 onClick={() => navigate('/')}
 />
               <div className="flex items-center gap-3">
-                <DashboardModeToggle subscription={subscription} />
+                <DashboardModeToggle subscription={subscription} profile={profile} />
                 <ThemeToggle />
                 <button
                   onClick={async () => {
