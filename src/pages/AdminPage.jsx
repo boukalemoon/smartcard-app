@@ -28,7 +28,7 @@ export default function AdminPage() {
         .eq('user_id', session.user.id)
         .single()
 
-      if (profileData?.role !== 'admin') {
+      if (!['admin', 'superadmin'].includes(profileData?.role)) {
         alert('Admin yetkisi gerekli!')
         navigate('/dashboard')
         return
