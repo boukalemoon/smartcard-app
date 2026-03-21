@@ -51,41 +51,50 @@ export function useSubscription(profileId) {
   }, [profileId]);
 
   const getLimits = () => {
-    if (!subscription) {
-      return { organizations: 2, socialLinks: 3, nfcCards: 0, name: 'Başlangıç Planı' };
+  if (!subscription) {
+    return { organizations: 2, socialLinks: 3, nfcCards: 0, name: 'Başlangıç Planı' }
+  }
+
+  const isYearly = subscription.billing_cycle === 'yearly'
+
+  if (subscription.plan === 'student') {
+    return {
+      organizations: 1,
+      socialLinks: 5,
+      nfcCards: isYearly ? 1 : 0,
+      name: 'Öğrenci Planı'
     }
+  }
 
-    const isYearly = subscription.billing_cycle === 'yearly';
-
-    if (subscription.plan === 'professional') {
-      return {
-        organizations: 999,
-        socialLinks: 999,
-        nfcCards: isYearly ? 1 : 0,
-        name: 'Profesyonel Plan'
-      };
+  if (subscription.plan === 'professional') {
+    return {
+      organizations: 999,
+      socialLinks: 999,
+      nfcCards: isYearly ? 1 : 0,
+      name: 'Profesyonel Plan'
     }
+  }
 
-    if (subscription.plan === 'stk') {
-      return {
-        organizations: 999,
-        socialLinks: 999,
-        nfcCards: isYearly ? 6 : 0,
-        name: 'STK Özel Plan'
-      };
+  if (subscription.plan === 'stk') {
+    return {
+      organizations: 999,
+      socialLinks: 999,
+      nfcCards: isYearly ? 6 : 0,
+      name: 'STK Özel Plan'
     }
+  }
 
-    if (subscription.plan === 'business') {
-      return {
-        organizations: 999,
-        socialLinks: 999,
-        nfcCards: isYearly ? 10 : 0,
-        name: 'Kurumsal Plan'
-      };
+  if (subscription.plan === 'business') {
+    return {
+      organizations: 999,
+      socialLinks: 999,
+      nfcCards: isYearly ? 10 : 0,
+      name: 'Kurumsal Plan'
     }
+  }
 
-    return { organizations: 2, socialLinks: 3, nfcCards: 0, name: 'Başlangıç Planı' };
-  };
+  return { organizations: 2, socialLinks: 3, nfcCards: 0, name: 'Başlangıç Planı' }
+}
 
   const canAdd = (type) => {
     if (!subscription) return false;

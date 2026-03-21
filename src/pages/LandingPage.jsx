@@ -506,29 +506,27 @@ export default function LandingPage() {
               </p>
             </div>
             <div>
-              <h4 className="text-white font-semibold mb-4">Ürün</h4>
-              <ul className="space-y-2 text-sm">
-                <li><button onClick={() => navigate('/nfc-cards')} className="hover:text-white">NFC Kartlar</button></li>
-                <li><a href="#pricing" className="hover:text-white">Fiyatlar</a></li>
-                <li><a href="#features" className="hover:text-white">Özellikler</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Destek</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white">Yardım Merkezi</a></li>
-                <li><a href="#" className="hover:text-white">İletişim</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Yasal</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="/gizlilik" className="hover:text-white">Gizlilik</a></li>
-                <li><a href="/kullanim-sartlari" className="hover:text-white">Şartlar</a></li>
-                <li><a href="/kvkk" className="hover:text-white">KVKK Aydınlatma</a></li>
-                <li><a href="/cerez-politikasi" className="hover:text-white">Çerez Politikası</a></li>
-              </ul>
-            </div>
+  <h4 className="text-white font-semibold mb-4">Ürün</h4>
+  <ul className="space-y-2 text-sm">
+    <li><button onClick={() => navigate('/nfc-cards')} className="hover:text-white">NFC Kartlar</button></li>
+    <li><a href="#pricing" className="hover:text-white">Fiyatlar</a></li>
+  </ul>
+</div>
+<div>
+  <h4 className="text-white font-semibold mb-4">Destek</h4>
+  <ul className="space-y-2 text-sm">
+    <li><button onClick={() => navigate('/iletisim')} className="hover:text-white">İletişim</button></li>
+  </ul>
+</div>
+<div>
+  <h4 className="text-white font-semibold mb-4">Yasal</h4>
+  <ul className="space-y-2 text-sm">
+    <li><button onClick={() => navigate('/gizlilik')} className="hover:text-white">Gizlilik Politikası</button></li>
+    <li><button onClick={() => navigate('/kullanim-sartlari')} className="hover:text-white">Kullanım Şartları</button></li>
+    <li><button onClick={() => navigate('/kvkk')} className="hover:text-white">KVKK</button></li>
+    <li><button onClick={() => navigate('/cerez-politikasi')} className="hover:text-white">Çerez Politikası</button></li>
+  </ul>
+</div>
           </div>
           <div className="pt-8 border-t border-gray-800 text-center text-sm">
             <p>&copy; 2026 QRtım. Tüm hakları saklıdır.</p>
