@@ -135,7 +135,7 @@ export default function LandingPage() {
     cardGift: '10 NFC Kart dahil',
     features: [
       'Sınırsız üye',
-      'API erişimi',
+      'Öncelikli Teknik Destek',
       'Dedike destek & SLA',
       'Özel entegrasyon',
       'Kurumsal faturalama',
