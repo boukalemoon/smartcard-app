@@ -19,6 +19,9 @@ import UsernameEditor from './UsernameEditor'
 import { validateCatalogLink, validateService, validateProfile } from '../utils/inputValidation'
 import { useNavigate } from 'react-router-dom'
 import { checkProfileUpdateRateLimit } from '../utils/rateLimiting'
+import { getAnalyticsSummary, getAnalyticsSummaryFiltered } from '../utils/analyticsHelpers'
+import { exportToCSV } from '../utils/exportHelpers'
+import AnalyticsFilter from './AnalyticsFilter'
 
 export default function Dashboard({ session }) {
   const [profile, setProfile] = useState(null)
@@ -30,6 +33,8 @@ export default function Dashboard({ session }) {
   const [isAdmin, setIsAdmin] = useState(false)
   const [socialLinks, setSocialLinks] = useState([])
   const [analytics, setAnalytics] = useState(null)
+  const [analyticsFilter, setAnalyticsFilter] = useState({ type: 'monthly', year: new Date().getFullYear(), month: new Date().getMonth() + 1 })
+  const [analyticsLoading, setAnalyticsLoading] = useState(false)
   const [orgCount, setOrgCount] = useState(0)
   const navigate = useNavigate()
 
@@ -97,6 +102,17 @@ useEffect(() => {
         setCompany(data.company || '')
         setPhone(data.phone || '')
         setBio(data.bio || '')
+
+        const loadFilteredAnalytics = async (filter) => {
+  if (!profile?.id) return
+  setAnalyticsLoading(true)
+  try {
+    const data = await getAnalyticsSummaryFiltered(profile.id, filter)
+    setAnalytics(data)
+  } finally {
+    setAnalyticsLoading(false)
+  }
+}
 
         // Social links yükle
         const { data: linksData } = await supabase
@@ -461,26 +477,59 @@ useEffect(() => {
                   </div>
                 </div>
 
-                {/* İstatistikler */}
-                <div className="grid md:grid-cols-4 gap-4">
-                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-blue-500">
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Profil Görüntülenme</div>
-                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{analytics?.profile_views || 0}</div>
-                  </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-green-500">
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">QR Kod Tarama</div>
-                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{analytics?.qr_scans || 0}</div>
-                  </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-purple-500">
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">vCard İndirme</div>
-                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{analytics?.vcard_downloads || 0}</div>
-                  </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-yellow-500">
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Link Tıklama</div>
-                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{analytics?.link_clicks || 0}</div>
-                  </div>
-                </div>
+              {/* İstatistikler */}
+<div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">📊 Analytics</h2>
 
+  {['professional', 'stk', 'business', 'superadmin'].includes(subscription?.plan) || ['admin', 'superadmin'].includes(profile?.role) ? (
+    <AnalyticsFilter
+      isPremium={true}
+      onFilterChange={(filter) => {
+        setAnalyticsFilter(filter)
+        loadFilteredAnalytics(filter)
+      }}
+      onExport={() => {
+        const data = [{
+          'Profil Görüntülenme': analytics?.profile_views || 0,
+          'QR Kod Tarama': analytics?.qr_scans || 0,
+          'vCard İndirme': analytics?.vcard_downloads || 0,
+          'Link Tıklama': analytics?.link_clicks || 0,
+          'Dönem': analyticsFilter.type === 'monthly'
+            ? `${analyticsFilter.month}/${analyticsFilter.year}`
+            : analyticsFilter.type === 'yearly'
+            ? `${analyticsFilter.year}`
+            : `${analyticsFilter.startDate} - ${analyticsFilter.endDate}`
+        }]
+        exportToCSV(data, 'analytics')
+      }}
+    />
+  ) : null}
+
+  {analyticsLoading ? (
+    <div className="flex justify-center py-8">
+      <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  ) : (
+    <div className="grid md:grid-cols-4 gap-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-blue-500">
+        <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Profil Görüntülenme</div>
+        <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{analytics?.profile_views || 0}</div>
+      </div>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-green-500">
+        <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">QR Kod Tarama</div>
+        <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{analytics?.qr_scans || 0}</div>
+      </div>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-purple-500">
+        <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">vCard İndirme</div>
+        <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{analytics?.vcard_downloads || 0}</div>
+      </div>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-yellow-500">
+        <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Link Tıklama</div>
+        <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{analytics?.link_clicks || 0}</div>
+      </div>
+    </div>
+  )}
+</div>
                 {/* Username Editor */}
                 {profile && (
                   <UsernameEditor

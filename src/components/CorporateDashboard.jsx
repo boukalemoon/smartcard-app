@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabaseClient'
 import MemberManager from './MemberManager'
 import ApplicationManager from './ApplicationManager'
 import { Building2, Users, UserCheck, ChevronRight, MessageSquare } from 'lucide-react'
+import AnalyticsFilter from './AnalyticsFilter'
 
 export default function CorporateDashboard({ profile, subscription }) {
   const [organizations, setOrganizations] = useState([])
@@ -22,6 +23,12 @@ export default function CorporateDashboard({ profile, subscription }) {
     vcard_downloads: 0,
     link_clicks: 0
   })
+
+  const [analyticsFilter, setAnalyticsFilter] = useState({
+  type: 'monthly',
+  year: new Date().getFullYear(),
+  month: new Date().getMonth() + 1
+})
   const [stats, setStats] = useState({
     totalOrgs: 0,
     totalMembers: 0,
@@ -103,11 +110,18 @@ export default function CorporateDashboard({ profile, subscription }) {
     }
   }
 
-  const loadOrganizationAnalytics = async (orgs) => {
+const loadOrganizationAnalytics = async (orgs, filter = null) => {
     try {
       const analyticsData = []
       let totalQR = 0, totalProfile = 0, totalVCard = 0, totalLink = 0
-
+const { data } = await supabase.rpc('get_org_member_analytics', {
+    org_id: org.id,
+    filter_type: filter?.type || 'all',
+    filter_year: filter?.year || null,
+    filter_month: filter?.month || null,
+    filter_start: filter?.startDate || null,
+    filter_end: filter?.endDate || null
+  })
       for (const org of orgs) {
         const { data } = await supabase.rpc('get_org_member_analytics', {
           org_id: org.id
@@ -290,6 +304,15 @@ export default function CorporateDashboard({ profile, subscription }) {
           <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{stats.activeMembers}</div>
         </div>
       </div>
+
+      {/* Analytics Filtresi */}
+<AnalyticsFilter
+  isPremium={true}
+  onFilterChange={(filter) => {
+    loadOrganizationAnalytics(organizations, filter)
+  }}
+  onExport={handleExportAnalytics}
+/>
 
       {/* Toplam Analytics */}
       {orgAnalytics.length > 0 && (

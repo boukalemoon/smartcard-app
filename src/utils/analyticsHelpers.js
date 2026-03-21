@@ -57,22 +57,51 @@ export const getAnalyticsSummary = async (profileId) => {
 }
 
 /**
- * Get recent analytics events
+ * Get analytics summary with date filter
  */
-export const getRecentEvents = async (profileId, limit = 50) => {
+export const getAnalyticsSummaryFiltered = async (profileId, filter = null) => {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('analytics_events')
-      .select('*')
+      .select('event_type')
       .eq('profile_id', profileId)
-      .order('created_at', { ascending: false })
-      .limit(limit)
 
+    if (filter) {
+      if (filter.type === 'monthly') {
+        const start = new Date(filter.year, filter.month - 1, 1).toISOString()
+        const end = new Date(filter.year, filter.month, 0, 23, 59, 59).toISOString()
+        query = query.gte('created_at', start).lte('created_at', end)
+      } else if (filter.type === 'yearly') {
+        const start = new Date(filter.year, 0, 1).toISOString()
+        const end = new Date(filter.year, 11, 31, 23, 59, 59).toISOString()
+        query = query.gte('created_at', start).lte('created_at', end)
+      } else if (filter.type === 'range') {
+        query = query
+          .gte('created_at', filter.startDate)
+          .lte('created_at', filter.endDate + 'T23:59:59')
+      }
+    }
+
+    const { data, error } = await query
     if (error) throw error
 
-    return data || []
+    const summary = {
+      profile_views: 0,
+      qr_scans: 0,
+      vcard_downloads: 0,
+      link_clicks: 0
+    }
+
+    data?.forEach(event => {
+      if (event.event_type === 'profile_view') summary.profile_views++
+      if (event.event_type === 'qr_scan') summary.qr_scans++
+      if (event.event_type === 'vcard_download') summary.vcard_downloads++
+      if (event.event_type === 'link_click') summary.link_clicks++
+    })
+
+    return summary
   } catch (error) {
-    console.error('Get recent events error:', error)
-    return []
+    console.error('Filtered analytics error:', error)
+    return { profile_views: 0, qr_scans: 0, vcard_downloads: 0, link_clicks: 0 }
   }
 }
