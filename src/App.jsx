@@ -16,7 +16,7 @@ import AuthConfirm from './components/AuthConfirm'
 import GizlilikPolitikasi from './pages/GizlilikPolitikasi'
 import KullanimSartlari from './pages/KullanimSartlari'
 import KVKKAydinlatma from './pages/KVKKAydinlatma'
-import CerezPolitikasi from './pages/Cerezpolitikasi'
+import CerezPolitikasi from './pages/CerezPolitikasi'
 import Iletisim from './pages/Iletisim'
 
 function App() {
