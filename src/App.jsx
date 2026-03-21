@@ -17,6 +17,7 @@ import GizlilikPolitikasi from './pages/Gizlilikpolitikasi'
 import KullanimSartlari from './pages/Kullanimsartlari'
 import KVKKAydinlatma from './pages/KVKKAydinlatma'
 import CerezPolitikasi from './pages/Cerezpolitikasi'
+import Iletisim from './pages/Iletisim'
 
 function App() {
   const [session, setSession] = useState(null)
@@ -81,6 +82,8 @@ function App() {
   path="/admin" 
   element={session ? <AdminPage session={session} /> : <Navigate to="/" replace />} 
 />
+
+<Route path="/iletisim" element={<Iletisim />} />
           </Routes>
         </Router>
       </DashboardModeProvider>
