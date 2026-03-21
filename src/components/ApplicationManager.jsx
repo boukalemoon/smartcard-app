@@ -53,16 +53,24 @@ export default function ApplicationManager({ organizationId }) {
         const application = applications.find(app => app.id === applicationId)
         
         if (application) {
-          await supabase
-            .from('members')
-            .insert({
-              organization_id: organizationId,
-              name: application.applicant_name,
-              email: application.applicant_email,
-              phone: application.applicant_phone,
-              role: 'member',
-              status: 'active'
-            })
+          const { data: profileData } = await supabase
+  .from('profiles')
+  .select('id')
+  .eq('email', application.applicant_email)
+  .single()
+
+if (profileData) {
+  await supabase
+    .from('members')
+    .insert({
+      organization_id: organizationId,
+      profile_id: profileData.id,
+      role: 'member',
+      status: 'active'
+    })
+} else {
+  alert('⚠️ Başvuru sahibi henüz QRtım hesabı oluşturmamış. Üye eklenemedi.')
+}
         }
       }
 
