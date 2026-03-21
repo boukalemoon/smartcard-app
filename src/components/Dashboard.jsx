@@ -1,7 +1,6 @@
 import ReadyPlayerMeAvatar from './ReadyPlayerMeAvatar'
 import ImageUpload from './ImageUpload'
 import PublicCardPreview from './PublicCardPreview'
-import { getAnalyticsSummary } from '../utils/analyticsHelpers'
 import ReferralDashboard from './ReferralDashboard'
 import OrganizationManager from './OrganizationManager'
 import CorporateDashboard from './CorporateDashboard'
