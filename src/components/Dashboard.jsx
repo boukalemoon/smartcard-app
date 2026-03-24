@@ -604,12 +604,12 @@ const handleThemeColorChange = async (color) => {
 
                 {/* Username Editor */}
                 {profile?.id && (
-  <UsernameEditor
-    currentUsername={profile.username}
-    profileId={profile.id}
-    onUpdate={(newUsername) => setProfile({ ...profile, username: newUsername })}
-  />
-)}
+                  <UsernameEditor
+                    currentUsername={profile.username}
+                    profileId={profile.id}
+                    onUpdate={(newUsername) => setProfile({ ...profile, username: newUsername })}
+                  />
+                )}
 
                 {/* Social Links Manager */}
                 {profile && (
