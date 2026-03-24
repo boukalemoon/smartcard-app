@@ -1,4 +1,3 @@
-import ReadyPlayerMeAvatar from './ReadyPlayerMeAvatar'
 import ImageUpload from './ImageUpload'
 import PublicCardPreview from './PublicCardPreview'
 import { getAnalyticsSummary } from '../utils/analyticsHelpers'
@@ -373,18 +372,6 @@ const handleThemeColorChange = async (color) => {
       maxSize={2}
     />
   </div>
-
- {/* 3D Avatar - YENİ! */}
-<div className="flex justify-center pb-4 border-b border-gray-200 dark:border-gray-700">
-{profile?.id && (
-  <ReadyPlayerMeAvatar
-    profileId={profile.id}
-    currentAvatarUrl={profile?.avatar_3d_url}
-    onAvatarUpdate={(url) => setProfile({ ...profile, avatar_3d_url: url })}
-    type="profile"
-  />
-)}
-</div>  {/* ← ReadyPlayerMeAvatar DIV KAPANDI! */}
 
 {/* Tema Rengi */}
 <div className="space-y-4">
