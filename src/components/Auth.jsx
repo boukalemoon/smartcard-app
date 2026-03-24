@@ -28,6 +28,10 @@ export default function Auth({ initialMode = 'signup' }) {
   }, [])
 
   useEffect(() => {
+  setMode(initialMode)
+}, [initialMode])
+
+  useEffect(() => {
     if (referralCode) {
       localStorage.setItem('qartim_referral_code', referralCode)
     }
