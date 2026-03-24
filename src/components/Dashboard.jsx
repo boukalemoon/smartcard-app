@@ -1,7 +1,7 @@
 import ImageUpload from './ImageUpload'
 import PublicCardPreview from './PublicCardPreview'
 import { getAnalyticsSummary } from '../utils/analyticsHelpers'
-import AdminCRM from './AdminCRM'
+import AdminCRM from './AdminCRM' 
 import ReferralDashboard from './ReferralDashboard'
 import OrganizationManager from './OrganizationManager'
 import CorporateDashboard from './CorporateDashboard'
@@ -18,6 +18,7 @@ import SocialLinksManager from './SocialLinksManager'
 import UsernameEditor from './UsernameEditor'
 import { validateCatalogLink, validateService, validateProfile } from '../utils/inputValidation'
 import { checkProfileUpdateRateLimit } from '../utils/rateLimiting'
+import { useNavigate } from 'react-router-dom'
 
 export default function Dashboard({ session }) {
   const [profile, setProfile] = useState(null)
@@ -34,7 +35,14 @@ export default function Dashboard({ session }) {
   
   
   // Dashboard mode
-  const { mode, isIndividual, isCorporate } = useDashboardMode()
+  const { mode, isIndividual, isCorporate, initMode } = useDashboardMode()
+
+  // useEffect ekle:
+useEffect(() => {
+  if (subscription?.plan) {
+    initMode(subscription.plan)
+  }
+}, [subscription?.plan])
   
   // Form states
   const [name, setName] = useState('')
@@ -42,6 +50,7 @@ export default function Dashboard({ session }) {
   const [company, setCompany] = useState('')
   const [phone, setPhone] = useState('')
   const [bio, setBio] = useState('')
+  const [socialLinks, setSocialLinks] = useState([])
 
   // Subscription hook
   const { 
@@ -71,6 +80,14 @@ const loadProfile = async () => {
       .select('*')
       .eq('user_id', session.user.id)
       .single()
+
+      const { data: linksData } = await supabase
+  .from('social_links')
+  .select('*')
+  .eq('profile_id', data.id)
+  .order('display_order')
+if (linksData) setSocialLinks(linksData)
+
 console.log('📊 Loaded profile data:', data)
     if (error && error.code !== 'PGRST116') throw error
 
@@ -254,11 +271,14 @@ const handleThemeColorChange = async (color) => {
               </div>
               <div className="flex items-center gap-3">
                 {/* Dashboard Mode Toggle */}
-                <DashboardModeToggle subscription={subscription} />
+                <DashboardModeToggle subscription={subscription} profile={profile} />
                 
                 <ThemeToggle />
                 <button
-                  onClick={() => supabase.auth.signOut()}
+                  onClick={async () => {
+  await supabase.auth.signOut()
+  navigate('/')
+}}
                   className="px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-all"
                 >
                   Çıkış Yap
@@ -442,6 +462,7 @@ const handleThemeColorChange = async (color) => {
 <PublicCardPreview 
   profile={profile}
   themeColor={themeColor}
+  socialLinks={socialLinks}
 />
 
 {/* Background Image Upload - YENİ! */}
@@ -1072,7 +1093,7 @@ const handleThemeColorChange = async (color) => {
     </div>
   )
 )}
-    <NFCWriter username={profile.username} />
+
                   </>
                 )}
 
