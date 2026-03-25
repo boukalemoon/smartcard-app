@@ -247,6 +247,32 @@ END:VCARD`;
                 </a>
               )}
             </div>
+            
+            {/* Sosyal Medya */}
+{socialLinks.length > 0 && (
+  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+    <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-3">🔗 Sosyal Medya</h3>
+    <div className="flex flex-wrap gap-2">
+      {socialLinks.map((link) => {
+        const config = PLATFORM_CONFIG[link.platform] || { color: '#6B7280', label: link.platform }
+        return (
+          <a
+            key={link.id}   
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer" 
+            title={config.label}
+            onClick={() => trackEvent(profile.id, 'link_click')}
+            className="px-4 py-2 rounded-lg text-white text-sm font-medium hover:opacity-80 transition-opacity"
+            style={{ backgroundColor: config.color }}
+          >
+            {config.label}
+          </a>
+        )
+      })}
+    </div>
+  </div>
+)}
 
             {/* Katalog & Dökümanlar */}
             {profile.catalog_links && profile.catalog_links.length > 0 && (
