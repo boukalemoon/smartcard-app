@@ -365,6 +365,24 @@ export default function Dashboard({ session }) {
                               <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline block truncate">{link.url}</a>
                             </div>
                             <button onClick={async () => { const newLinks = profile.catalog_links.filter((_, i) => i !== index); const { error } = await supabase.from('profiles').update({ catalog_links: newLinks }).eq('user_id', session.user.id); if (error) { alert('Hata: ' + error.message); return } setProfile(prev => ({ ...prev, catalog_links: newLinks })) }} className="text-red-600 hover:text-red-700 text-sm font-semibold shrink-0">Sil</button>
+                          <button
+  onClick={() => {
+    const newTitle = prompt('Yeni başlık:', link.title)
+    if (!newTitle) return
+    const newUrl = prompt('Yeni URL:', link.url)
+    if (!newUrl) return
+    const newLinks = [...profile.catalog_links]
+    newLinks[index] = { ...link, title: newTitle, url: newUrl }
+    supabase.from('profiles').update({ catalog_links: newLinks }).eq('user_id', session.user.id)
+      .then(({ error }) => {
+        if (error) { alert('Hata: ' + error.message); return }
+        setProfile(prev => ({ ...prev, catalog_links: newLinks }))
+      })
+  }}
+  className="text-blue-600 hover:text-blue-700 text-sm font-semibold shrink-0"
+>
+  ✏️
+</button>
                           </div>
                         ))}
                       </div>
@@ -393,6 +411,27 @@ export default function Dashboard({ session }) {
                               </div>
                               <button onClick={async () => { const newServices = profile.services.filter((_, i) => i !== index); const { error } = await supabase.from('profiles').update({ services: newServices }).eq('user_id', session.user.id); if (error) { alert('Hata: ' + error.message); return } setProfile(prev => ({ ...prev, services: newServices })) }} className="text-red-600 hover:text-red-700 text-sm font-semibold shrink-0">Sil</button>
                             </div>
+                            <button
+  onClick={() => {
+    const newTitle = prompt('Hizmet adı:', service.title)
+    if (!newTitle) return
+    const newDesc = prompt('Açıklama:', service.description)
+    if (!newDesc) return
+    const newPrice = prompt('Fiyat:', service.price)
+    if (!newPrice) return
+    const newTime = prompt('Teslim süresi:', service.delivery_time)
+    const newServices = [...profile.services]
+    newServices[index] = { ...service, title: newTitle, description: newDesc, price: parseFloat(newPrice), delivery_time: newTime }
+    supabase.from('profiles').update({ services: newServices }).eq('user_id', session.user.id)
+      .then(({ error }) => {
+        if (error) { alert('Hata: ' + error.message); return }
+        setProfile(prev => ({ ...prev, services: newServices }))
+      })
+  }}
+  className="text-blue-600 hover:text-blue-700 text-sm font-semibold shrink-0"
+>
+  ✏️
+</button>
                             <div className="flex items-center gap-4 text-sm">
                               <span className="font-bold text-blue-600">₺{service.price}</span>
                               {service.delivery_time && <span className="text-gray-500">⏱️ {service.delivery_time}</span>}

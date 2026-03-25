@@ -39,6 +39,10 @@ export default function PublicCard() {
     }
   }, [username]);
 
+  useEffect(() => {
+  document.documentElement.classList.remove('dark')
+}, [])
+
   const loadProfile = async () => {
     try {
       setLoading(true);
@@ -82,14 +86,14 @@ export default function PublicCard() {
 
   // getSocialIcon fonksiyonunu komple şununla değiştir:
 const PLATFORM_CONFIG = {
-  linkedin:  { color: '#0A66C2', label: 'LinkedIn' },
-  facebook:  { color: '#1877F2', label: 'Facebook' },
-  twitter:   { color: '#000000', label: 'Twitter/X' },
-  instagram: { color: '#E4405F', label: 'Instagram' },
-  youtube:   { color: '#FF0000', label: 'YouTube' },
-  tiktok:    { color: '#000000', label: 'TikTok' },
-  github:    { color: '#333333', label: 'GitHub' },
-  website:   { color: '#6B7280', label: 'Website' },
+  linkedin:  { icon: Linkedin,  color: '#0A66C2', label: 'LinkedIn' },
+  facebook:  { icon: Facebook,  color: '#1877F2', label: 'Facebook' },
+  twitter:   { icon: Twitter,   color: '#000000', label: 'Twitter/X' },
+  instagram: { icon: Instagram, color: '#E4405F', label: 'Instagram' },
+  youtube:   { icon: Youtube,   color: '#FF0000', label: 'YouTube' },
+  tiktok:    { icon: Music,     color: '#000000', label: 'TikTok' },
+  github:    { icon: Github,    color: '#333333', label: 'GitHub' },
+  website:   { icon: Globe,     color: '#6B7280', label: 'Website' },
 }
 
   const downloadVCard = () => {
@@ -254,26 +258,27 @@ END:VCARD`;
     <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-3">🔗 Sosyal Medya</h3>
     <div className="flex flex-wrap gap-2">
       {socialLinks.map((link) => {
-        const config = PLATFORM_CONFIG[link.platform] || { color: '#6B7280', label: link.platform }
+        const config = PLATFORM_CONFIG[link.platform] || { icon: Globe, color: '#6B7280', label: link.platform }
+        const Icon = config.icon
+  
         return (
           <a
-            key={link.id}   
+            key={link.id}
             href={link.url}
             target="_blank"
-            rel="noopener noreferrer" 
+            rel="noopener noreferrer"
             title={config.label}
             onClick={() => trackEvent(profile.id, 'link_click')}
-            className="px-4 py-2 rounded-lg text-white text-sm font-medium hover:opacity-80 transition-opacity"
+            className="w-10 h-10 rounded-lg flex items-center justify-center text-white hover:opacity-80 transition-opacity"
             style={{ backgroundColor: config.color }}
           >
-            {config.label}
+            <Icon size={18} />
           </a>
         )
       })}
     </div>
   </div>
 )}
-
             {/* Katalog & Dökümanlar */}
             {profile.catalog_links && profile.catalog_links.length > 0 && (
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">

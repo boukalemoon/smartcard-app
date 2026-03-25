@@ -71,7 +71,7 @@ export const validateCatalogLink = (link) => {
   return {
     valid: true,
     sanitized: {
-      title: sanitizeHtml(link.title.trim()),
+      title: link.title.trim(),
       url: link.url.trim(),
       type: link.type || 'document'
     }
@@ -113,11 +113,11 @@ export const validateService = (service) => {
   return {
     valid: true,
     sanitized: {
-      title: sanitizeHtml(service.title.trim()),
-      description: sanitizeHtml(service.description.trim()),
+      title: service.title.trim(),
+      description: service.description.trim(),
       price: parseFloat(service.price),
       currency: 'TRY',
-      delivery_time: service.delivery_time ? sanitizeHtml(service.delivery_time.trim()) : null,
+      delivery_time: service.delivery_time ? service.delivery_time.trim() : null,
       category: 'general'
     }
   };
@@ -154,11 +154,11 @@ export const validateProfile = (profile) => {
   return {
     valid: true,
     sanitized: {
-      name: profile.name ? sanitizeHtml(profile.name.trim()) : null,
-      title: profile.title ? sanitizeHtml(profile.title.trim()) : null,
-      company: profile.company ? sanitizeHtml(profile.company.trim()) : null,
+      name: profile.name ? profile.name.trim() : null,
+      title: profile.title ? profile.title.trim() : null,
+      company: profile.company ? profile.company.trim() : null,
       phone: profile.phone ? profile.phone.trim() : null,
-      bio: profile.bio ? sanitizeHtml(profile.bio.trim()) : null
+      bio: profile.bio ? profile.bio.trim() : null
     }
   };
 };
