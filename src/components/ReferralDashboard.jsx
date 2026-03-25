@@ -279,7 +279,6 @@ export default function ReferralDashboard({ profile }) {
           <li>• Referral kodunuzu veya linkinizi arkadaşlarınızla paylaşın</li>
           <li>• Kodunuzla kayıt olup abonelik satın aldıklarında %10 kazanç elde edersiniz</li>
           <li>• Aylık abonelikler için aylık, yıllık abonelikler için yıllık kazanç alırsınız</li>
-          <li>• Minimum ₺100 biriktikten sonra ödeme talep edebilirsiniz</li>
         </ul>
       </div>
     </div>

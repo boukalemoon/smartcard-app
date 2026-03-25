@@ -80,16 +80,17 @@ export default function PublicCard() {
     }
   };
 
-  const getSocialIcon = (platform) => {
-    const icons = {
-      linkedin: <Linkedin size={20} />,
-      twitter: <Twitter size={20} />,
-      instagram: <Instagram size={20} />,
-      facebook: <Facebook size={20} />,
-      website: <Globe size={20} />
-    };
-    return icons[platform.toLowerCase()] || <ExternalLink size={20} />;
-  };
+  // getSocialIcon fonksiyonunu komple şununla değiştir:
+const PLATFORM_CONFIG = {
+  linkedin:  { color: '#0A66C2', label: 'LinkedIn' },
+  facebook:  { color: '#1877F2', label: 'Facebook' },
+  twitter:   { color: '#000000', label: 'Twitter/X' },
+  instagram: { color: '#E4405F', label: 'Instagram' },
+  youtube:   { color: '#FF0000', label: 'YouTube' },
+  tiktok:    { color: '#000000', label: 'TikTok' },
+  github:    { color: '#333333', label: 'GitHub' },
+  website:   { color: '#6B7280', label: 'Website' },
+}
 
   const downloadVCard = () => {
     if (!profile) return;

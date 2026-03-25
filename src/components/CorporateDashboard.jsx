@@ -94,13 +94,7 @@ export default function CorporateDashboard({ profile, subscription }) {
 
       if (orgs && orgs.length > 0) {
         const orgIds = orgs.map(o => o.id)
-        const { data: commissionsData } = await supabase
-          .from('organizational_commissions')
-          .select('*')
-          .in('organization_id', orgIds)
-          .order('created_at', { ascending: false })
-
-        setOrgCommissions(commissionsData || [])
+        
         await loadOrganizationAnalytics(orgs)
       }
     } catch (error) {
@@ -114,14 +108,6 @@ const loadOrganizationAnalytics = async (orgs, filter = null) => {
     try {
       const analyticsData = []
       let totalQR = 0, totalProfile = 0, totalVCard = 0, totalLink = 0
-const { data } = await supabase.rpc('get_org_member_analytics', {
-    org_id: org.id,
-    filter_type: filter?.type || 'all',
-    filter_year: filter?.year || null,
-    filter_month: filter?.month || null,
-    filter_start: filter?.startDate || null,
-    filter_end: filter?.endDate || null
-  })
       for (const org of orgs) {
         const { data } = await supabase.rpc('get_org_member_analytics', {
           org_id: org.id
@@ -426,55 +412,11 @@ const { data } = await supabase.rpc('get_org_member_analytics', {
             📊 Üye Analytics Export Et
           </button>
         )}
-        {orgCommissions.length > 0 && (
-          <button
-            onClick={handleExportCommissions}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-all text-sm"
-          >
-            📥 Hakediş Export Et
-          </button>
-        )}
+        
       </div>
 
       {/* Organizasyon Hakediş */}
-      {orgCommissions.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-            💰 Organizasyon Hakediş
-          </h2>
-          <div className="space-y-3">
-            {orgCommissions.map(comm => {
-              const org = organizations.find(o => o.id === comm.organization_id)
-              return (
-                <div key={comm.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-gray-900 dark:text-gray-100">{org?.name}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {comm.period_month}/{comm.period_year} • {comm.member_count} üye × ₺{parseFloat(comm.commission_per_member).toFixed(2)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                        ₺{parseFloat(comm.total_commission).toFixed(2)}
-                      </p>
-                      <span className={`inline-block px-2 py-1 text-xs rounded mt-1 ${
-                        comm.status === 'paid'
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                          : comm.status === 'approved'
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                      }`}>
-                        {comm.status === 'pending' ? 'Bekliyor' : comm.status === 'approved' ? 'Onaylandı' : 'Ödendi'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
+      
 
       {/* Organization Profile Manager */}
       {showOrgProfile && selectedOrg && (

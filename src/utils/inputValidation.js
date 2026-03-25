@@ -9,15 +9,13 @@ export const sanitizeHtml = (input) => {
   if (typeof input !== 'string') return input;
   
   const map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#x27;',
-    '/': '&#x2F;',
-  };
-  
-  return input.replace(/[&<>"'/]/g, (char) => map[char]);
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#x27;',
+};
+return input.replace(/[&<>"']/g, (char) => map[char]);
 };
 
 // URL validation

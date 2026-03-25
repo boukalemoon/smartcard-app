@@ -282,7 +282,17 @@ export default function Dashboard({ session }) {
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Hakkımda</label>
-                      {editing ? <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={4} className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none" placeholder="Kendinizden bahsedin..." />
+                      {editing ? <textarea
+  value={bio}
+  onChange={(e) => setBio(e.target.value)}
+  rows={4}
+  autoComplete="off"
+  autoCorrect="off"
+  autoCapitalize="off"
+  spellCheck="false"
+  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray normalizeasion-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none"
+  placeholder="Kendinizden bahsedin..."
+/>
                         : <p className="text-gray-900 dark:text-gray-100">{bio || '-'}</p>}
                     </div>
                   </div>

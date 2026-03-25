@@ -165,6 +165,13 @@ const handleExportCommissions = async () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Admin CRM</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">Tüm kullanıcıları ve ödemeleri yönetin</p>
+
+        <button
+  onClick={loadAllData}
+  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all text-sm"
+>
+  🔄 Yenile
+</button>
         </div>
       </div>
 
