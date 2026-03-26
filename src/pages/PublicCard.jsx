@@ -1,5 +1,4 @@
-﻿import { sanitizeHtml } from '../utils/inputValidation'
-import AvatarFlipCard from '../components/AvatarFlipCard'
+﻿import AvatarFlipCard from '../components/AvatarFlipCard'
 import { trackEvent } from '../utils/analyticsHelpers'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
@@ -7,14 +6,14 @@ import { supabase } from '../lib/supabaseClient'
 import { Linkedin, Facebook, Twitter, Instagram, Play, Github, Globe, Music, ExternalLink, ArrowLeft, Download, Mail, Phone } from 'lucide-react'
 
 const PLATFORM_CONFIG = {
-  linkedin:  { icon: Linkedin, color: '#0A66C2', label: 'LinkedIn' },
-  facebook:  { icon: Facebook, color: '#1877F2', label: 'Facebook' },
-  twitter:   { icon: Twitter,  color: '#000000', label: 'Twitter/X' },
-  instagram: { icon: Instagram,color: '#E4405F', label: 'Instagram' },
-  youtube:   { icon: Play,     color: '#FF0000', label: 'YouTube' },
-  tiktok:    { icon: Music,    color: '#000000', label: 'TikTok' },
-  github:    { icon: Github,   color: '#333333', label: 'GitHub' },
-  website:   { icon: Globe,    color: '#6B7280', label: 'Website' },
+  linkedin:  { icon: Linkedin,  color: '#0A66C2', label: 'LinkedIn' },
+  facebook:  { icon: Facebook,  color: '#1877F2', label: 'Facebook' },
+  twitter:   { icon: Twitter,   color: '#000000', label: 'Twitter/X' },
+  instagram: { icon: Instagram, color: '#E4405F', label: 'Instagram' },
+  youtube:   { icon: Play,      color: '#FF0000', label: 'YouTube' },
+  tiktok:    { icon: Music,     color: '#000000', label: 'TikTok' },
+  github:    { icon: Github,    color: '#333333', label: 'GitHub' },
+  website:   { icon: Globe,     color: '#6B7280', label: 'Website' },
 }
 
 export default function PublicCard() {
@@ -22,6 +21,7 @@ export default function PublicCard() {
   const navigate = useNavigate()
   const [profile, setProfile] = useState(null)
   const [socialLinks, setSocialLinks] = useState([])
+  const [organizations, setOrganizations] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -47,6 +47,7 @@ export default function PublicCard() {
     try {
       setLoading(true)
 
+      // 1. Profili yükle
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -58,6 +59,7 @@ export default function PublicCard() {
 
       setProfile(profileData)
 
+      // 2. Analytics
       if (profileData?.id) {
         trackEvent(profileData.id, 'profile_view')
         await supabase
@@ -66,6 +68,7 @@ export default function PublicCard() {
           .eq('id', profileData.id)
       }
 
+      // 3. Sosyal linkler
       const { data: linksData } = await supabase
         .from('social_links')
         .select('*')
@@ -73,8 +76,18 @@ export default function PublicCard() {
         .order('display_order')
       setSocialLinks(linksData || [])
 
-    } catch (error) {
-      console.error('Profil yükleme hatası:', error)
+      // 4. Organizasyonlar
+      const { data: memberData } = await supabase
+        .from('members')
+        .select(`role, organizations(id, name, type, description, logo_url)`)
+        .eq('profile_id', profileData.id)
+
+      const allOrgs = (memberData || []).map(m => ({ ...m.organizations, role: m.role }))
+      const orgLimit = ['professional', 'stk', 'business'].includes(profileData?.subscription_plan) ? 999 : 2
+      setOrganizations(allOrgs.slice(0, orgLimit))
+
+    } catch (err) {
+      console.error('Profil yükleme hatası:', err)
       setError('Profil bulunamadı')
     } finally {
       setLoading(false)
@@ -86,7 +99,18 @@ export default function PublicCard() {
     const nameParts = (profile.name || 'Unknown').split(' ')
     const lastName = nameParts.length > 1 ? nameParts.pop() : ''
     const firstName = nameParts.join(' ') || 'Unknown'
-    const vCard = `BEGIN:VCARD\nVERSION:3.0\nFN:${profile.name || 'Unknown'}\nN:${lastName};${firstName};;;\nTEL:${profile.phone || ''}\nEMAIL:${profile.email || ''}\nTITLE:${profile.title || ''}\nORG:${profile.company || ''}\nNOTE:${profile.bio || ''}\nURL:${window.location.origin}/card/${profile.username}\nEND:VCARD`
+    const vCard = [
+      'BEGIN:VCARD', 'VERSION:3.0',
+      `FN:${profile.name || 'Unknown'}`,
+      `N:${lastName};${firstName};;;`,
+      `TEL:${profile.phone || ''}`,
+      `EMAIL:${profile.email || ''}`,
+      `TITLE:${profile.title || ''}`,
+      `ORG:${profile.company || ''}`,
+      `NOTE:${profile.bio || ''}`,
+      `URL:${window.location.origin}/card/${profile.username}`,
+      'END:VCARD'
+    ].join('\n')
     const blob = new Blob([vCard], { type: 'text/vcard;charset=utf-8' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
@@ -121,10 +145,13 @@ export default function PublicCard() {
     )
   }
 
+  const themeColor = profile?.theme_color || '#3B82F6'
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
       <div className="max-w-2xl mx-auto">
 
+        {/* Üst bar */}
         <div className="mb-6 flex items-center justify-between">
           <button onClick={() => navigate('/')} className="flex items-center gap-2 text-gray-600 hover:text-gray-800">
             <ArrowLeft size={20} /><span>Ana Sayfa</span>
@@ -135,12 +162,12 @@ export default function PublicCard() {
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
 
           {/* Header */}
-          <div
-            className="p-8 text-white text-center relative overflow-hidden"
-            style={{ background: profile?.background_image_url ? 'transparent' : `linear-gradient(to right, ${profile?.theme_color || '#3B82F6'}, ${adjustColor(profile?.theme_color || '#3B82F6', -40)})` }}
-          >
-            {profile?.background_image_url && <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${profile.background_image_url})` }} />}
-            {profile?.background_image_url && <div className="absolute inset-0 bg-black/40" />}
+          <div className="p-8 text-white text-center relative overflow-hidden"
+            style={{ background: profile.background_image_url ? 'transparent' : `linear-gradient(to right, ${themeColor}, ${adjustColor(themeColor, -40)})` }}>
+            {profile.background_image_url && <>
+              <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${profile.background_image_url})` }} />
+              <div className="absolute inset-0 bg-black/40" />
+            </>}
             <div className="relative z-10">
               <AvatarFlipCard profileImage={profile.avatar_url} avatar3dUrl={profile.avatar_3d_url} name={profile.name || ''} />
               <h1 className="text-3xl font-bold mb-2">{profile.name || ''}</h1>
@@ -152,22 +179,24 @@ export default function PublicCard() {
           {/* İçerik */}
           <div className="p-6 space-y-4">
 
+            {/* Bio */}
             {profile.bio && (
               <div className="pb-4 border-b border-gray-200">
                 <p className="text-gray-700 text-center">{profile.bio}</p>
               </div>
             )}
 
+            {/* İletişim */}
             <div className="grid gap-3">
               {profile.email && (
                 <a href={`mailto:${profile.email}`} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Mail size={20} style={{ color: profile?.theme_color || '#3B82F6' }} />
+                  <Mail size={20} style={{ color: themeColor }} />
                   <span className="text-gray-700">{profile.email}</span>
                 </a>
               )}
               {profile.phone && (
                 <a href={`tel:${profile.phone}`} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Phone size={20} style={{ color: profile?.theme_color || '#10B981' }} />
+                  <Phone size={20} style={{ color: themeColor }} />
                   <span className="text-gray-700">{profile.phone}</span>
                 </a>
               )}
@@ -194,6 +223,31 @@ export default function PublicCard() {
               </div>
             )}
 
+            {/* Organizasyonlar */}
+            {organizations.length > 0 && (
+              <div className="pt-4 border-t border-gray-200">
+                <h3 className="font-semibold text-gray-800 mb-3">🏢 Şirketler & Organizasyonlar</h3>
+                <div className="grid gap-3">
+                  {organizations.map((org) => (
+                    <div key={org.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                      {org.logo_url ? (
+                        <img src={org.logo_url} alt={org.name} className="w-10 h-10 rounded-lg object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-lg font-bold"
+                          style={{ backgroundColor: themeColor }}>
+                          {org.name?.charAt(0)}
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-semibold text-gray-900">{org.name}</p>
+                        {org.description && <p className="text-xs text-gray-500">{org.description}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Katalog */}
             {profile.catalog_links && profile.catalog_links.length > 0 && (
               <div className="pt-4 border-t border-gray-200">
@@ -202,7 +256,7 @@ export default function PublicCard() {
                   {profile.catalog_links.map((link, index) => (
                     <a key={index} href={link.url} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                      <span style={{ color: profile?.theme_color || '#6B7280' }}>📄</span>
+                      <span style={{ color: themeColor }}>📄</span>
                       <span className="text-gray-700 font-medium">{link.title}</span>
                       <ExternalLink className="ml-auto text-gray-400" size={16} />
                     </a>
@@ -217,11 +271,11 @@ export default function PublicCard() {
                 <h3 className="font-semibold text-gray-800 mb-3">🛍️ Hizmetlerim</h3>
                 <div className="grid gap-3">
                   {profile.services.map((service, index) => (
-                    <div key={index} className="p-4 rounded-lg" style={{ backgroundColor: `${profile?.theme_color || '#3B82F6'}10` }}>
+                    <div key={index} className="p-4 rounded-lg" style={{ backgroundColor: `${themeColor}10` }}>
                       <h4 className="font-semibold text-gray-900 mb-1">{service.title}</h4>
                       <p className="text-sm text-gray-600 mb-2">{service.description}</p>
                       <div className="flex items-center justify-between">
-                        <span className="font-bold" style={{ color: profile?.theme_color || '#10B981' }}>₺{service.price}</span>
+                        <span className="font-bold" style={{ color: themeColor }}>₺{service.price}</span>
                         {service.delivery_time && <span className="text-sm text-gray-500">⏱️ {service.delivery_time}</span>}
                       </div>
                     </div>
@@ -234,8 +288,8 @@ export default function PublicCard() {
             {profile.google_review_link && (
               <div className="pt-4 border-t border-gray-200">
                 <a href={profile.google_review_link} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 p-4 rounded-lg transition-all"
-                  style={{ background: `linear-gradient(to right, ${profile?.theme_color || '#10B981'}, ${adjustColor(profile?.theme_color || '#10B981', -30)})` }}>
+                  className="flex items-center justify-center gap-2 p-4 rounded-lg"
+                  style={{ background: `linear-gradient(to right, ${themeColor}, ${adjustColor(themeColor, -30)})` }}>
                   <span className="text-white text-2xl">⭐</span>
                   <span className="text-white font-semibold">Google'da Yorum Yap</span>
                 </a>
@@ -245,13 +299,14 @@ export default function PublicCard() {
             {/* vCard */}
             <button onClick={downloadVCard}
               className="w-full mt-6 flex items-center justify-center gap-2 px-6 py-3 text-white rounded-xl font-semibold hover:shadow-xl transition-all"
-              style={{ background: `linear-gradient(to right, ${profile?.theme_color || '#10B981'}, ${adjustColor(profile?.theme_color || '#10B981', -30)})` }}>
+              style={{ background: `linear-gradient(to right, ${themeColor}, ${adjustColor(themeColor, -30)})` }}>
               <Download size={20} />
               Kişilere Kaydet (vCard)
             </button>
           </div>
         </div>
 
+        {/* Footer */}
         <div className="mt-6 text-center">
           <p className="text-gray-600 text-sm mb-2">Sen de dijital kartvizitini oluştur!</p>
           <button onClick={() => navigate(`/signup?ref=${profile?.referral_code || profile?.id}`)}
