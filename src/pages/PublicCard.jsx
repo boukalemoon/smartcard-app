@@ -44,7 +44,6 @@ export default function PublicCard() {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('user_id', session.user.id)
       .single()
 
     if (error && error.code !== 'PGRST116') throw error
