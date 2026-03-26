@@ -5,11 +5,7 @@ import { trackEvent } from '../utils/analyticsHelpers'
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { 
-  Mail, Phone, MapPin, Briefcase, Building, 
-  Globe, Linkedin, Twitter, Instagram, Facebook,
-  ExternalLink, ArrowLeft, UserPlus, Download
-} from 'lucide-react';
+import { Linkedin, Facebook, Twitter, Instagram, Youtube, Github, Globe, Music, Camera } from 'lucide-react'
 
 export default function PublicCard() {
   const { username } = useParams();
@@ -43,15 +39,24 @@ export default function PublicCard() {
   document.documentElement.classList.remove('dark')
 }, [])
 
-  const loadProfile = async () => {
-    try {
-      setLoading(true);
+ const loadProfile = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .single()
 
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('username', username)
-        .single();
+    if (error && error.code !== 'PGRST116') throw error
+
+    if (data) {
+      setProfile(data)
+      setThemeColor(data.theme_color || '#3B82F6')
+      setName(data.name || '')
+      setTitle(data.title || '')
+      setCompany(data.company || '')
+      setPhone(data.phone || '')
+      setBio(data.bio || '')
 
       if (profileError) throw profileError;
 
@@ -72,17 +77,19 @@ export default function PublicCard() {
       const { data: linksData } = await supabase
         .from('social_links')
         .select('*')
-        .eq('profile_id', profileData.id)
-        .order('created_at');
+        .eq('profile_id', data.id)
+        .order('display_order')
+      if (linksData) setSocialLinks(linksData)
 
-      setSocialLinks(linksData || []);
-    } catch (error) {
-      console.error('Profil yükleme hatası:', error);
-      setError('Profil bulunamadı');
-    } finally {
-      setLoading(false);
+      const analyticsData = await getAnalyticsSummary(data.id)
+      setAnalytics(analyticsData)
     }
-  };
+  } catch (error) {
+    console.error('Error loading profile:', error)
+  } finally {
+    setLoading(false)
+  }
+}
 
   // getSocialIcon fonksiyonunu komple şununla değiştir:
 const PLATFORM_CONFIG = {

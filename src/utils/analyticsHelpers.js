@@ -35,24 +35,30 @@ export const trackEvent = async (profileId, eventType, metadata = {}) => {
 export const getAnalyticsSummary = async (profileId) => {
   try {
     const { data, error } = await supabase
-      .from('analytics_summary')
-      .select('*')
+      .from('analytics_events')
+      .select('event_type')
       .eq('profile_id', profileId)
-      .single()
 
-    if (error && error.code !== 'PGRST116') throw error
+    if (error) throw error
 
-    return data || {
+    const summary = {
       profile_views: 0,
       qr_scans: 0,
-      nfc_taps: 0,
       vcard_downloads: 0,
-      link_clicks: 0,
-      last_activity: null
+      link_clicks: 0
     }
+
+    data?.forEach(event => {
+      if (event.event_type === 'profile_view') summary.profile_views++
+      if (event.event_type === 'qr_scan') summary.qr_scans++
+      if (event.event_type === 'vcard_download') summary.vcard_downloads++
+      if (event.event_type === 'link_click') summary.link_clicks++
+    })
+
+    return summary
   } catch (error) {
     console.error('Get analytics summary error:', error)
-    return null
+    return { profile_views: 0, qr_scans: 0, vcard_downloads: 0, link_clicks: 0 }
   }
 }
 
@@ -82,7 +88,6 @@ export const getAnalyticsSummaryFiltered = async (profileId, filter = null) => {
       }
     }
 
-    const { data, error } = await query
     if (error) throw error
 
     const summary = {
