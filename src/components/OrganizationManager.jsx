@@ -258,17 +258,34 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
     });
   };
 
-  const saveEdit = async (orgId) => {
-    try {
-      const { error } = await supabase.from('organizations').update(editForm).eq('id', orgId);
-      if (error) throw error;
-      setEditingOrg(null);
-      loadOrganizations();
-      alert('✅ Organizasyon güncellendi!');
-    } catch (error) {
-      alert('Hata: ' + error.message);
-    }
-  };
+ const saveEdit = async (orgId) => {
+  try {
+    const { error } = await supabase
+      .from('organizations')
+      .update({
+        name: editForm.name,
+        type: editForm.type,
+        description: editForm.description,
+        website: editForm.website,
+        email: editForm.email,
+        phone: editForm.phone,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', orgId)
+      
+    if (error) throw error
+    
+    // Local state'i de güncelle
+    setOrganizations(prev => prev.map(org => 
+      org.id === orgId ? { ...org, ...editForm } : org
+    ))
+    setEditingOrg(null)
+    alert('✅ Organizasyon güncellendi!')
+  } catch (error) {
+    console.error('Save error:', error)
+    alert('Hata: ' + error.message)
+  }
+}
 
   const deleteOrganization = async (orgId) => {
     if (!confirm('Bu organizasyonu silmek istediğinizden emin misiniz?')) return;
@@ -585,6 +602,11 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
                     <div className="grid grid-cols-2 gap-2">
                       <input type="url" value={editForm.website} onChange={(e) => setEditForm({ ...editForm, website: e.target.value })} className="px-3 py-2 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg outline-none text-sm" placeholder="Website" />
                       <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} className="px-3 py-2 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg outline-none text-sm" placeholder="Email" />
+                    // Edit formu içine ekle:
+<input type="tel" value={editForm.phone} 
+  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} 
+  className="px-3 py-2 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg outline-none text-sm" 
+  placeholder="Telefon" />
                     </div>
                     <div className="flex gap-2">
                       <button onClick={() => saveEdit(org.id)} className="flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"><Check size={14} /> Kaydet</button>
