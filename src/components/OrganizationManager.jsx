@@ -602,7 +602,6 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
                     <div className="grid grid-cols-2 gap-2">
                       <input type="url" value={editForm.website} onChange={(e) => setEditForm({ ...editForm, website: e.target.value })} className="px-3 py-2 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg outline-none text-sm" placeholder="Website" />
                       <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} className="px-3 py-2 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg outline-none text-sm" placeholder="Email" />
-                    // Edit formu içine ekle:
 <input type="tel" value={editForm.phone} 
   onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} 
   className="px-3 py-2 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg outline-none text-sm" 
