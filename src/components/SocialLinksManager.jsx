@@ -67,6 +67,15 @@ export default function SocialLinksManager({ profileId, subscriptionPlan }) {
       return;
     }
 
+    const normalizeUrl = (url) => {
+    if (!url) return url
+    url = url.trim()
+    if (url.startsWith('http://') || url.startsWith('https://')) return url
+    return 'https://' + url
+  }
+
+  const normalizedUrl = normalizeUrl(newLink.url)
+
     try {
       setLoading(true);
 
@@ -75,7 +84,7 @@ export default function SocialLinksManager({ profileId, subscriptionPlan }) {
         .insert({
           profile_id: profileId,
           platform: newLink.platform,
-          url: newLink.url,
+          url: normalizedUrl,
           display_order: links.length
         });
 
@@ -128,14 +137,21 @@ export default function SocialLinksManager({ profileId, subscriptionPlan }) {
       return;
     }
 
+    const normalizeUrl = (url) => {
+    if (!url) return url
+    url = url.trim()
+    if (url.startsWith('http://') || url.startsWith('https://')) return url
+    return 'https://' + url
+  }
+
+  const normalizedUrl = normalizeUrl(editLink.url)
+
     try {
       setLoading(true);
 
       const { error } = await supabase
         .from('social_links')
-        .update({
-          url: editLink.url
-        })
+        .update({ url: normalizedUrl })
         .eq('id', id);
 
       if (error) throw error;
