@@ -25,6 +25,9 @@ export default function PublicCard() {
   const [expandedOrg, setExpandedOrg] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const activePlan = subData?.plan || 'free'
+  const orgLimit = ['professional', 'stk', 'business', 'student'].includes(activePlan) ? 999 : 2
+setOrganizations(allOrgs.slice(0, orgLimit))
 
   const adjustColor = (color, percent) => {
     if (!color) return '#1e40af'
@@ -48,6 +51,14 @@ export default function PublicCard() {
       if (!profileData) { setError('Profil bulunamadı'); return }
       setProfile(profileData)
 
+      const { data: subData } = await supabase
+  .from('subscriptions')
+  .select('plan')
+  .eq('profile_id', profileData.id)
+  .eq('status', 'active')
+  .maybeSingle()
+
+      
       if (profileData?.id) {
         trackEvent(profileData.id, 'profile_view')
         await supabase.from('profiles')
@@ -60,14 +71,14 @@ export default function PublicCard() {
       setSocialLinks(linksData || [])
 
       const { data: memberData } = await supabase
-        .from('members')
-        .select('role, organizations(id, name, type, description, logo_url, phone, email, website, address, city)')
-        .eq('profile_id', profileData.id)
+  .from('members')
+  .select('role, organizations(id, name, type, description, logo_url, phone, email, website, address, city)')
+  .eq('profile_id', profileData.id)
 
-      const allOrgs = (memberData || []).map(m => ({ ...m.organizations, role: m.role }))
-      const orgLimit = ['professional', 'stk', 'business'].includes(profileData?.subscription_plan) ? 999 : 2
-      setOrganizations(allOrgs.slice(0, orgLimit))
-
+const allOrgs = (memberData || []).map(m => ({ ...m.organizations, role: m.role }))
+const activePlan = subData?.plan || 'free'
+const orgLimit = ['professional', 'stk', 'business', 'student'].includes(activePlan) ? 999 : 2
+setOrganizations(allOrgs.slice(0, orgLimit))
     } catch (err) {
       console.error('Profil yükleme hatası:', err)
       setError('Profil bulunamadı')
