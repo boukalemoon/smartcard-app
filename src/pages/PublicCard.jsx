@@ -73,7 +73,9 @@ export default function PublicCard() {
   .eq('profile_id', profileData.id)
 
 const allOrgs = (memberData || []).map(m => ({ ...m.organizations, role: m.role }))
-
+const activePlan = subData?.plan || profileData?.subscription_plan || 'free'
+const orgLimit = ['professional', 'stk', 'business', 'student'].includes(activePlan) ? 999 : 2
+setOrganizations(allOrgs.slice(0, orgLimit))
     } catch (err) {
       console.error('Profil yükleme hatası:', err)
       setError('Profil bulunamadı')
