@@ -25,9 +25,6 @@ export default function PublicCard() {
   const [expandedOrg, setExpandedOrg] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const activePlan = subData?.plan || 'free'
-  const orgLimit = ['professional', 'stk', 'business', 'student'].includes(activePlan) ? 999 : 2
-setOrganizations(allOrgs.slice(0, orgLimit))
 
   const adjustColor = (color, percent) => {
     if (!color) return '#1e40af'
@@ -76,9 +73,7 @@ setOrganizations(allOrgs.slice(0, orgLimit))
   .eq('profile_id', profileData.id)
 
 const allOrgs = (memberData || []).map(m => ({ ...m.organizations, role: m.role }))
-const activePlan = subData?.plan || 'free'
-const orgLimit = ['professional', 'stk', 'business', 'student'].includes(activePlan) ? 999 : 2
-setOrganizations(allOrgs.slice(0, orgLimit))
+
     } catch (err) {
       console.error('Profil yükleme hatası:', err)
       setError('Profil bulunamadı')
