@@ -277,13 +277,7 @@ export default function Dashboard({ session }) {
                         : <p className="text-gray-900 dark:text-gray-100 font-medium">{phone || '-'}</p>}
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Email</label>
-                      <p className="text-gray-900 dark:text-gray-100 font-medium">{session.user.email}</p>
-                    </div>
-                    <div className="flex items-center justify-between mb-2">
-  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
-    Email
-  </label>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Email</label>
   <button
     onClick={async () => {
       const newVal = !profile?.show_email
