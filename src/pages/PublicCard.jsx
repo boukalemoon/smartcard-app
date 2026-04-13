@@ -159,12 +159,12 @@ setOrganizations(allOrgs.slice(0, orgLimit))
 
             {/* İletişim */}
             <div className="grid gap-3">
-              {profile.email && (
-                <a href={`mailto:${profile.email}`} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Mail size={20} style={{ color: themeColor }} />
-                  <span className="text-gray-700">{profile.email}</span>
-                </a>
-              )}
+              {profile.email && profile.show_email !== false && (
+  <a href={`mailto:${profile.email}`} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+    <Mail size={20} style={{ color: themeColor }} />
+    <span className="text-gray-700">{profile.email}</span>
+  </a>
+)}
               {profile.phone && (
                 <a href={`tel:${profile.phone}`} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                   <Phone size={20} style={{ color: themeColor }} />

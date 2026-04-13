@@ -37,9 +37,13 @@ export const isValidEmail = (email) => {
 
 // Telefon numarası validation (Türkiye)
 export const isValidPhone = (phone) => {
-  // Türkiye telefon formatı: +90XXXXXXXXXX veya 0XXXXXXXXXX
-  const phoneRegex = /^(\+90|0)?[0-9]{10}$/;
-  return phoneRegex.test(phone.replace(/\s/g, ''));
+  if (!phone || phone.trim() === '') return true // boş olabilir
+  const cleaned = phone.replace(/[\s\-\(\)\.]/g, '')
+  // Uluslararası format: + ile başlayan 7-15 haneli
+  // veya Türkiye: 0 ile başlayan 11 haneli
+  const intlRegex = /^\+[1-9]\d{6,14}$/
+  const trRegex = /^0[0-9]{10}$/
+  return intlRegex.test(cleaned) || trRegex.test(cleaned)
 };
 
 // Katalog linki validation ve sanitization
