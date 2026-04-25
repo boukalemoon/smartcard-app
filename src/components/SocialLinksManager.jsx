@@ -19,6 +19,15 @@ const SOCIAL_PLATFORMS = [
   { id: 'snapchat', name: 'Snapchat', icon: Camera, placeholder: 'https://snapchat.com/add/username', color: 'bg-yellow-400' },
   { id: 'github', name: 'GitHub', icon: Github, placeholder: 'https://github.com/username', color: 'bg-gray-800 dark:bg-gray-700' },
   { id: 'website', name: 'Website', icon: Globe, placeholder: 'https://yourwebsite.com', color: 'bg-gray-600' },
+  // E-ticaret platformları
+  { id: 'trendyol', name: 'Trendyol', icon: Globe, placeholder: 'https://trendyol.com/magaza/username', color: 'bg-orange-500' },
+  { id: 'hepsiburada', name: 'Hepsiburada', icon: Globe, placeholder: 'https://hepsiburada.com/magaza/username', color: 'bg-orange-600' },
+  { id: 'n11', name: 'N11', icon: Globe, placeholder: 'https://n11.com/magaza/username', color: 'bg-blue-500' },
+  { id: 'amazon_tr', name: 'Amazon TR', icon: Globe, placeholder: 'https://amazon.com.tr/magaza/username', color: 'bg-yellow-500' },
+  { id: 'etsy', name: 'Etsy', icon: Globe, placeholder: 'https://etsy.com/shop/username', color: 'bg-orange-400' },
+  { id: 'shopify', name: 'Shopify Mağaza', icon: Globe, placeholder: 'https://yourstore.myshopify.com', color: 'bg-green-600' },
+  { id: 'woocommerce', name: 'WooCommerce', icon: Globe, placeholder: 'https://yourstore.com', color: 'bg-purple-600' },
+  { id: 'katalog_link', name: 'Ürün Kataloğu', icon: Globe, placeholder: 'https://katalog.yoursite.com', color: 'bg-gray-600' },
 ];
 
 const FREE_PLAN_LIMIT = 3;
