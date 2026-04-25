@@ -3,9 +3,10 @@ import { trackEvent } from '../utils/analyticsHelpers'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { Linkedin, Facebook, Twitter, Instagram, Play, Github, Globe, Music, ExternalLink, ArrowLeft, Download, Mail, Phone, MapPin, ChevronDown, ChevronUp } from 'lucide-react'
+import { Linkedin, Facebook, Twitter, Instagram, Play, Github, Globe, Music, Twitch, ExternalLink, ArrowLeft, Download, Mail, Phone, MapPin, ChevronDown, ChevronUp } from 'lucide-react'
 
 const PLATFORM_CONFIG = {
+  // mevcut platformlar...
   linkedin:  { icon: Linkedin,  color: '#0A66C2', label: 'LinkedIn' },
   facebook:  { icon: Facebook,  color: '#1877F2', label: 'Facebook' },
   twitter:   { icon: Twitter,   color: '#000000', label: 'Twitter/X' },
@@ -14,6 +15,19 @@ const PLATFORM_CONFIG = {
   tiktok:    { icon: Music,     color: '#000000', label: 'TikTok' },
   github:    { icon: Github,    color: '#333333', label: 'GitHub' },
   website:   { icon: Globe,     color: '#6B7280', label: 'Website' },
+  twitch:    { icon: Twitch,    color: '#9146FF', label: 'Twitch' },
+  kick:      { icon: Globe,     color: '#53FC18', label: 'Kick' },
+  snapchat:  { icon: Globe,     color: '#FFFC00', label: 'Snapchat' },
+  pinterest: { icon: Globe,     color: '#E60023', label: 'Pinterest' },
+  // E-ticaret platformları
+  trendyol:     { icon: Globe, color: '#F27A1A', label: 'Trendyol' },
+  hepsiburada:  { icon: Globe, color: '#FF6000', label: 'Hepsiburada' },
+  n11:          { icon: Globe, color: '#1B5FAD', label: 'N11' },
+  amazon_tr:    { icon: Globe, color: '#FF9900', label: 'Amazon TR' },
+  etsy:         { icon: Globe, color: '#F56400', label: 'Etsy' },
+  shopify:      { icon: Globe, color: '#96BF48', label: 'Shopify' },
+  woocommerce:  { icon: Globe, color: '#7F54B3', label: 'WooCommerce' },
+  katalog_link: { icon: Globe, color: '#6B7280', label: 'Katalog' },
 }
 
 export default function PublicCard() {
@@ -176,7 +190,7 @@ setOrganizations(allOrgs.slice(0, orgLimit))
             {/* Sosyal Medya */}
             {socialLinks.length > 0 && (
               <div className="pt-4 border-t border-gray-200">
-                <h3 className="font-semibold text-gray-800 mb-3">🔗 Sosyal Medya</h3>
+                <h3 className="font-semibold text-gray-800 mb-3">🔗 Bağlantılar</h3>
                 <div className="flex flex-wrap gap-2">
                   {socialLinks.map((link) => {
                     const config = PLATFORM_CONFIG[link.platform] || { icon: Globe, color: '#6B7280', label: link.platform }

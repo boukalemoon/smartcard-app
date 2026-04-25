@@ -21,7 +21,6 @@ import { useNavigate } from 'react-router-dom'
 
 export default function Dashboard({ session }) {
   const navigate = useNavigate()
-
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
@@ -39,7 +38,6 @@ export default function Dashboard({ session }) {
   const [bio, setBio] = useState('')
 
   const { mode, isIndividual, isCorporate, initMode } = useDashboardMode()
-
   const { subscription, loading: subLoading, getLimits, canAdd, isPremium } = useSubscription(profile?.id)
 
   useEffect(() => { loadProfile() }, [])
@@ -188,11 +186,15 @@ export default function Dashboard({ session }) {
                       </div>
                     )}
                   </div>
+
                   <div className="space-y-4">
-                    <div className="flex justify-center pb-4 border-b border-gray-200 dark:border-gray-700">
+                    {/* Profil Fotoğrafı */}
+                    <div className="flex flex-col items-center pb-4 border-b border-gray-200 dark:border-gray-700">
                       <ImageUpload currentImageUrl={profile?.avatar_url} onUploadSuccess={updateAvatar} bucket="avatars" label="Profil Fotoğrafı" maxSize={2} />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">📐 Önerilen: 400×400px (kare) — Maks 2MB — JPG/PNG</p>
                     </div>
 
+                    {/* Tema Rengi */}
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">🎨 Tema Rengi</label>
@@ -222,8 +224,10 @@ export default function Dashboard({ session }) {
                       <p className="text-xs text-gray-500 dark:text-gray-400 text-center">{themeColor !== profile?.theme_color ? '⚠️ Değişiklikler kaydedilmedi!' : '✅ Kaydedildi'}</p>
                     </div>
 
+                    {/* Önizleme */}
                     <PublicCardPreview profile={profile} themeColor={themeColor} socialLinks={socialLinks} />
 
+                    {/* Arka Plan */}
                     <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
                       <div className="flex items-center justify-between">
                         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">🖼️ Arka Plan Resmi</label>
@@ -253,69 +257,78 @@ export default function Dashboard({ session }) {
                           } catch (error) { alert('Hata: ' + error.message) }
                         }}
                         bucket="backgrounds" label="Arka Plan" maxSize={5} />
-                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center">Kartınızın arka plan resmini yükleyin (Maksimum 5MB)</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center">📐 Önerilen: 1200×400px (yatay) — Maks 5MB — JPG/PNG</p>
                     </div>
 
+                    {/* Ad Soyad */}
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Ad Soyad</label>
                       {editing ? <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none" placeholder="Ahmet Yılmaz" />
                         : <p className="text-gray-900 dark:text-gray-100 font-medium">{name || '-'}</p>}
                     </div>
+
+                    {/* Ünvan */}
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Ünvan</label>
                       {editing ? <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none" placeholder="Yazılım Geliştirici" />
                         : <p className="text-gray-900 dark:text-gray-100 font-medium">{title || '-'}</p>}
                     </div>
+
+                    {/* Şirket */}
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Şirket</label>
                       {editing ? <input type="text" value={company} onChange={(e) => setCompany(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none" placeholder="Tech Startup" />
                         : <p className="text-gray-900 dark:text-gray-100 font-medium">{company || '-'}</p>}
                     </div>
+
+                    {/* Telefon */}
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Telefon</label>
-                      {editing ? <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none" placeholder="+90 555 123 4567" />
+                      {editing ? <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none" placeholder="+90 555 123 4567 veya +1 555 123 4567" />
                         : <p className="text-gray-900 dark:text-gray-100 font-medium">{phone || '-'}</p>}
                     </div>
+
+                    {/* Email */}
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Email</label>
-  <button
-    onClick={async () => {
-      const newVal = !profile?.show_email
-      const { error } = await supabase
-        .from('profiles')
-        .update({ show_email: newVal })
-        .eq('user_id', session.user.id)
-      if (error) { alert('Hata: ' + error.message); return }
-      setProfile(prev => ({ ...prev, show_email: newVal }))
-    }}
-    className={`text-xs px-3 py-1 rounded-full font-semibold transition-colors ${
-      profile?.show_email !== false
-        ? 'bg-green-100 text-green-700 hover:bg-green-200'
-        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-    }`}
-  >
-    {profile?.show_email !== false ? '👁 Görünür' : '🙈 Gizli'}
-  </button>
-</div>
-<p className="text-gray-900 dark:text-gray-100 font-medium">{session.user.email}</p>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Email</label>
+                        <button
+                          onClick={async () => {
+                            const newVal = profile?.show_email === false ? true : false
+                            const { error } = await supabase.from('profiles').update({ show_email: newVal }).eq('user_id', session.user.id)
+                            if (error) { alert('Hata: ' + error.message); return }
+                            setProfile(prev => ({ ...prev, show_email: newVal }))
+                          }}
+                          className={`text-xs px-3 py-1 rounded-full font-semibold transition-colors ${profile?.show_email !== false ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                        >
+                          {profile?.show_email !== false ? '👁 Görünür' : '🙈 Gizli'}
+                        </button>
+                      </div>
+                      <p className="text-gray-900 dark:text-gray-100 font-medium">{session.user.email}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Bu ayar kartvizit sayfanızda email adresinizin görünüp görünmeyeceğini belirler.</p>
+                    </div>
+
+                    {/* Hakkımda */}
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Hakkımda</label>
-                      {editing ? <textarea
-  value={bio}
-  onChange={(e) => setBio(e.target.value)}
-  rows={4}
-  autoComplete="off"
-  autoCorrect="off"
-  autoCapitalize="off"
-  spellCheck="false"
-  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray normalizeasion-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none"
-  placeholder="Kendinizden bahsedin..."
-/>
-                        : <p className="text-gray-900 dark:text-gray-100">{bio || '-'}</p>}
+                      {editing ? (
+                        <textarea
+                          value={bio}
+                          onChange={(e) => setBio(e.target.value)}
+                          rows={4}
+                          autoComplete="off"
+                          autoCorrect="off"
+                          autoCapitalize="off"
+                          spellCheck="false"
+                          className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none"
+                          placeholder="Kendinizden bahsedin..."
+                        />
+                      ) : <p className="text-gray-900 dark:text-gray-100">{bio || '-'}</p>}
                     </div>
                   </div>
                 </div>
 
+                {/* İstatistikler */}
                 <div className="grid md:grid-cols-4 gap-4">
                   <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-blue-500">
                     <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Profil Görüntülenme</div>
@@ -335,9 +348,7 @@ export default function Dashboard({ session }) {
                   </div>
                 </div>
 
-                {profile?.id && (
-                  <UsernameEditor currentUsername={profile.username} profileId={profile.id} onUpdate={(newUsername) => setProfile({ ...profile, username: newUsername })} />
-                )}
+                {profile?.id && <UsernameEditor currentUsername={profile.username} profileId={profile.id} onUpdate={(newUsername) => setProfile({ ...profile, username: newUsername })} />}
                 {profile && <SocialLinksManager profileId={profile.id} subscriptionPlan={subscription?.plan || 'free'} />}
                 {profile && <OrganizationManager profileId={profile.id} subscriptionPlan={subscription?.plan || 'free'} />}
                 {profile && <ReferralDashboard profile={profile} />}
@@ -373,6 +384,7 @@ export default function Dashboard({ session }) {
                       </div>
                     </div>
 
+                    {/* Katalog */}
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
                       <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">📁 Katalog & Dökümanlar</h3>
                       <div className="space-y-3 mb-4">
@@ -382,31 +394,18 @@ export default function Dashboard({ session }) {
                               <p className="font-semibold text-gray-900 dark:text-gray-100 mb-1">{link.title}</p>
                               <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline block truncate">{link.url}</a>
                             </div>
+                            <button onClick={() => {
+                              const newTitle = prompt('Yeni başlık:', link.title); if (!newTitle) return
+                              const newUrl = prompt('Yeni URL:', link.url); if (!newUrl) return
+                              const newLinks = [...profile.catalog_links]; newLinks[index] = { ...link, title: newTitle, url: newUrl }
+                              supabase.from('profiles').update({ catalog_links: newLinks }).eq('user_id', session.user.id).then(({ error }) => { if (error) { alert('Hata: ' + error.message); return } setProfile(prev => ({ ...prev, catalog_links: newLinks })) })
+                            }} className="text-blue-600 hover:text-blue-700 text-sm font-semibold shrink-0">✏️</button>
                             <button onClick={async () => { const newLinks = profile.catalog_links.filter((_, i) => i !== index); const { error } = await supabase.from('profiles').update({ catalog_links: newLinks }).eq('user_id', session.user.id); if (error) { alert('Hata: ' + error.message); return } setProfile(prev => ({ ...prev, catalog_links: newLinks })) }} className="text-red-600 hover:text-red-700 text-sm font-semibold shrink-0">Sil</button>
-                          <button
-  onClick={() => {
-    const newTitle = prompt('Yeni başlık:', link.title)
-    if (!newTitle) return
-    const newUrl = prompt('Yeni URL:', link.url)
-    if (!newUrl) return
-    const newLinks = [...profile.catalog_links]
-    newLinks[index] = { ...link, title: newTitle, url: newUrl }
-    supabase.from('profiles').update({ catalog_links: newLinks }).eq('user_id', session.user.id)
-      .then(({ error }) => {
-        if (error) { alert('Hata: ' + error.message); return }
-        setProfile(prev => ({ ...prev, catalog_links: newLinks }))
-      })
-  }}
-  className="text-blue-600 hover:text-blue-700 text-sm font-semibold shrink-0"
->
-  ✏️
-</button>
                           </div>
                         ))}
                       </div>
                       <button onClick={async () => {
-                        const rateCheck = checkProfileUpdateRateLimit(session.user.id)
-                        if (!rateCheck.allowed) { alert(`⏳ ${rateCheck.message}`); return }
+                        const rateCheck = checkProfileUpdateRateLimit(session.user.id); if (!rateCheck.allowed) { alert(`⏳ ${rateCheck.message}`); return }
                         const t = prompt('Döküman başlığı:'); if (!t) return
                         const u = prompt('Döküman linki:'); if (!u) return
                         const validation = validateCatalogLink({ title: t, url: u, type: 'document' })
@@ -417,6 +416,7 @@ export default function Dashboard({ session }) {
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">💡 Google Drive, Dropbox veya kendi web sitenizden link ekleyin</p>
                     </div>
 
+                    {/* Hizmetler */}
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
                       <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">🛍️ Hizmetlerim</h3>
                       <div className="space-y-3 mb-4">
@@ -427,29 +427,16 @@ export default function Dashboard({ session }) {
                                 <h4 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{service.title}</h4>
                                 <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{service.description}</p>
                               </div>
+                              <button onClick={() => {
+                                const newTitle = prompt('Hizmet adı:', service.title); if (!newTitle) return
+                                const newDesc = prompt('Açıklama:', service.description); if (!newDesc) return
+                                const newPrice = prompt('Fiyat:', service.price); if (!newPrice) return
+                                const newTime = prompt('Teslim süresi:', service.delivery_time)
+                                const newServices = [...profile.services]; newServices[index] = { ...service, title: newTitle, description: newDesc, price: parseFloat(newPrice), delivery_time: newTime }
+                                supabase.from('profiles').update({ services: newServices }).eq('user_id', session.user.id).then(({ error }) => { if (error) { alert('Hata: ' + error.message); return } setProfile(prev => ({ ...prev, services: newServices })) })
+                              }} className="text-blue-600 hover:text-blue-700 text-sm font-semibold shrink-0">✏️</button>
                               <button onClick={async () => { const newServices = profile.services.filter((_, i) => i !== index); const { error } = await supabase.from('profiles').update({ services: newServices }).eq('user_id', session.user.id); if (error) { alert('Hata: ' + error.message); return } setProfile(prev => ({ ...prev, services: newServices })) }} className="text-red-600 hover:text-red-700 text-sm font-semibold shrink-0">Sil</button>
                             </div>
-                            <button
-  onClick={() => {
-    const newTitle = prompt('Hizmet adı:', service.title)
-    if (!newTitle) return
-    const newDesc = prompt('Açıklama:', service.description)
-    if (!newDesc) return
-    const newPrice = prompt('Fiyat:', service.price)
-    if (!newPrice) return
-    const newTime = prompt('Teslim süresi:', service.delivery_time)
-    const newServices = [...profile.services]
-    newServices[index] = { ...service, title: newTitle, description: newDesc, price: parseFloat(newPrice), delivery_time: newTime }
-    supabase.from('profiles').update({ services: newServices }).eq('user_id', session.user.id)
-      .then(({ error }) => {
-        if (error) { alert('Hata: ' + error.message); return }
-        setProfile(prev => ({ ...prev, services: newServices }))
-      })
-  }}
-  className="text-blue-600 hover:text-blue-700 text-sm font-semibold shrink-0"
->
-  ✏️
-</button>
                             <div className="flex items-center gap-4 text-sm">
                               <span className="font-bold text-blue-600">₺{service.price}</span>
                               {service.delivery_time && <span className="text-gray-500">⏱️ {service.delivery_time}</span>}
@@ -458,8 +445,7 @@ export default function Dashboard({ session }) {
                         ))}
                       </div>
                       <button onClick={async () => {
-                        const rateCheck = checkProfileUpdateRateLimit(session.user.id)
-                        if (!rateCheck.allowed) { alert(`⏳ ${rateCheck.message}`); return }
+                        const rateCheck = checkProfileUpdateRateLimit(session.user.id); if (!rateCheck.allowed) { alert(`⏳ ${rateCheck.message}`); return }
                         const t = prompt('Hizmet adı:'); if (!t) return
                         const d = prompt('Açıklama:'); if (!d) return
                         const p = prompt('Fiyat (TL):'); if (!p) return
@@ -472,6 +458,7 @@ export default function Dashboard({ session }) {
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">💡 Freelance hizmetlerinizi ekleyin ve profilinizde sergileyin</p>
                     </div>
 
+                    {/* Google Yorumlar */}
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
                       <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">⭐ Google Yorumlar</h3>
                       {profile.google_review_link ? (
