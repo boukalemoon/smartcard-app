@@ -6,7 +6,6 @@ import { supabase } from '../lib/supabaseClient'
 import { Linkedin, Facebook, Twitter, Instagram, Play, Github, Globe, Music, Twitch, ExternalLink, ArrowLeft, Download, Mail, Phone, MapPin, ChevronDown, ChevronUp } from 'lucide-react'
 
 const PLATFORM_CONFIG = {
-  // mevcut platformlar...
   linkedin:  { icon: Linkedin,  color: '#0A66C2', label: 'LinkedIn' },
   facebook:  { icon: Facebook,  color: '#1877F2', label: 'Facebook' },
   twitter:   { icon: Twitter,   color: '#000000', label: 'Twitter/X' },
@@ -19,7 +18,6 @@ const PLATFORM_CONFIG = {
   kick:      { icon: Globe,     color: '#53FC18', label: 'Kick' },
   snapchat:  { icon: Globe,     color: '#FFFC00', label: 'Snapchat' },
   pinterest: { icon: Globe,     color: '#E60023', label: 'Pinterest' },
-  // E-ticaret platformları
   trendyol:     { icon: Globe, color: '#F27A1A', label: 'Trendyol' },
   hepsiburada:  { icon: Globe, color: '#FF6000', label: 'Hepsiburada' },
   n11:          { icon: Globe, color: '#1B5FAD', label: 'N11' },
@@ -63,13 +61,8 @@ export default function PublicCard() {
       setProfile(profileData)
 
       const { data: subData } = await supabase
-  .from('subscriptions')
-  .select('plan')
-  .eq('profile_id', profileData.id)
-  .eq('status', 'active')
-  .maybeSingle()
+        .from('subscriptions').select('plan').eq('profile_id', profileData.id).eq('status', 'active').maybeSingle()
 
-      
       if (profileData?.id) {
         trackEvent(profileData.id, 'profile_view')
         await supabase.from('profiles')
@@ -82,14 +75,15 @@ export default function PublicCard() {
       setSocialLinks(linksData || [])
 
       const { data: memberData } = await supabase
-  .from('members')
-  .select('role, organizations(id, name, type, description, logo_url, phone, email, website, address, city)')
-  .eq('profile_id', profileData.id)
+        .from('members')
+        .select('role, organizations(id, name, type, description, logo_url, phone, email, website, address, city)')
+        .eq('profile_id', profileData.id)
 
-const allOrgs = (memberData || []).map(m => ({ ...m.organizations, role: m.role }))
-const activePlan = subData?.plan || profileData?.subscription_plan || 'free'
-const orgLimit = ['professional', 'stk', 'business', 'student'].includes(activePlan) ? 999 : 2
-setOrganizations(allOrgs.slice(0, orgLimit))
+      const allOrgs = (memberData || []).map(m => ({ ...m.organizations, role: m.role }))
+      const activePlan = subData?.plan || profileData?.subscription_plan || 'free'
+      const orgLimit = ['professional', 'stk', 'business', 'student'].includes(activePlan) ? 999 : 2
+      setOrganizations(allOrgs.slice(0, orgLimit))
+
     } catch (err) {
       console.error('Profil yükleme hatası:', err)
       setError('Profil bulunamadı')
@@ -174,11 +168,11 @@ setOrganizations(allOrgs.slice(0, orgLimit))
             {/* İletişim */}
             <div className="grid gap-3">
               {profile.email && profile.show_email !== false && (
-  <a href={`mailto:${profile.email}`} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-    <Mail size={20} style={{ color: themeColor }} />
-    <span className="text-gray-700">{profile.email}</span>
-  </a>
-)}
+                <a href={`mailto:${profile.email}`} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                  <Mail size={20} style={{ color: themeColor }} />
+                  <span className="text-gray-700">{profile.email}</span>
+                </a>
+              )}
               {profile.phone && (
                 <a href={`tel:${profile.phone}`} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                   <Phone size={20} style={{ color: themeColor }} />
@@ -208,129 +202,13 @@ setOrganizations(allOrgs.slice(0, orgLimit))
               </div>
             )}
 
-{/* Banka Hesapları */}
-<div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">🏦 Banka Hesapları</h3>
-  <div className="space-y-3 mb-4">
-    {(profile.bank_accounts || []).map((account, index) => (
-      <div key={index} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-gray-900 dark:text-gray-100">{account.bank_name}</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">{account.account_holder}</p>
-            <p className="text-xs font-mono text-gray-700 dark:text-gray-300 mt-1 break-all">{account.iban}</p>
-          </div>
-          <div className="flex gap-1 shrink-0">
-            <button
-              onClick={() => {
-                const newName = prompt('Banka adı:', account.bank_name); if (!newName) return
-                const newHolder = prompt('Hesap sahibi:', account.account_holder); if (!newHolder) return
-                const newIban = prompt('IBAN (TR... formatında):', account.iban); if (!newIban) return
-                const newAccounts = [...profile.bank_accounts]
-                newAccounts[index] = { bank_name: newName, account_holder: newHolder, iban: newIban.replace(/\s/g, '').toUpperCase() }
-                supabase.from('profiles').update({ bank_accounts: newAccounts }).eq('user_id', session.user.id).then(({ error }) => {
-                  if (error) { alert('Hata: ' + error.message); return }
-                  setProfile(prev => ({ ...prev, bank_accounts: newAccounts }))
-                })
-              }}
-              className="text-blue-600 hover:text-blue-700 text-sm font-semibold"
-            >✏️</button>
-            <button
-              onClick={async () => {
-                if (!confirm('Bu banka hesabını silmek istediğinize emin misiniz?')) return
-                const newAccounts = profile.bank_accounts.filter((_, i) => i !== index)
-                const { error } = await supabase.from('profiles').update({ bank_accounts: newAccounts }).eq('user_id', session.user.id)
-                if (error) { alert('Hata: ' + error.message); return }
-                setProfile(prev => ({ ...prev, bank_accounts: newAccounts }))
-              }}
-              className="text-red-600 hover:text-red-700 text-sm font-semibold"
-            >Sil</button>
-          </div>
-        </div>
-      </div>
-    ))}
-
-    {/* Fatura Bilgileri */}
-{profile.billing_info && (
-  <div className="pt-4 border-t border-gray-200">
-    <div className="flex items-center justify-between mb-3">
-      <h3 className="font-semibold text-gray-800">📋 Fatura Bilgileri</h3>
-      <button
-        onClick={() => {
-          const text = [
-            profile.billing_info.company_title,
-            profile.billing_info.tax_office && `Vergi Dairesi: ${profile.billing_info.tax_office}`,
-            profile.billing_info.tax_number && `${profile.billing_info.is_individual ? 'TC' : 'Vergi No'}: ${profile.billing_info.tax_number}`,
-            profile.billing_info.address
-          ].filter(Boolean).join('\n')
-          navigator.clipboard.writeText(text)
-          alert('✅ Fatura bilgileri kopyalandı!')
-        }}
-        className="px-3 py-1 text-white text-xs font-semibold rounded-lg"
-        style={{ backgroundColor: themeColor }}
-      >
-        📋 Tümünü Kopyala
-      </button>
-    </div>
-    <div className="p-3 rounded-lg space-y-2" style={{ backgroundColor: `${themeColor}10` }}>
-      <div>
-        <p className="text-xs text-gray-500">Ünvan:</p>
-        <p className="text-sm font-semibold text-gray-900">{profile.billing_info.company_title}</p>
-      </div>
-      {profile.billing_info.tax_office && (
-        <div>
-          <p className="text-xs text-gray-500">Vergi Dairesi:</p>
-          <p className="text-sm text-gray-900">{profile.billing_info.tax_office}</p>
-        </div>
-      )}
-      {profile.billing_info.tax_number && (
-        <div>
-          <p className="text-xs text-gray-500">{profile.billing_info.is_individual ? 'TC Kimlik:' : 'Vergi No:'}</p>
-          <p className="text-sm font-mono text-gray-900">{profile.billing_info.tax_number}</p>
-        </div>
-      )}
-      {profile.billing_info.address && (
-        <div>
-          <p className="text-xs text-gray-500">Adres:</p>
-          <p className="text-sm text-gray-900">{profile.billing_info.address}</p>
-        </div>
-      )}
-    </div>
-  </div>
-)}
-
-  </div>
-  <button
-    onClick={async () => {
-      const bankName = prompt('Banka adı (örn: Garanti BBVA):'); if (!bankName) return
-      const holder = prompt('Hesap sahibi adı:'); if (!holder) return
-      const iban = prompt('IBAN (TR... formatında):'); if (!iban) return
-      const cleanIban = iban.replace(/\s/g, '').toUpperCase()
-      if (!/^TR[0-9]{24}$/.test(cleanIban)) {
-        alert('❌ Geçersiz IBAN formatı. Türkiye IBAN: TR + 24 rakam (toplam 26 karakter)')
-        return
-      }
-      const newAccounts = [...(profile.bank_accounts || []), { bank_name: bankName, account_holder: holder, iban: cleanIban }]
-      try {
-        const { error } = await supabase.from('profiles').update({ bank_accounts: newAccounts }).eq('user_id', session.user.id)
-        if (error) throw error
-        setProfile(prev => ({ ...prev, bank_accounts: newAccounts }))
-        alert('✅ Banka hesabı eklendi!')
-      } catch (error) { alert('❌ Hata: ' + error.message) }
-    }}
-    className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
-  >+ Banka Hesabı Ekle</button>
-  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">💡 IBAN'larınız kartvizitinizde görünür ve tek tık ile kopyalanabilir.</p>
-</div>
-
-            {/* Organizasyonlar — tıkla aç */}
+            {/* Organizasyonlar */}
             {organizations.length > 0 && (
               <div className="pt-4 border-t border-gray-200">
                 <h3 className="font-semibold text-gray-800 mb-3">🏢 Şirketler & Organizasyonlar</h3>
                 <div className="grid gap-3">
                   {organizations.map((org) => (
                     <div key={org.id} className="rounded-lg border border-gray-200 overflow-hidden">
-                      {/* Organizasyon başlık — tıkla */}
                       <button
                         onClick={() => setExpandedOrg(expandedOrg === org.id ? null : org.id)}
                         className="w-full flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
@@ -350,7 +228,6 @@ setOrganizations(allOrgs.slice(0, orgLimit))
                         {expandedOrg === org.id ? <ChevronUp size={18} className="text-gray-400 flex-shrink-0" /> : <ChevronDown size={18} className="text-gray-400 flex-shrink-0" />}
                       </button>
 
-                      {/* Organizasyon detay — açılır */}
                       {expandedOrg === org.id && (
                         <div className="p-4 space-y-2 bg-white border-t border-gray-100">
                           {org.description && <p className="text-sm text-gray-600 mb-3">{org.description}</p>}
@@ -382,6 +259,85 @@ setOrganizations(allOrgs.slice(0, orgLimit))
                       )}
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Banka Hesapları */}
+            {profile.bank_accounts && profile.bank_accounts.length > 0 && (
+              <div className="pt-4 border-t border-gray-200">
+                <h3 className="font-semibold text-gray-800 mb-3">🏦 Banka Hesapları</h3>
+                <div className="grid gap-3">
+                  {profile.bank_accounts.map((account, index) => (
+                    <div key={index} className="p-3 rounded-lg" style={{ backgroundColor: `${themeColor}10` }}>
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <div>
+                          <p className="font-semibold text-gray-900 text-sm">{account.bank_name}</p>
+                          <p className="text-xs text-gray-600">{account.account_holder}</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(account.iban)
+                            alert('✅ IBAN kopyalandı!')
+                          }}
+                          className="px-3 py-1 text-white text-xs font-semibold rounded-lg shrink-0"
+                          style={{ backgroundColor: themeColor }}
+                        >
+                          📋 Kopyala
+                        </button>
+                      </div>
+                      <p className="text-xs font-mono text-gray-700 break-all mt-2">{account.iban}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Fatura Bilgileri */}
+            {profile.billing_info && (
+              <div className="pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-gray-800">📋 Fatura Bilgileri</h3>
+                  <button
+                    onClick={() => {
+                      const text = [
+                        profile.billing_info.company_title,
+                        profile.billing_info.tax_office && `Vergi Dairesi: ${profile.billing_info.tax_office}`,
+                        profile.billing_info.tax_number && `${profile.billing_info.is_individual ? 'TC' : 'Vergi No'}: ${profile.billing_info.tax_number}`,
+                        profile.billing_info.address
+                      ].filter(Boolean).join('\n')
+                      navigator.clipboard.writeText(text)
+                      alert('✅ Fatura bilgileri kopyalandı!')
+                    }}
+                    className="px-3 py-1 text-white text-xs font-semibold rounded-lg"
+                    style={{ backgroundColor: themeColor }}
+                  >
+                    📋 Tümünü Kopyala
+                  </button>
+                </div>
+                <div className="p-3 rounded-lg space-y-2" style={{ backgroundColor: `${themeColor}10` }}>
+                  <div>
+                    <p className="text-xs text-gray-500">Ünvan:</p>
+                    <p className="text-sm font-semibold text-gray-900">{profile.billing_info.company_title}</p>
+                  </div>
+                  {profile.billing_info.tax_office && (
+                    <div>
+                      <p className="text-xs text-gray-500">Vergi Dairesi:</p>
+                      <p className="text-sm text-gray-900">{profile.billing_info.tax_office}</p>
+                    </div>
+                  )}
+                  {profile.billing_info.tax_number && (
+                    <div>
+                      <p className="text-xs text-gray-500">{profile.billing_info.is_individual ? 'TC Kimlik:' : 'Vergi No:'}</p>
+                      <p className="text-sm font-mono text-gray-900">{profile.billing_info.tax_number}</p>
+                    </div>
+                  )}
+                  {profile.billing_info.address && (
+                    <div>
+                      <p className="text-xs text-gray-500">Adres:</p>
+                      <p className="text-sm text-gray-900">{profile.billing_info.address}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -434,13 +390,52 @@ setOrganizations(allOrgs.slice(0, orgLimit))
               </div>
             )}
 
-            {/* vCard */}
-            <button onClick={downloadVCard}
-              className="w-full mt-6 flex items-center justify-center gap-2 px-6 py-3 text-white rounded-xl font-semibold hover:shadow-xl transition-all"
-              style={{ background: `linear-gradient(to right, ${themeColor}, ${adjustColor(themeColor, -30)})` }}>
-              <Download size={20} />
-              Kişilere Kaydet (vCard)
-            </button>
+            {/* vCard + Paylaşım Butonları */}
+            <div className="space-y-2 mt-6">
+              <button onClick={downloadVCard}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 text-white rounded-xl font-semibold hover:shadow-xl transition-all"
+                style={{ background: `linear-gradient(to right, ${themeColor}, ${adjustColor(themeColor, -30)})` }}>
+                <Download size={20} />
+                Kişilere Kaydet (vCard)
+              </button>
+
+              <div className="grid grid-cols-3 gap-2">
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(`${profile.name || 'Profil'} - ${window.location.href}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackEvent(profile.id, 'share_whatsapp')}
+                  className="flex items-center justify-center gap-2 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold text-sm transition-colors"
+                >
+                  💬 WhatsApp
+                </a>
+                <a
+                  href={`sms:?body=${encodeURIComponent(`${profile.name || 'Profil'} - ${window.location.href}`)}`}
+                  onClick={() => trackEvent(profile.id, 'share_sms')}
+                  className="flex items-center justify-center gap-2 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold text-sm transition-colors"
+                >
+                  📱 SMS
+                </a>
+                <a
+                  href={`mailto:?subject=${encodeURIComponent(profile.name || 'Profil')}&body=${encodeURIComponent(`${profile.name || ''} dijital kartvizitini gör:\n${window.location.href}`)}`}
+                  onClick={() => trackEvent(profile.id, 'share_email')}
+                  className="flex items-center justify-center gap-2 py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold text-sm transition-colors"
+                >
+                  ✉️ E-posta
+                </a>
+              </div>
+
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href)
+                  alert('✅ Link kopyalandı!')
+                  trackEvent(profile.id, 'share_copy_link')
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold text-sm transition-colors"
+              >
+                🔗 Linki Kopyala
+              </button>
+            </div>
           </div>
         </div>
 
