@@ -1,3 +1,9 @@
+import { useToast } from '../components/Toast'
+import Modal, { ConfirmModal } from './Modal'
+import BankAccountModal from './BankAccountModal'
+import BillingInfoModal from './BillingInfoModal'
+import ServiceModal from './ServiceModal'
+import CatalogLinkModal from './CatalogLinkModal'
 import ImageUpload from './ImageUpload'
 import PublicCardPreview from './PublicCardPreview'
 import { getAnalyticsSummary } from '../utils/analyticsHelpers'
@@ -21,6 +27,7 @@ import { useNavigate } from 'react-router-dom'
 
 export default function Dashboard({ session }) {
   const navigate = useNavigate()
+  const { showToast } = useToast()
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
@@ -36,6 +43,20 @@ export default function Dashboard({ session }) {
   const [company, setCompany] = useState('')
   const [phone, setPhone] = useState('')
   const [bio, setBio] = useState('')
+  // Modal state'leri
+  const [bankModal, setBankModal] = useState({ isOpen: false, account: null, index: null })
+  const [billingModal, setBillingModal] = useState({ isOpen: false })
+  const [serviceModal, setServiceModal] = useState({ isOpen: false, service: null, index: null })
+  const [catalogModal, setCatalogModal] = useState({ isOpen: false, link: null, index: null })
+
+  // Confirm dialog state'i (delete onayları için)
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+    variant: 'primary'
+  })
 
   const { mode, isIndividual, isCorporate, initMode } = useDashboardMode()
   const { subscription, loading: subLoading, getLimits, canAdd, isPremium } = useSubscription(profile?.id)
@@ -87,9 +108,17 @@ export default function Dashboard({ session }) {
     try {
       setLoading(true)
       const rateCheck = checkProfileUpdateRateLimit(session.user.id)
-      if (!rateCheck.allowed) { alert(`⏳ ${rateCheck.message}`); setLoading(false); return }
+      if (!rateCheck.allowed) {
+        showToast(rateCheck.message, 'warning')
+        setLoading(false)
+        return
+      }
       const validation = validateProfile({ name, title, company, phone, bio })
-      if (!validation.valid) { alert('❌ Hata:\n' + Object.values(validation.errors).join('\n')); setLoading(false); return }
+      if (!validation.valid) {
+        showToast('Hata: ' + Object.values(validation.errors).join(', '), 'error')
+        setLoading(false)
+        return
+      }
       if (profile) {
         const { error } = await supabase.from('profiles').update({ ...validation.sanitized, updated_at: new Date().toISOString() }).eq('user_id', session.user.id)
         if (error) throw error
@@ -97,12 +126,14 @@ export default function Dashboard({ session }) {
         const { error } = await supabase.from('profiles').insert({ user_id: session.user.id, email: session.user.email, ...validation.sanitized })
         if (error) throw error
       }
-      alert('✅ Profil kaydedildi!')
+      showToast('Profil kaydedildi', 'success')
       setEditing(false)
       loadProfile()
     } catch (error) {
-      alert('❌ Hata: ' + error.message)
-    } finally { setLoading(false) }
+      showToast('Hata: ' + error.message, 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const updateAvatar = async (avatarUrl) => {
@@ -110,8 +141,10 @@ export default function Dashboard({ session }) {
       const { error } = await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('user_id', session.user.id)
       if (error) throw error
       setProfile({ ...profile, avatar_url: avatarUrl })
-      alert('Profil fotoğrafı güncellendi!')
-    } catch (error) { alert('Hata: ' + error.message) }
+      showToast('Profil fotoğrafı güncellendi', 'success')
+    } catch (error) {
+      showToast('Hata: ' + error.message, 'error')
+    }
   }
 
   if (loading) {
@@ -123,7 +156,6 @@ export default function Dashboard({ session }) {
   }
 
   const limits = getLimits()
-
   return (
     <>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -198,14 +230,16 @@ export default function Dashboard({ session }) {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">🎨 Tema Rengi</label>
-                        {themeColor !== profile?.theme_color && (
+                       {themeColor !== profile?.theme_color && (
                           <button onClick={async () => {
                             try {
                               const { error } = await supabase.from('profiles').update({ theme_color: themeColor }).eq('user_id', session.user.id)
                               if (error) throw error
                               setProfile(prev => ({ ...prev, theme_color: themeColor }))
-                              alert('✅ Tema rengi kaydedildi!')
-                            } catch (error) { alert('Hata: ' + error.message) }
+                              showToast('Tema rengi kaydedildi', 'success')
+                            } catch (error) {
+                              showToast('Hata: ' + error.message, 'error')
+                            }
                           }} className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-all animate-pulse">Kaydet</button>
                         )}
                       </div>
@@ -232,14 +266,23 @@ export default function Dashboard({ session }) {
                       <div className="flex items-center justify-between">
                         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">🖼️ Arka Plan Resmi</label>
                         {profile?.background_image_url && (
-                          <button onClick={async () => {
-                            try {
-                              const { error } = await supabase.from('profiles').update({ background_image_url: null }).eq('user_id', session.user.id)
-                              if (error) throw error
-                              setProfile(prev => ({ ...prev, background_image_url: null }))
-                              alert('✅ Arka plan resmi kaldırıldı!')
-                            } catch (error) { alert('Hata: ' + error.message) }
-                          }} className="px-3 py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-xs font-semibold hover:bg-red-100 transition-colors">🗑️ Resmi Kaldır</button>
+                          <button onClick={() => setConfirmDialog({
+                            isOpen: true,
+                            title: 'Arka Plan Resmini Kaldır',
+                            message: 'Arka plan resmini kaldırmak istediğinize emin misiniz?',
+                            variant: 'danger',
+                            confirmText: 'Evet, Kaldır',
+                            onConfirm: async () => {
+                              try {
+                                const { error } = await supabase.from('profiles').update({ background_image_url: null }).eq('user_id', session.user.id)
+                                if (error) throw error
+                                setProfile(prev => ({ ...prev, background_image_url: null }))
+                                showToast('Arka plan resmi kaldırıldı', 'success')
+                              } catch (error) {
+                                showToast('Hata: ' + error.message, 'error')
+                              }
+                            }
+                          })} className="px-3 py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-xs font-semibold hover:bg-red-100 transition-colors">🗑️ Resmi Kaldır</button>
                         )}
                       </div>
                       {profile?.background_image_url && (
@@ -253,11 +296,12 @@ export default function Dashboard({ session }) {
                             const { error } = await supabase.from('profiles').update({ background_image_url: url }).eq('user_id', session.user.id)
                             if (error) throw error
                             setProfile(prev => ({ ...prev, background_image_url: url }))
-                            alert('✅ Arka plan resmi güncellendi!')
-                          } catch (error) { alert('Hata: ' + error.message) }
+                            showToast('Arka plan resmi güncellendi', 'success')
+                          } catch (error) {
+                            showToast('Hata: ' + error.message, 'error')
+                          }
                         }}
                         bucket="backgrounds" label="Arka Plan" maxSize={5} />
-                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center">📐 Önerilen: 1200×400px (yatay) — Maks 5MB — JPG/PNG</p>
                     </div>
 
                     {/* Ad Soyad */}
@@ -296,8 +340,12 @@ export default function Dashboard({ session }) {
                           onClick={async () => {
                             const newVal = profile?.show_email === false ? true : false
                             const { error } = await supabase.from('profiles').update({ show_email: newVal }).eq('user_id', session.user.id)
-                            if (error) { alert('Hata: ' + error.message); return }
+                            if (error) {
+                              showToast('Hata: ' + error.message, 'error')
+                              return
+                            }
                             setProfile(prev => ({ ...prev, show_email: newVal }))
+                            showToast(newVal ? 'Email görünür yapıldı' : 'Email gizlendi', 'success')
                           }}
                           className={`text-xs px-3 py-1 rounded-full font-semibold transition-colors ${profile?.show_email !== false ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                         >
@@ -391,203 +439,211 @@ export default function Dashboard({ session }) {
                         {(profile.catalog_links || []).map((link, index) => (
                           <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                             <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-gray-900 dark:text-gray-100 mb-1">{link.title}</p>
-                              <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline block truncate">{link.url}</a>
+                              <p className="font-semibold text-gray-900 dark:text-gray-100 mb-1 truncate">{link.title}</p>
+                              <a  
+                                href={link.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-blue-600 hover:underline block truncate"
+                              >
+                                {link.url}
+                              </a>
                             </div>
-                            <button onClick={() => {
-                              const newTitle = prompt('Yeni başlık:', link.title); if (!newTitle) return
-                              const newUrl = prompt('Yeni URL:', link.url); if (!newUrl) return
-                              const newLinks = [...profile.catalog_links]; newLinks[index] = { ...link, title: newTitle, url: newUrl }
-                              supabase.from('profiles').update({ catalog_links: newLinks }).eq('user_id', session.user.id).then(({ error }) => { if (error) { alert('Hata: ' + error.message); return } setProfile(prev => ({ ...prev, catalog_links: newLinks })) })
-                            }} className="text-blue-600 hover:text-blue-700 text-sm font-semibold shrink-0">✏️</button>
-                            <button onClick={async () => { const newLinks = profile.catalog_links.filter((_, i) => i !== index); const { error } = await supabase.from('profiles').update({ catalog_links: newLinks }).eq('user_id', session.user.id); if (error) { alert('Hata: ' + error.message); return } setProfile(prev => ({ ...prev, catalog_links: newLinks })) }} className="text-red-600 hover:text-red-700 text-sm font-semibold shrink-0">Sil</button>
+                            <div className="flex gap-1 shrink-0">
+                              <button
+                                onClick={() => setCatalogModal({ isOpen: true, link, index })}
+                                className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                title="Düzenle"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                onClick={() => setConfirmDialog({
+                                  isOpen: true,
+                                  title: 'Linki Sil',
+                                  message: `"${link.title}" linkini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`,
+                                  variant: 'danger',
+                                  onConfirm: async () => {
+                                    const newLinks = profile.catalog_links.filter((_, i) => i !== index)
+                                    const { error } = await supabase
+                                      .from('profiles')
+                                      .update({ catalog_links: newLinks })
+                                      .eq('user_id', session.user.id)
+                                    if (error) {
+                                      showToast('Hata: ' + error.message, 'error')
+                                      return
+                                    }
+                                    setProfile(prev => ({ ...prev, catalog_links: newLinks }))
+                                    showToast('Link silindi', 'success')
+                                  }
+                                })}
+                                className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                title="Sil"
+                              >
+                                🗑️
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
-                      <button onClick={async () => {
-                        const rateCheck = checkProfileUpdateRateLimit(session.user.id); if (!rateCheck.allowed) { alert(`⏳ ${rateCheck.message}`); return }
-                        const t = prompt('Döküman başlığı:'); if (!t) return
-                        const u = prompt('Döküman linki:'); if (!u) return
-                        const validation = validateCatalogLink({ title: t, url: u, type: 'document' })
-                        if (!validation.valid) { alert('❌ Hata:\n' + validation.errors.join('\n')); return }
-                        const newLinks = [...(profile.catalog_links || []), validation.sanitized]
-                        try { const { error } = await supabase.from('profiles').update({ catalog_links: newLinks }).eq('user_id', session.user.id); if (error) throw error; setProfile(prev => ({ ...prev, catalog_links: newLinks })); alert('✅ Katalog eklendi!') } catch (error) { alert('❌ Hata: ' + error.message) }
-                      }} className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm">+ Döküman Ekle</button>
+                      <button
+                        onClick={() => setCatalogModal({ isOpen: true, link: null, index: null })}
+                        className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
+                      >
+                        + Döküman Ekle
+                      </button>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">💡 Google Drive, Dropbox veya kendi web sitenizden link ekleyin</p>
                     </div>
 
                     {/* Banka Hesapları */}
-<div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">🏦 Banka Hesapları</h3>
-  <div className="space-y-3 mb-4">
-    {(profile.bank_accounts || []).map((account, index) => (
-      <div key={index} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-gray-900 dark:text-gray-100">{account.bank_name}</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">{account.account_holder}</p>
-            <p className="text-xs font-mono text-gray-700 dark:text-gray-300 mt-1 break-all">{account.iban}</p>
-          </div>
-          <div className="flex gap-1 shrink-0">
-            <button
-              onClick={() => {
-                const newName = prompt('Banka adı:', account.bank_name); if (!newName) return
-                const newHolder = prompt('Hesap sahibi:', account.account_holder); if (!newHolder) return
-                const newIban = prompt('IBAN (TR... formatında):', account.iban); if (!newIban) return
-                const newAccounts = [...profile.bank_accounts]
-                newAccounts[index] = { bank_name: newName, account_holder: newHolder, iban: newIban.replace(/\s/g, '').toUpperCase() }
-                supabase.from('profiles').update({ bank_accounts: newAccounts }).eq('user_id', session.user.id).then(({ error }) => {
-                  if (error) { alert('Hata: ' + error.message); return }
-                  setProfile(prev => ({ ...prev, bank_accounts: newAccounts }))
-                })
-              }}
-              className="text-blue-600 hover:text-blue-700 text-sm font-semibold"
-            >✏️</button>
-            <button
-              onClick={async () => {
-                if (!confirm('Bu banka hesabını silmek istediğinize emin misiniz?')) return
-                const newAccounts = profile.bank_accounts.filter((_, i) => i !== index)
-                const { error } = await supabase.from('profiles').update({ bank_accounts: newAccounts }).eq('user_id', session.user.id)
-                if (error) { alert('Hata: ' + error.message); return }
-                setProfile(prev => ({ ...prev, bank_accounts: newAccounts }))
-              }}
-              className="text-red-600 hover:text-red-700 text-sm font-semibold"
-            >Sil</button>
-          </div>
-        </div>
-      </div>
-    ))}
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">🏦 Banka Hesapları</h3>
+                      <div className="space-y-3 mb-4">
+                        {(profile.bank_accounts || []).map((account, index) => (
+                          <div key={index} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{account.bank_name}</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{account.account_holder}</p>
+                                <p className="text-xs font-mono text-gray-700 dark:text-gray-300 mt-1 break-all">{account.iban}</p>
+                              </div>
+                              <div className="flex gap-1 shrink-0">
+                                <button
+                                  onClick={() => setBankModal({ isOpen: true, account, index })}
+                                  className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                  title="Düzenle"
+                                >
+                                  ✏️
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDialog({
+                                    isOpen: true,
+                                    title: 'Banka Hesabını Sil',
+                                    message: `"${account.bank_name}" hesabını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`,
+                                    variant: 'danger',
+                                    onConfirm: async () => {
+                                      const newAccounts = profile.bank_accounts.filter((_, i) => i !== index)
+                                      const { error } = await supabase
+                                        .from('profiles')
+                                        .update({ bank_accounts: newAccounts })
+                                        .eq('user_id', session.user.id)
+                                      if (error) {
+                                        showToast('Hata: ' + error.message, 'error')
+                                        return
+                                      }
+                                      setProfile(prev => ({ ...prev, bank_accounts: newAccounts }))
+                                      showToast('Banka hesabı silindi', 'success')
+                                    }
+                                  })}
+                                  className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                  title="Sil"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => setBankModal({ isOpen: true, account: null, index: null })}
+                        className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
+                      >
+                        + Banka Hesabı Ekle
+                      </button>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">💡 IBAN'larınız kartvizitinizde görünür ve tek tık ile kopyalanabilir.</p>
+                    </div>
 
-    {/* Fatura Bilgileri */}
-<div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">📋 Fatura Bilgileri</h3>
-  
-  {profile.billing_info ? (
-    <div className="space-y-3">
-      <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg space-y-1">
-        <p className="text-xs text-gray-500 dark:text-gray-400">Ünvan / Ad Soyad:</p>
-        <p className="font-semibold text-gray-900 dark:text-gray-100">{profile.billing_info.company_title}</p>
-        
-        {profile.billing_info.tax_office && (
-          <>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Vergi Dairesi:</p>
-            <p className="text-sm text-gray-900 dark:text-gray-100">{profile.billing_info.tax_office}</p>
-          </>
-        )}
-        
-        {profile.billing_info.tax_number && (
-          <>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Vergi/TC No:</p>
-            <p className="text-sm font-mono text-gray-900 dark:text-gray-100">{profile.billing_info.tax_number}</p>
-          </>
-        )}
-        
-        {profile.billing_info.address && (
-          <>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Adres:</p>
-            <p className="text-sm text-gray-900 dark:text-gray-100">{profile.billing_info.address}</p>
-          </>
-        )}
-      </div>
-      
-      <div className="flex gap-2">
-        <button
-          onClick={() => {
-            const isIndividual = confirm('Bireysel mi? (Tamam: Bireysel, İptal: Şirket)')
-            const titleLabel = isIndividual ? 'Ad Soyad:' : 'Şirket Ünvanı:'
-            const newTitle = prompt(titleLabel, profile.billing_info.company_title); if (!newTitle) return
-            const newOffice = prompt('Vergi dairesi:', profile.billing_info.tax_office || '')
-            const newTaxNo = prompt(isIndividual ? 'TC Kimlik No:' : 'Vergi numarası:', profile.billing_info.tax_number || '')
-            const newAddress = prompt('Fatura adresi:', profile.billing_info.address || '')
-            
-            const newBillingInfo = {
-              company_title: newTitle,
-              tax_office: newOffice || null,
-              tax_number: newTaxNo || null,
-              address: newAddress || null,
-              is_individual: isIndividual
-            }
-            
-            supabase.from('profiles').update({ billing_info: newBillingInfo }).eq('user_id', session.user.id).then(({ error }) => {
-              if (error) { alert('Hata: ' + error.message); return }
-              setProfile(prev => ({ ...prev, billing_info: newBillingInfo }))
-              alert('✅ Fatura bilgileri güncellendi!')
-            })
-          }}
-          className="flex-1 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors"
-        >✏️ Düzenle</button>
-        
-        <button
-          onClick={async () => {
-            if (!confirm('Fatura bilgilerini silmek istediğinize emin misiniz?')) return
-            const { error } = await supabase.from('profiles').update({ billing_info: null }).eq('user_id', session.user.id)
-            if (error) { alert('Hata: ' + error.message); return }
-            setProfile(prev => ({ ...prev, billing_info: null }))
-          }}
-          className="px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm font-semibold hover:bg-red-100 transition-colors"
-        >Sil</button>
-      </div>
-    </div>
-  ) : (
-    <div className="space-y-3">
-      <p className="text-sm text-gray-600 dark:text-gray-400">Fatura/e-Fatura için müşterilerinizin ihtiyaç duyacağı bilgileri ekleyin.</p>
-      
-      <button
-        onClick={() => {
-          const isIndividual = confirm('Bireysel misiniz?\n\nTamam = Bireysel (TC Kimlik)\nİptal = Şirket (Vergi No)')
-          const titleLabel = isIndividual ? 'Ad Soyad:' : 'Şirket Ünvanı (örn: Sognare Ltd. Şti.):'
-          const title = prompt(titleLabel); if (!title) return
-          
-          const office = prompt('Vergi dairesi (örn: Beşiktaş):')
-          const taxNo = prompt(isIndividual ? 'TC Kimlik No (11 haneli):' : 'Vergi numarası (10 haneli):')
-          const address = prompt('Fatura adresi:')
-          
-          const billingInfo = {
-            company_title: title,
-            tax_office: office || null,
-            tax_number: taxNo || null,
-            address: address || null,
-            is_individual: isIndividual
-          }
-          
-          supabase.from('profiles').update({ billing_info: billingInfo }).eq('user_id', session.user.id).then(({ error }) => {
-            if (error) { alert('Hata: ' + error.message); return }
-            setProfile(prev => ({ ...prev, billing_info: billingInfo }))
-            alert('✅ Fatura bilgileri eklendi!')
-          })
-        }}
-        className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
-      >+ Fatura Bilgileri Ekle</button>
-      
-      <p className="text-xs text-gray-500 dark:text-gray-400">💡 Bu bilgiler kartvizitinizde görünür ve müşterileriniz tek tık ile kopyalayabilir.</p>
-    </div>
-  )}
-</div>
+                    {/* Fatura Bilgileri */}
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">📋 Fatura Bilgileri</h3>
 
+                      {profile.billing_info ? (
+                        <div className="space-y-3">
+                          <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg space-y-2">
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {profile.billing_info.is_individual ? 'Ad Soyad:' : 'Şirket Ünvanı:'}
+                              </p>
+                              <p className="font-semibold text-gray-900 dark:text-gray-100">{profile.billing_info.company_title}</p>
+                            </div>
 
-  </div>
-  <button
-    onClick={async () => {
-      const bankName = prompt('Banka adı (örn: Garanti BBVA):'); if (!bankName) return
-      const holder = prompt('Hesap sahibi adı:'); if (!holder) return
-      const iban = prompt('IBAN (TR... formatında):'); if (!iban) return
-      const cleanIban = iban.replace(/\s/g, '').toUpperCase()
-      if (!/^TR[0-9]{24}$/.test(cleanIban)) {
-        alert('❌ Geçersiz IBAN formatı. Türkiye IBAN: TR + 24 rakam (toplam 26 karakter)')
-        return
-      }
-      const newAccounts = [...(profile.bank_accounts || []), { bank_name: bankName, account_holder: holder, iban: cleanIban }]
-      try {
-        const { error } = await supabase.from('profiles').update({ bank_accounts: newAccounts }).eq('user_id', session.user.id)
-        if (error) throw error
-        setProfile(prev => ({ ...prev, bank_accounts: newAccounts }))
-        alert('✅ Banka hesabı eklendi!')
-      } catch (error) { alert('❌ Hata: ' + error.message) }
-    }}
-    className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
-  >+ Banka Hesabı Ekle</button>
-  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">💡 IBAN'larınız kartvizitinizde görünür ve tek tık ile kopyalanabilir.</p>
-</div>
+                            {profile.billing_info.tax_office && (
+                              <div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Vergi Dairesi:</p>
+                                <p className="text-sm text-gray-900 dark:text-gray-100">{profile.billing_info.tax_office}</p>
+                              </div>
+                            )}
+
+                            {profile.billing_info.tax_number && (
+                              <div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  {profile.billing_info.is_individual ? 'TC Kimlik No:' : 'Vergi No:'}
+                                </p>
+                                <p className="text-sm font-mono text-gray-900 dark:text-gray-100">{profile.billing_info.tax_number}</p>
+                              </div>
+                            )}
+
+                            {profile.billing_info.address && (
+                              <div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Adres:</p>
+                                <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{profile.billing_info.address}</p>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setBillingModal({ isOpen: true })}
+                              className="flex-1 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                            >
+                              ✏️ Düzenle
+                            </button>
+
+                            <button
+                              onClick={() => setConfirmDialog({
+                                isOpen: true,
+                                title: 'Fatura Bilgilerini Sil',
+                                message: 'Fatura bilgilerinizi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
+                                variant: 'danger',
+                                onConfirm: async () => {
+                                  const { error } = await supabase
+                                    .from('profiles')
+                                    .update({ billing_info: null })
+                                    .eq('user_id', session.user.id)
+                                  if (error) {
+                                    showToast('Hata: ' + error.message, 'error')
+                                    return
+                                  }
+                                  setProfile(prev => ({ ...prev, billing_info: null }))
+                                  showToast('Fatura bilgileri silindi', 'success')
+                                }
+                              })}
+                              className="px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                            >
+                              🗑️ Sil
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Fatura/e-Fatura için müşterilerinizin ihtiyaç duyacağı bilgileri ekleyin.
+                          </p>
+
+                          <button
+                            onClick={() => setBillingModal({ isOpen: true })}
+                            className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
+                          >
+                            + Fatura Bilgileri Ekle
+                          </button>
+
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            💡 Bu bilgiler kartvizitinizde görünür ve müşterileriniz tek tık ile kopyalayabilir.
+                          </p>
+                        </div>
+                      )}
+                    </div>
 
                     {/* Hizmetler */}
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
@@ -600,34 +656,54 @@ export default function Dashboard({ session }) {
                                 <h4 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{service.title}</h4>
                                 <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{service.description}</p>
                               </div>
-                              <button onClick={() => {
-                                const newTitle = prompt('Hizmet adı:', service.title); if (!newTitle) return
-                                const newDesc = prompt('Açıklama:', service.description); if (!newDesc) return
-                                const newPrice = prompt('Fiyat:', service.price); if (!newPrice) return
-                                const newTime = prompt('Teslim süresi:', service.delivery_time)
-                                const newServices = [...profile.services]; newServices[index] = { ...service, title: newTitle, description: newDesc, price: parseFloat(newPrice), delivery_time: newTime }
-                                supabase.from('profiles').update({ services: newServices }).eq('user_id', session.user.id).then(({ error }) => { if (error) { alert('Hata: ' + error.message); return } setProfile(prev => ({ ...prev, services: newServices })) })
-                              }} className="text-blue-600 hover:text-blue-700 text-sm font-semibold shrink-0">✏️</button>
-                              <button onClick={async () => { const newServices = profile.services.filter((_, i) => i !== index); const { error } = await supabase.from('profiles').update({ services: newServices }).eq('user_id', session.user.id); if (error) { alert('Hata: ' + error.message); return } setProfile(prev => ({ ...prev, services: newServices })) }} className="text-red-600 hover:text-red-700 text-sm font-semibold shrink-0">Sil</button>
+                              <div className="flex gap-1 shrink-0">
+                                <button
+                                  onClick={() => setServiceModal({ isOpen: true, service, index })}
+                                  className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                  title="Düzenle"
+                                >
+                                  ✏️
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDialog({
+                                    isOpen: true,
+                                    title: 'Hizmeti Sil',
+                                    message: `"${service.title}" hizmetini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`,
+                                    variant: 'danger',
+                                    onConfirm: async () => {
+                                      const newServices = profile.services.filter((_, i) => i !== index)
+                                      const { error } = await supabase
+                                        .from('profiles')
+                                        .update({ services: newServices })
+                                        .eq('user_id', session.user.id)
+                                      if (error) {
+                                        showToast('Hata: ' + error.message, 'error')
+                                        return
+                                      }
+                                      setProfile(prev => ({ ...prev, services: newServices }))
+                                      showToast('Hizmet silindi', 'success')
+                                    }
+                                  })}
+                                  className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                  title="Sil"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
                             </div>
                             <div className="flex items-center gap-4 text-sm">
-                              <span className="font-bold text-blue-600">₺{service.price}</span>
-                              {service.delivery_time && <span className="text-gray-500">⏱️ {service.delivery_time}</span>}
+                              <span className="font-bold text-blue-600 dark:text-blue-400">₺{service.price}</span>
+                              {service.delivery_time && <span className="text-gray-500 dark:text-gray-400">⏱️ {service.delivery_time}</span>}
                             </div>
                           </div>
                         ))}
                       </div>
-                      <button onClick={async () => {
-                        const rateCheck = checkProfileUpdateRateLimit(session.user.id); if (!rateCheck.allowed) { alert(`⏳ ${rateCheck.message}`); return }
-                        const t = prompt('Hizmet adı:'); if (!t) return
-                        const d = prompt('Açıklama:'); if (!d) return
-                        const p = prompt('Fiyat (TL):'); if (!p) return
-                        const dt = prompt('Teslim süresi:')
-                        const validation = validateService({ title: t, description: d, price: p, delivery_time: dt, currency: 'TRY', category: 'general' })
-                        if (!validation.valid) { alert('❌ Hata:\n' + validation.errors.join('\n')); return }
-                        const newServices = [...(profile.services || []), validation.sanitized]
-                        try { const { error } = await supabase.from('profiles').update({ services: newServices }).eq('user_id', session.user.id); if (error) throw error; setProfile(prev => ({ ...prev, services: newServices })); alert('✅ Hizmet eklendi!') } catch (error) { alert('❌ Hata: ' + error.message) }
-                      }} className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm">+ Hizmet Ekle</button>
+                      <button
+                        onClick={() => setServiceModal({ isOpen: true, service: null, index: null })}
+                        className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
+                      >
+                        + Hizmet Ekle
+                      </button>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">💡 Freelance hizmetlerinizi ekleyin ve profilinizde sergileyin</p>
                     </div>
 
@@ -640,12 +716,38 @@ export default function Dashboard({ session }) {
                             <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Google Yorum Linki:</p>
                             <a href={profile.google_review_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm block truncate">{profile.google_review_link}</a>
                           </div>
-                          <button onClick={async () => { if (!confirm('Google yorum linkini kaldırmak istediğinize emin misiniz?')) return; const { error } = await supabase.from('profiles').update({ google_review_link: null, google_place_id: null }).eq('user_id', session.user.id); if (error) { alert('Hata: ' + error.message); return } setProfile(prev => ({ ...prev, google_review_link: null, google_place_id: null })) }} className="w-full py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm font-semibold hover:bg-red-100 transition-colors">Linki Kaldır</button>
+                         <button onClick={() => setConfirmDialog({
+                            isOpen: true,
+                            title: 'Google Yorum Linkini Kaldır',
+                            message: 'Google yorum linkini kaldırmak istediğinize emin misiniz?',
+                            variant: 'danger',
+                            confirmText: 'Evet, Kaldır',
+                            onConfirm: async () => {
+                              const { error } = await supabase.from('profiles').update({ google_review_link: null, google_place_id: null }).eq('user_id', session.user.id)
+                              if (error) {
+                                showToast('Hata: ' + error.message, 'error')
+                                return
+                              }
+                              setProfile(prev => ({ ...prev, google_review_link: null, google_place_id: null }))
+                              showToast('Google yorum linki kaldırıldı', 'success')
+                            }
+                          })} className="w-full py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm font-semibold hover:bg-red-100 transition-colors">Linki Kaldır</button>
                         </div>
                       ) : (
                         <div className="space-y-3">
                           <p className="text-sm text-gray-600 dark:text-gray-400">Profilinize Google İşletme yorumlarınızı ekleyin</p>
-                          <button onClick={() => { const link = prompt('Google İşletme yorum sayfası linkini yapıştırın:'); if (!link) return; supabase.from('profiles').update({ google_review_link: link }).eq('user_id', session.user.id).then(({ error }) => { if (error) { alert('Hata: ' + error.message); return } setProfile(prev => ({ ...prev, google_review_link: link })); alert('✅ Google yorum linki eklendi!') }) }} className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm">+ Google Yorum Linki Ekle</button>
+                          <button onClick={() => {
+                            const link = prompt('Google İşletme yorum sayfası linkini yapıştırın:')
+                            if (!link) return
+                            supabase.from('profiles').update({ google_review_link: link }).eq('user_id', session.user.id).then(({ error }) => {
+                              if (error) {
+                                showToast('Hata: ' + error.message, 'error')
+                                return
+                              }
+                              setProfile(prev => ({ ...prev, google_review_link: link }))
+                              showToast('Google yorum linki eklendi', 'success')
+                            })
+                          }} className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm">+ Google Yorum Linki Ekle</button>
                           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
                             <p className="text-xs text-blue-800 dark:text-blue-200">💡 <strong>Nasıl bulunur?</strong><br />1. Google'da işletmenizi arayın<br />2. "Yorum yaz" butonuna tıklayın<br />3. Açılan sayfanın linkini kopyalayın</p>
                           </div>
@@ -706,6 +808,106 @@ export default function Dashboard({ session }) {
       {showPayment && selectedPlan && (
         <PaymentModal plan={selectedPlan.plan} billingCycle={selectedPlan.billingCycle} profile={profile} onSuccess={() => { setShowPayment(false); window.location.reload() }} onClose={() => setShowPayment(false)} />
       )}
+      {/* Banka Hesabı Modal */}
+      <BankAccountModal
+        isOpen={bankModal.isOpen}
+        onClose={() => setBankModal({ isOpen: false, account: null, index: null })}
+        account={bankModal.account}
+        onSave={async (data) => {
+          let newAccounts
+          if (bankModal.index !== null) {
+            // Düzenleme
+            newAccounts = [...profile.bank_accounts]
+            newAccounts[bankModal.index] = data
+          } else {
+            // Yeni ekleme
+            newAccounts = [...(profile.bank_accounts || []), data]
+          }
+          const { error } = await supabase
+            .from('profiles')
+            .update({ bank_accounts: newAccounts })
+            .eq('user_id', session.user.id)
+          if (error) throw error
+          setProfile(prev => ({ ...prev, bank_accounts: newAccounts }))
+        }}
+      />
+
+      {/* Fatura Bilgileri Modal */}
+      <BillingInfoModal
+        isOpen={billingModal.isOpen}
+        onClose={() => setBillingModal({ isOpen: false })}
+        billingInfo={profile?.billing_info}
+        onSave={async (data) => {
+          const { error } = await supabase
+            .from('profiles')
+            .update({ billing_info: data })
+            .eq('user_id', session.user.id)
+          if (error) throw error
+          setProfile(prev => ({ ...prev, billing_info: data }))
+        }}
+      />
+
+      {/* Hizmet Modal */}
+      <ServiceModal
+        isOpen={serviceModal.isOpen}
+        onClose={() => setServiceModal({ isOpen: false, service: null, index: null })}
+        service={serviceModal.service}
+        serviceIndex={serviceModal.index}
+        onSave={async (data, index) => {
+          let newServices
+          if (index !== null && index !== undefined) {
+            // Düzenleme
+            newServices = [...profile.services]
+            newServices[index] = data
+          } else {
+            // Yeni ekleme
+            newServices = [...(profile.services || []), data]
+          }
+          const { error } = await supabase
+            .from('profiles')
+            .update({ services: newServices })
+            .eq('user_id', session.user.id)
+          if (error) throw error
+          setProfile(prev => ({ ...prev, services: newServices }))
+        }}
+      />
+
+      {/* Katalog Link Modal */}
+      <CatalogLinkModal
+        isOpen={catalogModal.isOpen}
+        onClose={() => setCatalogModal({ isOpen: false, link: null, index: null })}
+        link={catalogModal.link}
+        linkIndex={catalogModal.index}
+        onSave={async (data, index) => {
+          let newLinks
+          if (index !== null && index !== undefined) {
+            // Düzenleme
+            newLinks = [...profile.catalog_links]
+            newLinks[index] = data
+          } else {
+            // Yeni ekleme
+            newLinks = [...(profile.catalog_links || []), data]
+          }
+          const { error } = await supabase
+            .from('profiles')
+            .update({ catalog_links: newLinks })
+            .eq('user_id', session.user.id)
+          if (error) throw error
+          setProfile(prev => ({ ...prev, catalog_links: newLinks }))
+        }}
+      />
+
+      {/* Confirm Dialog (delete onayları için) */}
+      <ConfirmModal
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        variant={confirmDialog.variant}
+        confirmText="Evet, Sil"
+        cancelText="İptal"
+        onConfirm={() => confirmDialog.onConfirm?.()}
+      />
     </>
   )
 }

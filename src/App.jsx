@@ -1,3 +1,4 @@
+import { ToastProvider } from './components/Toast'
 import AdminPage from './pages/AdminPage'
 import LandingPage from './pages/LandingPage'
 import { ThemeProvider } from './contexts/ThemeContext'
@@ -50,11 +51,12 @@ function App() {
   }
 
   return (
-    <ThemeProvider>
-      <DashboardModeProvider>
-        <Router>
-          <Routes>
-            {/* Public routes */}
+    <ToastProvider>
+      <ThemeProvider>
+        <DashboardModeProvider>
+          <Router>
+            <Routes>
+              {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/card/:username" element={<PublicCard />} />
             <Route path="/nfc-cards" element={<NFCCardsPage />} />
@@ -88,6 +90,7 @@ function App() {
         </Router>
       </DashboardModeProvider>
     </ThemeProvider>
+    </ToastProvider>
   )
 }
 
