@@ -208,6 +208,71 @@ setOrganizations(allOrgs.slice(0, orgLimit))
               </div>
             )}
 
+{/* Banka Hesapları */}
+<div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">🏦 Banka Hesapları</h3>
+  <div className="space-y-3 mb-4">
+    {(profile.bank_accounts || []).map((account, index) => (
+      <div key={index} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-gray-900 dark:text-gray-100">{account.bank_name}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{account.account_holder}</p>
+            <p className="text-xs font-mono text-gray-700 dark:text-gray-300 mt-1 break-all">{account.iban}</p>
+          </div>
+          <div className="flex gap-1 shrink-0">
+            <button
+              onClick={() => {
+                const newName = prompt('Banka adı:', account.bank_name); if (!newName) return
+                const newHolder = prompt('Hesap sahibi:', account.account_holder); if (!newHolder) return
+                const newIban = prompt('IBAN (TR... formatında):', account.iban); if (!newIban) return
+                const newAccounts = [...profile.bank_accounts]
+                newAccounts[index] = { bank_name: newName, account_holder: newHolder, iban: newIban.replace(/\s/g, '').toUpperCase() }
+                supabase.from('profiles').update({ bank_accounts: newAccounts }).eq('user_id', session.user.id).then(({ error }) => {
+                  if (error) { alert('Hata: ' + error.message); return }
+                  setProfile(prev => ({ ...prev, bank_accounts: newAccounts }))
+                })
+              }}
+              className="text-blue-600 hover:text-blue-700 text-sm font-semibold"
+            >✏️</button>
+            <button
+              onClick={async () => {
+                if (!confirm('Bu banka hesabını silmek istediğinize emin misiniz?')) return
+                const newAccounts = profile.bank_accounts.filter((_, i) => i !== index)
+                const { error } = await supabase.from('profiles').update({ bank_accounts: newAccounts }).eq('user_id', session.user.id)
+                if (error) { alert('Hata: ' + error.message); return }
+                setProfile(prev => ({ ...prev, bank_accounts: newAccounts }))
+              }}
+              className="text-red-600 hover:text-red-700 text-sm font-semibold"
+            >Sil</button>
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+  <button
+    onClick={async () => {
+      const bankName = prompt('Banka adı (örn: Garanti BBVA):'); if (!bankName) return
+      const holder = prompt('Hesap sahibi adı:'); if (!holder) return
+      const iban = prompt('IBAN (TR... formatında):'); if (!iban) return
+      const cleanIban = iban.replace(/\s/g, '').toUpperCase()
+      if (!/^TR[0-9]{24}$/.test(cleanIban)) {
+        alert('❌ Geçersiz IBAN formatı. Türkiye IBAN: TR + 24 rakam (toplam 26 karakter)')
+        return
+      }
+      const newAccounts = [...(profile.bank_accounts || []), { bank_name: bankName, account_holder: holder, iban: cleanIban }]
+      try {
+        const { error } = await supabase.from('profiles').update({ bank_accounts: newAccounts }).eq('user_id', session.user.id)
+        if (error) throw error
+        setProfile(prev => ({ ...prev, bank_accounts: newAccounts }))
+        alert('✅ Banka hesabı eklendi!')
+      } catch (error) { alert('❌ Hata: ' + error.message) }
+    }}
+    className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
+  >+ Banka Hesabı Ekle</button>
+  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">💡 IBAN'larınız kartvizitinizde görünür ve tek tık ile kopyalanabilir.</p>
+</div>
+
             {/* Organizasyonlar — tıkla aç */}
             {organizations.length > 0 && (
               <div className="pt-4 border-t border-gray-200">
