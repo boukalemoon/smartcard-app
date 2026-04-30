@@ -249,6 +249,56 @@ setOrganizations(allOrgs.slice(0, orgLimit))
         </div>
       </div>
     ))}
+
+    {/* Fatura Bilgileri */}
+{profile.billing_info && (
+  <div className="pt-4 border-t border-gray-200">
+    <div className="flex items-center justify-between mb-3">
+      <h3 className="font-semibold text-gray-800">📋 Fatura Bilgileri</h3>
+      <button
+        onClick={() => {
+          const text = [
+            profile.billing_info.company_title,
+            profile.billing_info.tax_office && `Vergi Dairesi: ${profile.billing_info.tax_office}`,
+            profile.billing_info.tax_number && `${profile.billing_info.is_individual ? 'TC' : 'Vergi No'}: ${profile.billing_info.tax_number}`,
+            profile.billing_info.address
+          ].filter(Boolean).join('\n')
+          navigator.clipboard.writeText(text)
+          alert('✅ Fatura bilgileri kopyalandı!')
+        }}
+        className="px-3 py-1 text-white text-xs font-semibold rounded-lg"
+        style={{ backgroundColor: themeColor }}
+      >
+        📋 Tümünü Kopyala
+      </button>
+    </div>
+    <div className="p-3 rounded-lg space-y-2" style={{ backgroundColor: `${themeColor}10` }}>
+      <div>
+        <p className="text-xs text-gray-500">Ünvan:</p>
+        <p className="text-sm font-semibold text-gray-900">{profile.billing_info.company_title}</p>
+      </div>
+      {profile.billing_info.tax_office && (
+        <div>
+          <p className="text-xs text-gray-500">Vergi Dairesi:</p>
+          <p className="text-sm text-gray-900">{profile.billing_info.tax_office}</p>
+        </div>
+      )}
+      {profile.billing_info.tax_number && (
+        <div>
+          <p className="text-xs text-gray-500">{profile.billing_info.is_individual ? 'TC Kimlik:' : 'Vergi No:'}</p>
+          <p className="text-sm font-mono text-gray-900">{profile.billing_info.tax_number}</p>
+        </div>
+      )}
+      {profile.billing_info.address && (
+        <div>
+          <p className="text-xs text-gray-500">Adres:</p>
+          <p className="text-sm text-gray-900">{profile.billing_info.address}</p>
+        </div>
+      )}
+    </div>
+  </div>
+)}
+
   </div>
   <button
     onClick={async () => {

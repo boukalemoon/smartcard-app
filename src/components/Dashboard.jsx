@@ -457,6 +457,114 @@ export default function Dashboard({ session }) {
         </div>
       </div>
     ))}
+
+    {/* Fatura Bilgileri */}
+<div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">📋 Fatura Bilgileri</h3>
+  
+  {profile.billing_info ? (
+    <div className="space-y-3">
+      <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg space-y-1">
+        <p className="text-xs text-gray-500 dark:text-gray-400">Ünvan / Ad Soyad:</p>
+        <p className="font-semibold text-gray-900 dark:text-gray-100">{profile.billing_info.company_title}</p>
+        
+        {profile.billing_info.tax_office && (
+          <>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Vergi Dairesi:</p>
+            <p className="text-sm text-gray-900 dark:text-gray-100">{profile.billing_info.tax_office}</p>
+          </>
+        )}
+        
+        {profile.billing_info.tax_number && (
+          <>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Vergi/TC No:</p>
+            <p className="text-sm font-mono text-gray-900 dark:text-gray-100">{profile.billing_info.tax_number}</p>
+          </>
+        )}
+        
+        {profile.billing_info.address && (
+          <>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Adres:</p>
+            <p className="text-sm text-gray-900 dark:text-gray-100">{profile.billing_info.address}</p>
+          </>
+        )}
+      </div>
+      
+      <div className="flex gap-2">
+        <button
+          onClick={() => {
+            const isIndividual = confirm('Bireysel mi? (Tamam: Bireysel, İptal: Şirket)')
+            const titleLabel = isIndividual ? 'Ad Soyad:' : 'Şirket Ünvanı:'
+            const newTitle = prompt(titleLabel, profile.billing_info.company_title); if (!newTitle) return
+            const newOffice = prompt('Vergi dairesi:', profile.billing_info.tax_office || '')
+            const newTaxNo = prompt(isIndividual ? 'TC Kimlik No:' : 'Vergi numarası:', profile.billing_info.tax_number || '')
+            const newAddress = prompt('Fatura adresi:', profile.billing_info.address || '')
+            
+            const newBillingInfo = {
+              company_title: newTitle,
+              tax_office: newOffice || null,
+              tax_number: newTaxNo || null,
+              address: newAddress || null,
+              is_individual: isIndividual
+            }
+            
+            supabase.from('profiles').update({ billing_info: newBillingInfo }).eq('user_id', session.user.id).then(({ error }) => {
+              if (error) { alert('Hata: ' + error.message); return }
+              setProfile(prev => ({ ...prev, billing_info: newBillingInfo }))
+              alert('✅ Fatura bilgileri güncellendi!')
+            })
+          }}
+          className="flex-1 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors"
+        >✏️ Düzenle</button>
+        
+        <button
+          onClick={async () => {
+            if (!confirm('Fatura bilgilerini silmek istediğinize emin misiniz?')) return
+            const { error } = await supabase.from('profiles').update({ billing_info: null }).eq('user_id', session.user.id)
+            if (error) { alert('Hata: ' + error.message); return }
+            setProfile(prev => ({ ...prev, billing_info: null }))
+          }}
+          className="px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm font-semibold hover:bg-red-100 transition-colors"
+        >Sil</button>
+      </div>
+    </div>
+  ) : (
+    <div className="space-y-3">
+      <p className="text-sm text-gray-600 dark:text-gray-400">Fatura/e-Fatura için müşterilerinizin ihtiyaç duyacağı bilgileri ekleyin.</p>
+      
+      <button
+        onClick={() => {
+          const isIndividual = confirm('Bireysel misiniz?\n\nTamam = Bireysel (TC Kimlik)\nİptal = Şirket (Vergi No)')
+          const titleLabel = isIndividual ? 'Ad Soyad:' : 'Şirket Ünvanı (örn: Sognare Ltd. Şti.):'
+          const title = prompt(titleLabel); if (!title) return
+          
+          const office = prompt('Vergi dairesi (örn: Beşiktaş):')
+          const taxNo = prompt(isIndividual ? 'TC Kimlik No (11 haneli):' : 'Vergi numarası (10 haneli):')
+          const address = prompt('Fatura adresi:')
+          
+          const billingInfo = {
+            company_title: title,
+            tax_office: office || null,
+            tax_number: taxNo || null,
+            address: address || null,
+            is_individual: isIndividual
+          }
+          
+          supabase.from('profiles').update({ billing_info: billingInfo }).eq('user_id', session.user.id).then(({ error }) => {
+            if (error) { alert('Hata: ' + error.message); return }
+            setProfile(prev => ({ ...prev, billing_info: billingInfo }))
+            alert('✅ Fatura bilgileri eklendi!')
+          })
+        }}
+        className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
+      >+ Fatura Bilgileri Ekle</button>
+      
+      <p className="text-xs text-gray-500 dark:text-gray-400">💡 Bu bilgiler kartvizitinizde görünür ve müşterileriniz tek tık ile kopyalayabilir.</p>
+    </div>
+  )}
+</div>
+
+
   </div>
   <button
     onClick={async () => {
