@@ -50,6 +50,11 @@ function App() {
     )
   }
 
+  // Partner (Arku vb.) bağlama akışında, kullanıcı zaten giriş yapmış olsa bile
+  // /login sayfası Auth bileşenini göstermeli ki token üretilip partner'a
+  // geri dönülebilsin. Aksi halde session varken /dashboard'a yönlenip akış kopar.
+  const hasPartnerCallback = !!new URLSearchParams(window.location.search).get('callback')
+
   return (
     <ToastProvider>
       <ThemeProvider>
@@ -71,8 +76,8 @@ function App() {
             <Route path="/cerez-politikasi" element={<CerezPolitikasi />} />
 
             {/* Auth routes */}
-            <Route path="/login" element={!session ? <Auth initialMode="login" /> : <Navigate to="/dashboard" />} />
-            <Route path="/signup" element={!session ? <Auth initialMode="signup" /> : <Navigate to="/dashboard" />} />
+            <Route path="/login" element={!session || hasPartnerCallback ? <Auth initialMode="login" /> : <Navigate to="/dashboard" />} />
+            <Route path="/signup" element={!session || hasPartnerCallback ? <Auth initialMode="signup" /> : <Navigate to="/dashboard" />} />
             <Route path="/auth/confirm" element={<AuthConfirm />} />
 
             {/* Protected routes */}

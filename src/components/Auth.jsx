@@ -3,6 +3,57 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { checkLoginRateLimit, checkSignupRateLimit } from '../utils/rateLimiting'
 
+const TRUSTED_PARTNERS = {
+  arku: [
+    'https://arku-remote.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:5173',
+  ],
+  ilgezdi: [
+    'https://ilgezdi.vercel.app',
+    'http://localhost:4000',
+  ],
+}
+
+const ALL_TRUSTED_ORIGINS = Object.values(TRUSTED_PARTNERS).flat()
+
+function isSafeCallback(url) {
+  try {
+    return ALL_TRUSTED_ORIGINS.some((o) => url.startsWith(o))
+  } catch {
+    return false
+  }
+}
+
+function detectPartnerSource(url) {
+  try {
+    for (const [name, origins] of Object.entries(TRUSTED_PARTNERS)) {
+      if (origins.some((o) => url.startsWith(o))) return name
+    }
+  } catch {}
+  return null
+}
+
+async function issuePartnerToken(partnerName, session) {
+  try {
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/partner-issue-token`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ partner_name: partnerName }),
+      }
+    )
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
+}
+
 export default function Auth({ initialMode = 'signup' }) {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
@@ -11,6 +62,7 @@ export default function Auth({ initialMode = 'signup' }) {
   const [loading, setLoading] = useState(false)
   const [mode, setMode] = useState(initialMode)
   const [referralCode, setReferralCode] = useState(null)
+  const [arkuCallback, setArkuCallback] = useState(null)
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
@@ -20,11 +72,45 @@ export default function Auth({ initialMode = 'signup' }) {
       setMode('signup')
     }
 
+    const cb = urlParams.get('callback')
+    if (cb && isSafeCallback(cb)) {
+      setArkuCallback(cb)
+      sessionStorage.setItem('partner_callback', cb)
+    } else {
+      const saved = sessionStorage.getItem('partner_callback')
+      if (saved && isSafeCallback(saved)) setArkuCallback(saved)
+    }
+
     const savedRef = localStorage.getItem('qartim_referral_code')
     if (savedRef && !ref) {
       setReferralCode(savedRef)
       if (initialMode === 'signup') setMode('signup')
     }
+  }, [])
+
+  // Kullanıcı zaten giriş yapmışsa ve partner bağlama akışındaysa (callback varsa),
+  // yeniden giriş istemeden token üretip partner uygulamaya geri yönlendir.
+  useEffect(() => {
+    const autoLinkIfLoggedIn = async () => {
+      const urlParams = new URLSearchParams(window.location.search)
+      const cb = urlParams.get('callback') || sessionStorage.getItem('partner_callback')
+      if (!cb || !isSafeCallback(cb)) return
+      const partnerName = detectPartnerSource(cb)
+      if (!partnerName) return
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      sessionStorage.removeItem('partner_callback')
+      const tokenData = await issuePartnerToken(partnerName, session)
+      const redirectUrl = new URL(cb)
+      if (tokenData?.token) {
+        redirectUrl.searchParams.set('qrtim_token', tokenData.token)
+        redirectUrl.searchParams.set('qrtim_email', tokenData.email ?? '')
+        redirectUrl.searchParams.set('qrtim_name', tokenData.name ?? '')
+        redirectUrl.searchParams.set('qrtim_username', tokenData.username ?? '')
+      }
+      window.location.href = redirectUrl.toString()
+    }
+    autoLinkIfLoggedIn()
   }, [])
 
   useEffect(() => {
@@ -74,12 +160,32 @@ export default function Auth({ initialMode = 'signup' }) {
           return
         }
 
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data: signInData, error } = await supabase.auth.signInWithPassword({
           email,
           password
         })
 
         if (error) throw error
+
+        const cb = sessionStorage.getItem('partner_callback')
+        if (cb && isSafeCallback(cb)) {
+          sessionStorage.removeItem('partner_callback')
+          const partnerName = detectPartnerSource(cb)
+          if (partnerName && signInData?.session) {
+            const tokenData = await issuePartnerToken(partnerName, signInData.session)
+            if (tokenData?.token) {
+              const redirectUrl = new URL(cb)
+              redirectUrl.searchParams.set('qrtim_token', tokenData.token)
+              redirectUrl.searchParams.set('qrtim_email', tokenData.email)
+              redirectUrl.searchParams.set('qrtim_name', tokenData.name)
+              redirectUrl.searchParams.set('qrtim_username', tokenData.username ?? '')
+              window.location.href = redirectUrl.toString()
+              return
+            }
+          }
+          window.location.href = cb
+          return
+        }
       }
     } catch (error) {
       console.error('Auth error:', error)
@@ -111,6 +217,14 @@ export default function Auth({ initialMode = 'signup' }) {
             {mode === 'login' ? 'Hesabınıza giriş yapın' : 'Yeni hesap oluşturun'}
           </p>
         </div>
+
+        {arkuCallback && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
+            <p className="text-sm text-blue-800 font-medium">
+              Giriş yaptıktan sonra uygulamaya yönlendirileceksiniz.
+            </p>
+          </div>
+        )}
 
         {referralCode && mode === 'signup' && (
           <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-center">
