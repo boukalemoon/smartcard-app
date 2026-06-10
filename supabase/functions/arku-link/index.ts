@@ -64,7 +64,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: prof } = await admin
       .from("profiles")
-      .select("user_id, email, name, username, photo_url, title, company, subscription_plan")
+      .select("user_id, email, name, phone, username, photo_url, title, company, subscription_plan")
       .eq("user_id", tok.user_id)
       .maybeSingle();
 
@@ -84,6 +84,7 @@ Deno.serve(async (req: Request) => {
         qrtim_id: tok.user_id,
         email: email ?? "",
         name: name ?? "",
+        phone: prof?.phone ?? null,
         username: prof?.username ?? "",
         photo_url: prof?.photo_url ?? null,
         title: prof?.title ?? null,
