@@ -77,7 +77,15 @@ export default function Dashboard({ session }) {
       const { data, error } = await supabase.from('profiles').select('*').eq('user_id', session.user.id).single()
       if (error && error.code !== 'PGRST116') throw error
       if (data) {
-        setProfile(data)
+        // Ödeme/fatura ayrı owner-only tablodan gelir (profiles'ta tutulmaz).
+        const { data: pay } = await supabase.from('profile_payment').select('*').eq('profile_id', data.id).maybeSingle()
+        setProfile({
+          ...data,
+          bank_accounts: pay?.bank_accounts || [],
+          billing_info: pay?.billing_info || null,
+          show_bank_accounts: pay?.show_bank_accounts ?? false,
+          show_billing_info: pay?.show_billing_info ?? false,
+        })
         setThemeColor(data.theme_color || '#3B82F6')
         setName(data.name || '')
         setTitle(data.title || '')
@@ -107,25 +115,44 @@ export default function Dashboard({ session }) {
   const saveProfile = async () => {
     try {
       setLoading(true)
-      const rateCheck = checkProfileUpdateRateLimit(session.user.id)
+
+      // Session geçerliliğini doğrula — email onayı sonrası race condition'ı önler
+      const { data: sessionData } = await supabase.auth.getSession()
+      const currentSession = sessionData?.session
+      if (!currentSession?.user) {
+        showToast('Oturum süresi dolmuş, sayfayı yenileyin', 'error')
+        return
+      }
+      const userId = currentSession.user.id
+
+      const rateCheck = checkProfileUpdateRateLimit(userId)
       if (!rateCheck.allowed) {
         showToast(rateCheck.message, 'warning')
-        setLoading(false)
         return
       }
       const validation = validateProfile({ name, title, company, phone, bio })
       if (!validation.valid) {
         showToast('Hata: ' + Object.values(validation.errors).join(', '), 'error')
-        setLoading(false)
         return
       }
+
       if (profile) {
-        const { error } = await supabase.from('profiles').update({ ...validation.sanitized, updated_at: new Date().toISOString() }).eq('user_id', session.user.id)
+        const { error } = await supabase
+          .from('profiles')
+          .update({ ...validation.sanitized, updated_at: new Date().toISOString() })
+          .eq('user_id', userId)
         if (error) throw error
       } else {
-        const { error } = await supabase.from('profiles').insert({ user_id: session.user.id, email: session.user.email, ...validation.sanitized })
+        // Trigger'ın oluşturmadığı durum — id'yi açıkça set et (RLS uyumluluğu)
+        const { error } = await supabase.from('profiles').insert({
+          id: userId,
+          user_id: userId,
+          email: currentSession.user.email,
+          ...validation.sanitized
+        })
         if (error) throw error
       }
+
       showToast('Profil kaydedildi', 'success')
       setEditing(false)
       loadProfile()
@@ -497,7 +524,16 @@ export default function Dashboard({ session }) {
 
                     {/* Banka Hesapları */}
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">🏦 Banka Hesapları</h3>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">🏦 Banka Hesapları</h3>
+                      <label className="flex items-center gap-2 mb-4 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+                        <input type="checkbox" checked={profile.show_bank_accounts ?? false} onChange={async (e) => {
+                          const v = e.target.checked
+                          const { error } = await supabase.from('profile_payment').upsert({ profile_id: profile.id, show_bank_accounts: v, updated_at: new Date().toISOString() }, { onConflict: 'profile_id' })
+                          if (error) { showToast('Hata: ' + error.message, 'error'); return }
+                          setProfile(prev => ({ ...prev, show_bank_accounts: v }))
+                        }} className="w-4 h-4 rounded" />
+                        Kartvizitimde herkese göster
+                      </label>
                       <div className="space-y-3 mb-4">
                         {(profile.bank_accounts || []).map((account, index) => (
                           <div key={index} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -524,9 +560,8 @@ export default function Dashboard({ session }) {
                                     onConfirm: async () => {
                                       const newAccounts = profile.bank_accounts.filter((_, i) => i !== index)
                                       const { error } = await supabase
-                                        .from('profiles')
-                                        .update({ bank_accounts: newAccounts })
-                                        .eq('user_id', session.user.id)
+                                        .from('profile_payment')
+                                        .upsert({ profile_id: profile.id, bank_accounts: newAccounts, updated_at: new Date().toISOString() }, { onConflict: 'profile_id' })
                                       if (error) {
                                         showToast('Hata: ' + error.message, 'error')
                                         return
@@ -556,7 +591,16 @@ export default function Dashboard({ session }) {
 
                     {/* Fatura Bilgileri */}
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">📋 Fatura Bilgileri</h3>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">📋 Fatura Bilgileri</h3>
+                      <label className="flex items-center gap-2 mb-4 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+                        <input type="checkbox" checked={profile.show_billing_info ?? false} onChange={async (e) => {
+                          const v = e.target.checked
+                          const { error } = await supabase.from('profile_payment').upsert({ profile_id: profile.id, show_billing_info: v, updated_at: new Date().toISOString() }, { onConflict: 'profile_id' })
+                          if (error) { showToast('Hata: ' + error.message, 'error'); return }
+                          setProfile(prev => ({ ...prev, show_billing_info: v }))
+                        }} className="w-4 h-4 rounded" />
+                        Kartvizitimde herkese göster
+                      </label>
 
                       {profile.billing_info ? (
                         <div className="space-y-3">
@@ -608,9 +652,8 @@ export default function Dashboard({ session }) {
                                 variant: 'danger',
                                 onConfirm: async () => {
                                   const { error } = await supabase
-                                    .from('profiles')
-                                    .update({ billing_info: null })
-                                    .eq('user_id', session.user.id)
+                                    .from('profile_payment')
+                                    .upsert({ profile_id: profile.id, billing_info: null, updated_at: new Date().toISOString() }, { onConflict: 'profile_id' })
                                   if (error) {
                                     showToast('Hata: ' + error.message, 'error')
                                     return
@@ -824,11 +867,10 @@ export default function Dashboard({ session }) {
             newAccounts = [...(profile.bank_accounts || []), data]
           }
           const { error } = await supabase
-            .from('profiles')
-            .update({ bank_accounts: newAccounts })
-            .eq('user_id', session.user.id)
+            .from('profile_payment')
+            .upsert({ profile_id: profile.id, bank_accounts: newAccounts, show_bank_accounts: true, updated_at: new Date().toISOString() }, { onConflict: 'profile_id' })
           if (error) throw error
-          setProfile(prev => ({ ...prev, bank_accounts: newAccounts }))
+          setProfile(prev => ({ ...prev, bank_accounts: newAccounts, show_bank_accounts: true }))
         }}
       />
 
@@ -839,11 +881,10 @@ export default function Dashboard({ session }) {
         billingInfo={profile?.billing_info}
         onSave={async (data) => {
           const { error } = await supabase
-            .from('profiles')
-            .update({ billing_info: data })
-            .eq('user_id', session.user.id)
+            .from('profile_payment')
+            .upsert({ profile_id: profile.id, billing_info: data, show_billing_info: true, updated_at: new Date().toISOString() }, { onConflict: 'profile_id' })
           if (error) throw error
-          setProfile(prev => ({ ...prev, billing_info: data }))
+          setProfile(prev => ({ ...prev, billing_info: data, show_billing_info: true }))
         }}
       />
 

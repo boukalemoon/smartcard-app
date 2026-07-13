@@ -37,6 +37,8 @@ export default function PublicCard() {
   const [expandedOrg, setExpandedOrg] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  // Ödeme/fatura bilgisi profiles'ta değil; onaya bağlı güvenli RPC ile alınır.
+  const [paymentInfo, setPaymentInfo] = useState(null)
 
   const adjustColor = (color, percent) => {
     if (!color) return '#1e40af'
@@ -59,6 +61,10 @@ export default function PublicCard() {
       if (profileError) throw profileError
       if (!profileData) { setError('Profil bulunamadı'); return }
       setProfile(profileData)
+
+      // IBAN/fatura yalnızca kullanıcı onayı varsa döner (bulk döküm engellenir).
+      const { data: payData } = await supabase.rpc('get_card_payment_info', { p_username: username })
+      setPaymentInfo(payData || null)
 
       const { data: subData } = await supabase
         .from('subscriptions').select('plan').eq('profile_id', profileData.id).eq('status', 'active').maybeSingle()
@@ -264,11 +270,11 @@ export default function PublicCard() {
             )}
 
             {/* Banka Hesapları */}
-            {profile.bank_accounts && profile.bank_accounts.length > 0 && (
+            {paymentInfo?.bank_accounts && paymentInfo.bank_accounts.length > 0 && (
               <div className="pt-4 border-t border-gray-200">
                 <h3 className="font-semibold text-gray-800 mb-3">🏦 Banka Hesapları</h3>
                 <div className="grid gap-3">
-                  {profile.bank_accounts.map((account, index) => (
+                  {paymentInfo.bank_accounts.map((account, index) => (
                     <div key={index} className="p-3 rounded-lg" style={{ backgroundColor: `${themeColor}10` }}>
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <div>
@@ -294,17 +300,17 @@ export default function PublicCard() {
             )}
 
             {/* Fatura Bilgileri */}
-            {profile.billing_info && (
+            {paymentInfo?.billing_info && (
               <div className="pt-4 border-t border-gray-200">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-semibold text-gray-800">📋 Fatura Bilgileri</h3>
                   <button
                     onClick={() => {
                       const text = [
-                        profile.billing_info.company_title,
-                        profile.billing_info.tax_office && `Vergi Dairesi: ${profile.billing_info.tax_office}`,
-                        profile.billing_info.tax_number && `${profile.billing_info.is_individual ? 'TC' : 'Vergi No'}: ${profile.billing_info.tax_number}`,
-                        profile.billing_info.address
+                        paymentInfo.billing_info.company_title,
+                        paymentInfo.billing_info.tax_office && `Vergi Dairesi: ${paymentInfo.billing_info.tax_office}`,
+                        paymentInfo.billing_info.tax_number && `${paymentInfo.billing_info.is_individual ? 'TC' : 'Vergi No'}: ${paymentInfo.billing_info.tax_number}`,
+                        paymentInfo.billing_info.address
                       ].filter(Boolean).join('\n')
                       navigator.clipboard.writeText(text)
                       alert('✅ Fatura bilgileri kopyalandı!')
@@ -318,24 +324,24 @@ export default function PublicCard() {
                 <div className="p-3 rounded-lg space-y-2" style={{ backgroundColor: `${themeColor}10` }}>
                   <div>
                     <p className="text-xs text-gray-500">Ünvan:</p>
-                    <p className="text-sm font-semibold text-gray-900">{profile.billing_info.company_title}</p>
+                    <p className="text-sm font-semibold text-gray-900">{paymentInfo.billing_info.company_title}</p>
                   </div>
-                  {profile.billing_info.tax_office && (
+                  {paymentInfo.billing_info.tax_office && (
                     <div>
                       <p className="text-xs text-gray-500">Vergi Dairesi:</p>
-                      <p className="text-sm text-gray-900">{profile.billing_info.tax_office}</p>
+                      <p className="text-sm text-gray-900">{paymentInfo.billing_info.tax_office}</p>
                     </div>
                   )}
-                  {profile.billing_info.tax_number && (
+                  {paymentInfo.billing_info.tax_number && (
                     <div>
-                      <p className="text-xs text-gray-500">{profile.billing_info.is_individual ? 'TC Kimlik:' : 'Vergi No:'}</p>
-                      <p className="text-sm font-mono text-gray-900">{profile.billing_info.tax_number}</p>
+                      <p className="text-xs text-gray-500">{paymentInfo.billing_info.is_individual ? 'TC Kimlik:' : 'Vergi No:'}</p>
+                      <p className="text-sm font-mono text-gray-900">{paymentInfo.billing_info.tax_number}</p>
                     </div>
                   )}
-                  {profile.billing_info.address && (
+                  {paymentInfo.billing_info.address && (
                     <div>
                       <p className="text-xs text-gray-500">Adres:</p>
-                      <p className="text-sm text-gray-900">{profile.billing_info.address}</p>
+                      <p className="text-sm text-gray-900">{paymentInfo.billing_info.address}</p>
                     </div>
                   )}
                 </div>

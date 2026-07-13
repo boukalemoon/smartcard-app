@@ -13,6 +13,11 @@ const TRUSTED_PARTNERS = {
     'https://ilgezdi.vercel.app',
     'http://localhost:4000',
   ],
+  // Tınga masaüstü uygulaması: OAuth loopback (RFC 8252) — sabit yerel port
+  tinga: [
+    'http://127.0.0.1:17605',
+    'http://localhost:17605',
+  ],
 }
 
 const ALL_TRUSTED_ORIGINS = Object.values(TRUSTED_PARTNERS).flat()

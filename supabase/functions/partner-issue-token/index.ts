@@ -9,7 +9,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const KNOWN_PARTNERS = ["arku", "ilgezdi"];
+const KNOWN_PARTNERS = ["arku", "ilgezdi", "tinga"];
 const TOKEN_TTL_MS = 5 * 60 * 1000; // 5 dakika
 
 const cors = {

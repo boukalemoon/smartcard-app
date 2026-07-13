@@ -40,9 +40,6 @@ export default function AuthConfirm() {
           type: type || 'signup'
         })
 
-        // DEBUG — geçici, sonra sileceğiz
-alert('verifyOtp sonucu: ' + (error ? error.message : 'BAŞARILI'))
-
         if (error) {
           console.error('Verify error:', error)
           setStatus('error')
@@ -51,8 +48,23 @@ alert('verifyOtp sonucu: ' + (error ? error.message : 'BAŞARILI'))
           return
         }
 
+        // Session'ın client'a tam yerleşmesini bekle
+        let session = null
+        for (let i = 0; i < 10; i++) {
+          const { data } = await supabase.auth.getSession()
+          if (data?.session?.user) { session = data.session; break }
+          await new Promise(r => setTimeout(r, 300))
+        }
+
+        if (!session) {
+          // Session kurulamadı — kullanıcı giriş yaparak devam edebilir
+          setStatus('success')
+          setTimeout(() => navigate('/login'), 1500)
+          return
+        }
+
         setStatus('success')
-        setTimeout(() => navigate('/dashboard'), 1500)
+        setTimeout(() => navigate('/dashboard'), 800)
 
       } catch (err) {
         console.error('Confirm error:', err)
