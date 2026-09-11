@@ -19,17 +19,13 @@ export default function PublicApplicationPage() {
     try {
       setLoading(true)
       
-      // Organizasyonu slug veya ID ile bul
+      // Kurum künyesi ve başvuruya açıklık kararı SUNUCUDA veriliyor (bulgu Y-2).
       const { data, error } = await supabase
-        .from('organizations')
-        .select('*')
-        .eq('id', orgSlug)
-        .single()
+        .rpc('get_public_organization', { p_org_id: orgSlug })
 
       if (error) throw error
 
-      // Sadece STK'lar için başvuru formu
-      if (!['association', 'foundation', 'community', 'union'].includes(data.type)) {
+      if (!data) {
         setError('Bu organizasyon başvuru kabul etmiyor.')
         return
       }

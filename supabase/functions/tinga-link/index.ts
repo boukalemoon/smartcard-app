@@ -56,6 +56,22 @@ Deno.serve(async (req: Request) => {
       return json({ valid: false, error: "Token süresi doldu" }, 401);
     }
 
+    // E-posta doğrulaması — jetonu YAKMADAN ÖNCE denetlenir, aksi halde
+    // reddedilen kullanıcı jetonunu da kaybederdi.
+    //
+    // Tınga, dönen e-postayı doğrulanmış kabul edip hesabı ona bağlıyor.
+    // QRtım doğrulamayı dayatmazsa saldırgan `kurban@firma.com` ile QRtım
+    // hesabı açıp Tınga'daki hesabı devralabilir (Arku'da S1 olarak tespit
+    // edildi). Kimlik sağlayıcı bunu kaynakta engellemek zorunda.
+    const { data: authUser } = await admin.auth.admin.getUserById(tok.user_id);
+    if (!authUser?.user?.email_confirmed_at) {
+      return json({
+        valid: false,
+        error: "E-posta doğrulanmamış",
+        code: "email_not_verified",
+      }, 403);
+    }
+
     // Tek kullanımlık: hemen kullanıldı olarak işaretle
     await admin
       .from("partner_link_tokens")
@@ -68,22 +84,42 @@ Deno.serve(async (req: Request) => {
       .eq("user_id", tok.user_id)
       .maybeSingle();
 
-    // Profil henüz oluşmadıysa auth kaydından temel bilgiyi kullan
-    let email = prof?.email ?? null;
-    let name = prof?.name ?? null;
-    if (!email || !name) {
-      const { data: authUser } = await admin.auth.admin.getUserById(tok.user_id);
-      email = email ?? authUser?.user?.email ?? "";
-      name = name ?? (authUser?.user?.user_metadata?.name as string | undefined) ??
-        (email ? email.split("@")[0] : "");
-    }
+    // QRtım kimliği (kullanıcıyı ekosistem genelinde tanıyan dahili ID)
+    const { data: qid } = await admin
+      .from("qrtim_user_ids")
+      .select("qrtim_uid")
+      .eq("user_id", tok.user_id)
+      .maybeSingle();
+
+    // Kalıcı yazma kimliği (link_secret) — sinyal ingest için. Yoksa üretilir
+    // (partner_user_links default'u üretir), varsa yeniden kullanılır.
+    await admin
+      .from("partner_user_links")
+      .upsert({ user_id: tok.user_id, partner: "tinga" },
+              { onConflict: "user_id,partner", ignoreDuplicates: true });
+    const { data: link } = await admin
+      .from("partner_user_links")
+      .select("link_secret")
+      .eq("user_id", tok.user_id)
+      .eq("partner", "tinga")
+      .maybeSingle();
+
+    // Döndürülen e-posta, DOĞRULANMIŞ OLANIN AYNISI olmalı. profiles.email
+    // kullanıcı tarafından değiştirilebildiği için ondan okunursa "şunu
+    // doğruladım, bunu gönderdim" durumu oluşur ve denetim anlamsızlaşır.
+    const email = authUser.user.email ?? "";
+    const name = prof?.name ??
+      (authUser.user.user_metadata?.name as string | undefined) ??
+      (email ? email.split("@")[0] : "");
 
     return json({
       valid: true,
       user: {
         qrtim_id: tok.user_id,
-        email: email ?? "",
-        name: name ?? "",
+        qrtim_uid: qid?.qrtim_uid ?? null,   // ekosistem geneli dahili kimlik
+        email,
+        email_verified: true,                // yukarıda denetlendi; aksi halde 403
+        name,
         phone: prof?.phone ?? null,
         username: prof?.username ?? "",
         photo_url: prof?.photo_url ?? null,
@@ -91,6 +127,8 @@ Deno.serve(async (req: Request) => {
         company: prof?.company ?? null,
         plan: prof?.subscription_plan ?? "free",
       },
+      // Mini Ülgen bunu saklar; signal-ingest'e sinyal yazarken gönderir.
+      link_secret: link?.link_secret ?? null,
     });
   } catch (e) {
     return json({ valid: false, error: String(e) }, 500);

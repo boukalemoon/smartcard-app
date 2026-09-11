@@ -19,6 +19,7 @@ import KullanimSartlari from './pages/KullanimSartlari'
 import KVKKAydinlatma from './pages/KVKKAydinlatma'
 import CerezPolitikasi from './pages/CerezPolitikasi'
 import Iletisim from './pages/Iletisim'
+import BrowserLogin from './pages/BrowserLogin'
 
 function App() {
   const [session, setSession] = useState(null)
@@ -79,6 +80,9 @@ function App() {
             <Route path="/login" element={!session || hasPartnerCallback ? <Auth initialMode="login" /> : <Navigate to="/dashboard" />} />
             <Route path="/signup" element={!session || hasPartnerCallback ? <Auth initialMode="signup" /> : <Navigate to="/dashboard" />} />
             <Route path="/auth/confirm" element={<AuthConfirm />} />
+
+            {/* İlgezdi tarayıcısı QR giriş onayı (girişli/girişsiz her durumda render edilir) */}
+            <Route path="/browser-login" element={<BrowserLogin />} />
 
             {/* Protected routes */}
             <Route 

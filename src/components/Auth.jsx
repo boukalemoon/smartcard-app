@@ -1,42 +1,70 @@
 ﻿import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
+import { useToast } from './Toast'
 import { checkLoginRateLimit, checkSignupRateLimit } from '../utils/rateLimiting'
 
-const TRUSTED_PARTNERS = {
-  arku: [
-    'https://arku-remote.vercel.app',
-    'http://localhost:3000',
-    'http://localhost:5173',
-  ],
-  ilgezdi: [
-    'https://ilgezdi.vercel.app',
-    'http://localhost:4000',
-  ],
-  // Tınga masaüstü uygulaması: OAuth loopback (RFC 8252) — sabit yerel port
-  tinga: [
-    'http://127.0.0.1:17605',
-    'http://localhost:17605',
-  ],
+// Şifre asgari uzunluğu. Supabase panelinden de aynı değere çekilmeli
+// (Authentication → Policies), aksi halde bu yalnızca arayüz kontrolü kalır.
+const MIN_PASSWORD_LENGTH = 8
+
+// Ham `error.message` kullanıcıya gösterilmez: teknik ayrıntı sızdırır ve
+// saldırgana sistemin iç durumunu anlatır (bulgu O-8). Bilinen durumlar
+// anlaşılır Türkçeye çevrilir, gerisi genel bir mesaja düşer.
+const AUTH_ERROR_MESSAGES = [
+  ['Invalid login credentials', 'E-posta veya şifre hatalı.'],
+  ['Email not confirmed', 'Hesabınız henüz etkinleştirilmemiş. E-postanıza gönderdiğimiz doğrulama bağlantısına tıklayın.'],
+  ['User already registered', 'Bu e-posta ile daha önce kayıt olunmuş. Giriş yapmayı deneyin.'],
+  ['Password should be at least', `Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalı.`],
+  ['rate limit', 'Çok fazla deneme yapıldı. Lütfen birkaç dakika bekleyip tekrar deneyin.'],
+  ['over_email_send_rate_limit', 'Çok fazla e-posta gönderildi. Lütfen birkaç dakika bekleyin.'],
+]
+
+function friendlyAuthError(error) {
+  const raw = (error?.message ?? '').toLowerCase()
+  for (const [needle, message] of AUTH_ERROR_MESSAGES) {
+    if (raw.includes(needle.toLowerCase())) return message
+  }
+  return 'İşlem tamamlanamadı. Lütfen tekrar deneyin.'
 }
 
-const ALL_TRUSTED_ORIGINS = Object.values(TRUSTED_PARTNERS).flat()
+// Partner geri dönüş adresleri ORIGIN olarak tutulur ve tam eşitlikle
+// karşılaştırılır. Ön ek (startsWith) karşılaştırması güvenli DEĞİLDİR:
+// 'https://arku-remote.vercel.app@saldirgan.com' ve
+// 'https://arku-remote.vercel.app.saldirgan.com' gibi adresler ön ek testini
+// geçer ama gerçekte saldırganın alan adına gider — SSO jetonu sızardı.
+const TRUSTED_PARTNERS = {
+  arku: ['https://arku-remote.vercel.app'],
+  ilgezdi: ['https://ilgezdi.vercel.app'],
+  // Tınga masaüstü uygulaması: OAuth loopback (RFC 8252) — sabit yerel port.
+  // Loopback adresleri masaüstü akışının parçasıdır, üretimde de geçerlidir.
+  tinga: ['http://127.0.0.1:17605', 'http://localhost:17605'],
+}
+
+// Yerel geliştirme sunucuları yalnızca dev derlemesinde güvenilir sayılır;
+// üretim paketine hiç girmez.
+if (import.meta.env.DEV) {
+  TRUSTED_PARTNERS.arku.push('http://localhost:3000', 'http://localhost:5173')
+  TRUSTED_PARTNERS.ilgezdi.push('http://localhost:4000')
+}
+
+// Callback URL'in origin'i hangi partner'a ait? Değilse null.
+// new URL(...).origin, kullanıcı-bilgisi (@) ve alt alan adı hilelerini eler.
+function detectPartnerSource(url) {
+  let origin
+  try {
+    origin = new URL(url).origin
+  } catch {
+    return null
+  }
+  for (const [name, origins] of Object.entries(TRUSTED_PARTNERS)) {
+    if (origins.includes(origin)) return name
+  }
+  return null
+}
 
 function isSafeCallback(url) {
-  try {
-    return ALL_TRUSTED_ORIGINS.some((o) => url.startsWith(o))
-  } catch {
-    return false
-  }
-}
-
-function detectPartnerSource(url) {
-  try {
-    for (const [name, origins] of Object.entries(TRUSTED_PARTNERS)) {
-      if (origins.some((o) => url.startsWith(o))) return name
-    }
-  } catch {}
-  return null
+  return detectPartnerSource(url) !== null
 }
 
 async function issuePartnerToken(partnerName, session) {
@@ -61,6 +89,7 @@ async function issuePartnerToken(partnerName, session) {
 
 export default function Auth({ initialMode = 'signup' }) {
   const navigate = useNavigate()
+  const { showToast } = useToast()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -134,9 +163,15 @@ export default function Auth({ initialMode = 'signup' }) {
 
     try {
       if (mode === 'signup') {
+        if (password.length < MIN_PASSWORD_LENGTH) {
+          showToast(`Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalı.`, 'warning')
+          setLoading(false)
+          return
+        }
+
         const signupCheck = checkSignupRateLimit('client')
         if (!signupCheck.allowed) {
-          alert(`⏳ ${signupCheck.message}`)
+          showToast(signupCheck.message, 'warning')
           setLoading(false)
           return
         }
@@ -153,14 +188,17 @@ export default function Auth({ initialMode = 'signup' }) {
 
         if (authError) throw authError
 
-        alert('🎉 Kayıt başarılı!\n\n📧 Email adresinize doğrulama linki gönderdik.\n\nLütfen email kutunuzu kontrol edin ve linke tıklayarak hesabınızı aktif edin.\n\n💡 Email gelmedi mi? Spam klasörünü kontrol edin.')
+        showToast(
+          'Kayıt alındı. E-posta adresinize gönderdiğimiz doğrulama bağlantısına tıklayın (gelmediyse spam klasörünü kontrol edin).',
+          'success'
+        )
         localStorage.removeItem('qartim_referral_code')
         navigate('/login')
 
       } else {
         const loginCheck = checkLoginRateLimit(email)
         if (!loginCheck.allowed) {
-          alert(`⏳ ${loginCheck.message}`)
+          showToast(loginCheck.message, 'warning')
           setLoading(false)
           return
         }
@@ -194,7 +232,7 @@ export default function Auth({ initialMode = 'signup' }) {
       }
     } catch (error) {
       console.error('Auth error:', error)
-      alert('Hata: ' + (error.message || 'Bilinmeyen hata oluştu'))
+      showToast(friendlyAuthError(error), 'error')
     } finally {
       setLoading(false)
     }
@@ -279,9 +317,10 @@ export default function Auth({ initialMode = 'signup' }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
-              placeholder="En az 6 karakter"
+              placeholder={`En az ${MIN_PASSWORD_LENGTH} karakter`}
               required
-              minLength={6}
+              minLength={mode === 'signup' ? MIN_PASSWORD_LENGTH : undefined}
+              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
             />
           </div>
 

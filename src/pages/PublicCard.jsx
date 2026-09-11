@@ -3,6 +3,7 @@ import { trackEvent } from '../utils/analyticsHelpers'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
+import { useToast } from '../components/Toast'
 import { Linkedin, Facebook, Twitter, Instagram, Play, Github, Globe, Music, Twitch, ExternalLink, ArrowLeft, Download, Mail, Phone, MapPin, ChevronDown, ChevronUp } from 'lucide-react'
 
 const PLATFORM_CONFIG = {
@@ -28,10 +29,28 @@ const PLATFORM_CONFIG = {
   katalog_link: { icon: Globe, color: '#6B7280', label: 'Katalog' },
 }
 
+// Kullanıcı tarafından girilen adresler doğrudan href'e yazılmamalı:
+// 'javascript:' ve 'data:' şemaları kartı açan ziyaretçide kod çalıştırabilir
+// (bulgu Y-5). Yalnızca http/https geçer; diğerleri bağlantı olarak render
+// edilmez. Sunucu tarafında da süzülür, bu ikinci savunma katmanıdır.
+function safeUrl(url) {
+  if (typeof url !== 'string') return null
+  try {
+    const u = new URL(url.trim())
+    return ['http:', 'https:'].includes(u.protocol) ? u.href : null
+  } catch {
+    return null
+  }
+}
+
 export default function PublicCard() {
   const { username } = useParams()
   const navigate = useNavigate()
+  const { showToast } = useToast()
   const [profile, setProfile] = useState(null)
+  // Alan bazlı gizlilik: yalnızca görünürlüğü 'public' olan alanlar sunucudan
+  // gelir. Gizli alanlar istemciye HİÇ ulaşmaz (bkz. bulgu K-1 / K-2).
+  const [fields, setFields] = useState({})
   const [socialLinks, setSocialLinks] = useState([])
   const [organizations, setOrganizations] = useState([])
   const [expandedOrg, setExpandedOrg] = useState(null)
@@ -56,40 +75,28 @@ export default function PublicCard() {
   const loadProfile = async () => {
     try {
       setLoading(true)
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles').select('*').eq('username', username).maybeSingle()
-      if (profileError) throw profileError
-      if (!profileData) { setError('Profil bulunamadı'); return }
-      setProfile(profileData)
 
-      // IBAN/fatura yalnızca kullanıcı onayı varsa döner (bulk döküm engellenir).
-      const { data: payData } = await supabase.rpc('get_card_payment_info', { p_username: username })
-      setPaymentInfo(payData || null)
+      // Kartın TEK veri kaynağı. Görünürlük filtresi, plan bazlı organizasyon
+      // sınırı ve ödeme onayı kontrolü sunucuda uygulanır; istemci artık
+      // profiles/social_links/members/organizations tablolarına dokunmuyor.
+      const { data, error: rpcError } = await supabase
+        .rpc('get_public_card', { p_username: username })
+      if (rpcError) throw rpcError
+      if (!data) { setError('Profil bulunamadı'); return }
 
-      const { data: subData } = await supabase
-        .from('subscriptions').select('plan').eq('profile_id', profileData.id).eq('status', 'active').maybeSingle()
+      setProfile(data)
+      setFields(data.fields || {})
+      setSocialLinks(data.social_links || [])
+      setOrganizations(data.organizations || [])
+      setPaymentInfo(data.payment || null)
 
-      if (profileData?.id) {
-        trackEvent(profileData.id, 'profile_view')
-        await supabase.from('profiles')
-          .update({ card_views: (profileData.card_views || 0) + 1, last_viewed_at: new Date().toISOString() })
-          .eq('id', profileData.id)
+      if (data.id) {
+        trackEvent(data.id, 'profile_view')
+        // Sayaç sunucuda. Eskiden istemciden profiles.update deneniyordu;
+        // anon için RLS bunu engelliyor, 0 satır etkiliyor ve hata da
+        // fırlatmıyordu — yani hiç sayılmıyordu (bulgu O-6).
+        supabase.rpc('increment_card_view', { p_username: username })
       }
-
-      const { data: linksData } = await supabase
-        .from('social_links').select('*').eq('profile_id', profileData.id).order('display_order')
-      setSocialLinks(linksData || [])
-
-      const { data: memberData } = await supabase
-        .from('members')
-        .select('role, organizations(id, name, type, description, logo_url, phone, email, website, address, city)')
-        .eq('profile_id', profileData.id)
-
-      const allOrgs = (memberData || []).map(m => ({ ...m.organizations, role: m.role }))
-      const activePlan = subData?.plan || profileData?.subscription_plan || 'free'
-      const orgLimit = ['professional', 'stk', 'business', 'student'].includes(activePlan) ? 999 : 2
-      setOrganizations(allOrgs.slice(0, orgLimit))
-
     } catch (err) {
       console.error('Profil yükleme hatası:', err)
       setError('Profil bulunamadı')
@@ -98,12 +105,25 @@ export default function PublicCard() {
     }
   }
 
+  // Pano yazma izin verilmediğinde ya da güvenli bağlam dışında sessizce
+  // başarısız olur; kullanıcı ne olduğunu anlayabilsin diye geri bildirim verilir.
+  const copyToClipboard = async (text, basariMesaji) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      showToast(basariMesaji, 'success')
+    } catch {
+      showToast('Kopyalanamadı — metni elle seçip kopyalayabilirsiniz.', 'warning')
+    }
+  }
+
   const downloadVCard = () => {
     if (!profile) return
     const nameParts = (profile.name || 'Unknown').split(' ')
     const lastName = nameParts.length > 1 ? nameParts.pop() : ''
     const firstName = nameParts.join(' ') || 'Unknown'
-    const vCard = ['BEGIN:VCARD','VERSION:3.0',`FN:${profile.name||''}`,`N:${lastName};${firstName};;;`,`TEL:${profile.phone||''}`,`EMAIL:${profile.email||''}`,`TITLE:${profile.title||''}`,`ORG:${profile.company||''}`,`NOTE:${profile.bio||''}`,`URL:${window.location.origin}/card/${profile.username}`,'END:VCARD'].join('\n')
+    // vCard yalnızca herkese açık alanlardan üretilir; gizli tutulan bir alan
+    // zaten istemciye hiç gelmediği için kişi kartına da yazılamaz.
+    const vCard = ['BEGIN:VCARD','VERSION:3.0',`FN:${profile.name||''}`,`N:${lastName};${firstName};;;`,`TEL:${fields.phone||''}`,`EMAIL:${fields.email||''}`,`TITLE:${fields.title||''}`,`ORG:${fields.company||''}`,`NOTE:${fields.bio||''}`,`URL:${window.location.origin}/card/${profile.username}`,'END:VCARD'].join('\n')
     const blob = new Blob([vCard], { type: 'text/vcard;charset=utf-8' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
@@ -157,32 +177,33 @@ export default function PublicCard() {
             <div className="relative z-10">
               <AvatarFlipCard profileImage={profile.avatar_url} avatar3dUrl={profile.avatar_3d_url} name={profile.name || ''} />
               <h1 className="text-3xl font-bold mb-2">{profile.name || ''}</h1>
-              {profile.title && <p className="text-blue-100 text-lg mb-1">{profile.title}</p>}
-              {profile.company && <p className="text-blue-200">{profile.company}</p>}
+              {fields.title && <p className="text-blue-100 text-lg mb-1">{fields.title}</p>}
+              {fields.company && <p className="text-blue-200">{fields.company}</p>}
             </div>
           </div>
 
           <div className="p-6 space-y-4">
 
             {/* Bio */}
-            {profile.bio && (
+            {fields.bio && (
               <div className="pb-4 border-b border-gray-200">
-                <p className="text-gray-700 text-center">{profile.bio}</p>
+                <p className="text-gray-700 text-center">{fields.bio}</p>
               </div>
             )}
 
-            {/* İletişim */}
+            {/* İletişim — bu alanlar yalnızca kullanıcı 'herkese açık'
+                işaretlediyse sunucudan gelir; ayrıca istemci kontrolü yok. */}
             <div className="grid gap-3">
-              {profile.email && profile.show_email !== false && (
-                <a href={`mailto:${profile.email}`} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+              {fields.email && (
+                <a href={`mailto:${fields.email}`} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                   <Mail size={20} style={{ color: themeColor }} />
-                  <span className="text-gray-700">{profile.email}</span>
+                  <span className="text-gray-700">{fields.email}</span>
                 </a>
               )}
-              {profile.phone && (
-                <a href={`tel:${profile.phone}`} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+              {fields.phone && (
+                <a href={`tel:${fields.phone}`} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                   <Phone size={20} style={{ color: themeColor }} />
-                  <span className="text-gray-700">{profile.phone}</span>
+                  <span className="text-gray-700">{fields.phone}</span>
                 </a>
               )}
             </div>
@@ -195,8 +216,10 @@ export default function PublicCard() {
                   {socialLinks.map((link) => {
                     const config = PLATFORM_CONFIG[link.platform] || { icon: Globe, color: '#6B7280', label: link.platform }
                     const Icon = config.icon
+                    const href = safeUrl(link.url)
+                    if (!href) return null
                     return (
-                      <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" title={config.label}
+                      <a key={link.id} href={href} target="_blank" rel="noopener noreferrer" title={config.label}
                         onClick={() => trackEvent(profile.id, 'link_click')}
                         className="w-10 h-10 rounded-lg flex items-center justify-center text-white hover:opacity-80 transition-opacity"
                         style={{ backgroundColor: config.color }}>
@@ -249,8 +272,8 @@ export default function PublicCard() {
                               <span>{org.email}</span>
                             </a>
                           )}
-                          {org.website && (
-                            <a href={org.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-blue-600 hover:underline">
+                          {safeUrl(org.website) && (
+                            <a href={safeUrl(org.website)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-blue-600 hover:underline">
                               <Globe size={16} style={{ color: themeColor }} />
                               <span className="truncate">{org.website.replace('https://', '').replace('http://', '')}</span>
                             </a>
@@ -283,8 +306,7 @@ export default function PublicCard() {
                         </div>
                         <button
                           onClick={() => {
-                            navigator.clipboard.writeText(account.iban)
-                            alert('✅ IBAN kopyalandı!')
+                            copyToClipboard(account.iban, 'IBAN kopyalandı')
                           }}
                           className="px-3 py-1 text-white text-xs font-semibold rounded-lg shrink-0"
                           style={{ backgroundColor: themeColor }}
@@ -312,8 +334,7 @@ export default function PublicCard() {
                         paymentInfo.billing_info.tax_number && `${paymentInfo.billing_info.is_individual ? 'TC' : 'Vergi No'}: ${paymentInfo.billing_info.tax_number}`,
                         paymentInfo.billing_info.address
                       ].filter(Boolean).join('\n')
-                      navigator.clipboard.writeText(text)
-                      alert('✅ Fatura bilgileri kopyalandı!')
+                      copyToClipboard(text, 'Fatura bilgileri kopyalandı')
                     }}
                     className="px-3 py-1 text-white text-xs font-semibold rounded-lg"
                     style={{ backgroundColor: themeColor }}
@@ -349,28 +370,32 @@ export default function PublicCard() {
             )}
 
             {/* Katalog */}
-            {profile.catalog_links && profile.catalog_links.length > 0 && (
+            {Array.isArray(fields.catalog_links) && fields.catalog_links.length > 0 && (
               <div className="pt-4 border-t border-gray-200">
                 <h3 className="font-semibold text-gray-800 mb-3">📁 Katalog & Dökümanlar</h3>
                 <div className="grid gap-2">
-                  {profile.catalog_links.map((link, index) => (
-                    <a key={index} href={link.url} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                      <span style={{ color: themeColor }}>📄</span>
-                      <span className="text-gray-700 font-medium">{link.title}</span>
-                      <ExternalLink className="ml-auto text-gray-400" size={16} />
-                    </a>
-                  ))}
+                  {fields.catalog_links.map((link, index) => {
+                    const href = safeUrl(link.url)
+                    if (!href) return null
+                    return (
+                      <a key={index} href={href} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                        <span style={{ color: themeColor }}>📄</span>
+                        <span className="text-gray-700 font-medium">{link.title}</span>
+                        <ExternalLink className="ml-auto text-gray-400" size={16} />
+                      </a>
+                    )
+                  })}
                 </div>
               </div>
             )}
 
             {/* Hizmetler */}
-            {profile.services && profile.services.length > 0 && (
+            {Array.isArray(fields.services) && fields.services.length > 0 && (
               <div className="pt-4 border-t border-gray-200">
                 <h3 className="font-semibold text-gray-800 mb-3">🛍️ Hizmetlerim</h3>
                 <div className="grid gap-3">
-                  {profile.services.map((service, index) => (
+                  {fields.services.map((service, index) => (
                     <div key={index} className="p-4 rounded-lg" style={{ backgroundColor: `${themeColor}10` }}>
                       <h4 className="font-semibold text-gray-900 mb-1">{service.title}</h4>
                       <p className="text-sm text-gray-600 mb-2">{service.description}</p>
@@ -385,9 +410,9 @@ export default function PublicCard() {
             )}
 
             {/* Google Yorum */}
-            {profile.google_review_link && (
+            {safeUrl(fields.google_review_link) && (
               <div className="pt-4 border-t border-gray-200">
-                <a href={profile.google_review_link} target="_blank" rel="noopener noreferrer"
+                <a href={safeUrl(fields.google_review_link)} target="_blank" rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 p-4 rounded-lg"
                   style={{ background: `linear-gradient(to right, ${themeColor}, ${adjustColor(themeColor, -30)})` }}>
                   <span className="text-white text-2xl">⭐</span>
@@ -433,8 +458,7 @@ export default function PublicCard() {
 
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(window.location.href)
-                  alert('✅ Link kopyalandı!')
+                  copyToClipboard(window.location.href, 'Bağlantı kopyalandı')
                   trackEvent(profile.id, 'share_copy_link')
                 }}
                 className="w-full flex items-center justify-center gap-2 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold text-sm transition-colors"

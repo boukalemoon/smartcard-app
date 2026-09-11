@@ -15,12 +15,13 @@ export default function PublicMemberDirectory({ organizationId, organizationName
     try {
       setLoading(true)
       
+      // Eskiden members.select('*') her üyenin AD, E-POSTA ve TELEFONUNU
+      // yayımlıyordu; kurumun memberVisibility/allowPublicDirectory tercihleri
+      // hiç uygulanmıyordu (bulgu Y-2). Artık kurum tercihleri sunucuda
+      // uygulanıyor ve iletişim bilgisi yalnızca kurum açıkça izin verirse
+      // (settings.showMemberContact) dönüyor.
       const { data, error } = await supabase
-        .from('members')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
+        .rpc('get_public_org_members', { p_org_id: organizationId })
 
       if (error) throw error
       setMembers(data || [])

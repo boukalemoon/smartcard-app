@@ -21,6 +21,8 @@ import QRCodeDisplay from './QRCodeDisplay'
 import NFCWriter from './NFCWriter'
 import SocialLinksManager from './SocialLinksManager'
 import UsernameEditor from './UsernameEditor'
+import QrtimIdCard from './QrtimIdCard'
+import FieldVisibilityManager from './FieldVisibilityManager'
 import { validateCatalogLink, validateService, validateProfile } from '../utils/inputValidation'
 import { checkProfileUpdateRateLimit } from '../utils/rateLimiting'
 import { useNavigate } from 'react-router-dom'
@@ -359,28 +361,15 @@ export default function Dashboard({ session }) {
                         : <p className="text-gray-900 dark:text-gray-100 font-medium">{phone || '-'}</p>}
                     </div>
 
-                    {/* Email */}
+                    {/* Email — görünürlük artık "Paylaşım Ayarları" bölümünden
+                        yönetiliyor. Eski buradaki anahtar yalnızca React
+                        render'ında çalışıyordu; veri yine de gönderiliyordu. */}
                     <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Email</label>
-                        <button
-                          onClick={async () => {
-                            const newVal = profile?.show_email === false ? true : false
-                            const { error } = await supabase.from('profiles').update({ show_email: newVal }).eq('user_id', session.user.id)
-                            if (error) {
-                              showToast('Hata: ' + error.message, 'error')
-                              return
-                            }
-                            setProfile(prev => ({ ...prev, show_email: newVal }))
-                            showToast(newVal ? 'Email görünür yapıldı' : 'Email gizlendi', 'success')
-                          }}
-                          className={`text-xs px-3 py-1 rounded-full font-semibold transition-colors ${profile?.show_email !== false ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                        >
-                          {profile?.show_email !== false ? '👁 Görünür' : '🙈 Gizli'}
-                        </button>
-                      </div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Email</label>
                       <p className="text-gray-900 dark:text-gray-100 font-medium">{session.user.email}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Bu ayar kartvizit sayfanızda email adresinizin görünüp görünmeyeceğini belirler.</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Kartınızda görünüp görünmeyeceğini aşağıdaki <strong>Paylaşım Ayarları</strong> bölümünden belirleyebilirsiniz.
+                      </p>
                     </div>
 
                     {/* Hakkımda */}
@@ -424,6 +413,8 @@ export default function Dashboard({ session }) {
                 </div>
 
                 {profile?.id && <UsernameEditor currentUsername={profile.username} profileId={profile.id} onUpdate={(newUsername) => setProfile({ ...profile, username: newUsername })} />}
+                {profile?.id && <FieldVisibilityManager profileId={profile.id} />}
+                {profile?.user_id && <QrtimIdCard userId={profile.user_id} />}
                 {profile && <SocialLinksManager profileId={profile.id} subscriptionPlan={subscription?.plan || 'free'} />}
                 {profile && <OrganizationManager profileId={profile.id} subscriptionPlan={subscription?.plan || 'free'} />}
                 {profile && <ReferralDashboard profile={profile} />}

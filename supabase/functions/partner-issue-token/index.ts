@@ -50,6 +50,24 @@ Deno.serve(async (req: Request) => {
     const { data: { user }, error: userErr } = await userClient.auth.getUser();
     if (userErr || !user) return json({ error: "Geçersiz oturum" }, 401);
 
+    // KİMLİK SAĞLAYICI SORUMLULUĞU — doğrulanmamış e-posta partner'a verilmez.
+    //
+    // Partner uygulamalar (Arku, Tınga, İlgezdi) QRtım'in döndürdüğü e-postayı
+    // DOĞRULANMIŞ kabul edip o e-postaya ait hesabı açıyor. QRtım e-posta
+    // doğrulamasını dayatmazsa saldırgan `kurban@firma.com` ile QRtım hesabı
+    // açıp partner tarafında kurbanın hesabını devralabilir — şifreyle
+    // korunan hesaplar dahil. (Arku tarafında S1 olarak tespit edildi ve
+    // entegrasyon bu yüzden askıya alındı.)
+    //
+    // Kural: doğrulanmamış kimlik, kimlik değildir.
+    if (!user.email_confirmed_at) {
+      return json({
+        error: "E-posta adresiniz doğrulanmamış. Bağlantı kurmadan önce " +
+               "e-postanıza gönderilen doğrulama linkine tıklayın.",
+        code: "email_not_verified",
+      }, 403);
+    }
+
     const admin = createClient(
       supabaseUrl,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -73,9 +91,14 @@ Deno.serve(async (req: Request) => {
       .eq("user_id", user.id)
       .maybeSingle();
 
+    // Döndürülen e-posta, DOĞRULANMIŞ OLANIN AYNISI olmalı. profiles.email
+    // kullanıcı tarafından değiştirilebildiği için ondan okunursa "şunu
+    // doğruladım, bunu gönderdim" durumu oluşur ve yukarıdaki denetim
+    // anlamsızlaşır.
     return json({
       token,
-      email: prof?.email ?? user.email ?? "",
+      email: user.email ?? "",
+      email_verified: true,              // yukarıda denetlendi; aksi halde 403
       name: prof?.name ?? (user.user_metadata?.name as string | undefined) ?? "",
       username: prof?.username ?? "",
     });

@@ -19,16 +19,16 @@ export default function PublicMemberDirectoryPage() {
     try {
       setLoading(true)
       
+      // Kurum tipi ve herkese açıklık kararı artık SUNUCUDA veriliyor.
+      // Eskiden tablo doğrudan okunuyor, 'sadece STK' kısıtı istemcide
+      // uygulanıyordu — saldırgan tabloyu sorgulayıp 33 kurumun tamamını
+      // (telefon/e-posta/adres) alabiliyordu (bulgu Y-2).
       const { data, error } = await supabase
-        .from('organizations')
-        .select('*')
-        .eq('id', orgSlug)
-        .single()
+        .rpc('get_public_organization', { p_org_id: orgSlug })
 
       if (error) throw error
 
-      // Sadece STK'lar için public directory
-      if (!['association', 'foundation', 'community', 'union'].includes(data.type)) {
+      if (!data) {
         setError('Bu organizasyonun üye listesi herkese açık değil.')
         return
       }

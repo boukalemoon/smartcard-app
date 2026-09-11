@@ -56,6 +56,23 @@ Deno.serve(async (req: Request) => {
       return json({ valid: false, error: "Token süresi doldu" }, 401);
     }
 
+    // E-posta doğrulaması — jetonu YAKMADAN ÖNCE denetlenir, aksi halde
+    // reddedilen kullanıcı jetonunu da kaybederdi.
+    //
+    // Arku, dönen e-postayı doğrulanmış kabul edip o e-posta için oturum
+    // açıyordu (Arku tarafında S1 olarak tespit edilip entegrasyon askıya
+    // alındı). Saldırgan `kurban@firma.com` ile QRtım hesabı açıp Arku'daki
+    // hesabı devralabiliyordu. Kök neden kimlik sağlayıcıdaydı; burada
+    // kapatılıyor. Arku entegrasyonu ancak bu dağıtıldıktan sonra açılmalı.
+    const { data: authUser } = await admin.auth.admin.getUserById(tok.user_id);
+    if (!authUser?.user?.email_confirmed_at) {
+      return json({
+        valid: false,
+        error: "E-posta doğrulanmamış",
+        code: "email_not_verified",
+      }, 403);
+    }
+
     // Tek kullanımlık: hemen kullanıldı olarak işaretle
     await admin
       .from("partner_link_tokens")
@@ -68,22 +85,21 @@ Deno.serve(async (req: Request) => {
       .eq("user_id", tok.user_id)
       .maybeSingle();
 
-    // Profil henüz oluşmadıysa auth kaydından temel bilgiyi kullan
-    let email = prof?.email ?? null;
-    let name = prof?.name ?? null;
-    if (!email || !name) {
-      const { data: authUser } = await admin.auth.admin.getUserById(tok.user_id);
-      email = email ?? authUser?.user?.email ?? "";
-      name = name ?? (authUser?.user?.user_metadata?.name as string | undefined) ??
-        (email ? email.split("@")[0] : "");
-    }
+    // Döndürülen e-posta, DOĞRULANMIŞ OLANIN AYNISI olmalı. profiles.email
+    // kullanıcı tarafından değiştirilebildiği için ondan okunursa "şunu
+    // doğruladım, bunu gönderdim" durumu oluşur ve denetim anlamsızlaşır.
+    const email = authUser.user.email ?? "";
+    const name = prof?.name ??
+      (authUser.user.user_metadata?.name as string | undefined) ??
+      (email ? email.split("@")[0] : "");
 
     return json({
       valid: true,
       user: {
         qrtim_id: tok.user_id,
-        email: email ?? "",
-        name: name ?? "",
+        email,
+        email_verified: true,              // yukarıda denetlendi; aksi halde 403
+        name,
         phone: prof?.phone ?? null,
         username: prof?.username ?? "",
         photo_url: prof?.photo_url ?? null,
