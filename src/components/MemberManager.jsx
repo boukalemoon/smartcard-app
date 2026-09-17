@@ -24,16 +24,14 @@ export default function MemberManager({ organizationId, onClose }) {
   const loadMembers = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('members')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .order('created_at', { ascending: false })
-
+      // Ham tablo yerine RPC: e-posta ve telefon yalnızca yöneticiye ve
+      // kişinin kendisine döner. Eskiden her üye, diğer üyelerin iletişim
+      // bilgisini doğrudan tablodan okuyabiliyordu.
+      const { data, error } = await supabase.rpc('org_member_list', { p_org_id: organizationId })
       if (error) throw error
       setMembers(data || [])
     } catch (error) {
-      console.error('Error loading members:', error)
+      console.error('Üyeler yüklenemedi:', error)
       alert('Üyeler yüklenirken hata: ' + error.message)
     } finally {
       setLoading(false)
@@ -125,15 +123,22 @@ export default function MemberManager({ organizationId, onClose }) {
   const toggleStatus = async (member) => {
     try {
       const newStatus = member.status === 'active' ? 'inactive' : 'active'
-      const { error } = await supabase
+      // Etkilenen satır kontrolü olmadan, erişim kuralı engellediğinde de
+      // ekran sessizce "değişti" gibi davranıyordu.
+      const { data, error } = await supabase
         .from('members')
         .update({ status: newStatus })
         .eq('id', member.id)
+        .select('id')
 
       if (error) throw error
+      if (!data || data.length === 0) {
+        alert('Durum değiştirilemedi. Bu işlem için organizasyon yöneticisi olmanız gerekiyor.')
+        return
+      }
       loadMembers()
     } catch (error) {
-      console.error('Error toggling status:', error)
+      console.error('Durum değiştirilemedi:', error)
       alert('Hata: ' + error.message)
     }
   }

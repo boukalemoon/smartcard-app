@@ -10,6 +10,82 @@ Anlatı ve faz planı Obsidian'da: `01 - Aktif Projeler/QRtım/`
 
 ---
 
+## [1.9.0] — 2026-09-18
+
+Kurumsal ve STK panellerinin çalışır hâle getirilmesi. Panel analizi 24 bulgu
+çıkardı; bu sürüm ölçüm altyapısını, panel erişimini ve veri sızıntılarını
+kapsıyor. Fiyat/paket revizyonu ve yeni tasarım sonraki aşamalarda.
+
+### Güvenlik
+
+- **Kritik:** giriş yapmış herhangi bir kullanıcı herhangi bir kuruma kendini
+  **yönetici** olarak ekleyebiliyordu; başvuranların kişisel verilerini ve üye
+  analitiğini okuyabiliyordu. Sıradan hesapla denenerek doğrulandı, kapatıldı.
+  Mevcut 10 yönetici kaydının hepsi kurucu — istismar izi yok.
+- **Sahte ölçüm kapatıldı.** Kart hareketleri tarayıcıdan doğrudan yazılıyor ve
+  tabloda "herkes her satırı yazabilir" kuralı vardı: giriş yapmamış biri
+  istediği kişi adına sınırsız görüntülenme üretebiliyordu. Artık tek yol
+  sunucudaki `track_card_event` (hız sınırı ve doğrulama içeride).
+- **Kurum bilgileri kapatıldı.** Giriş yapan herkes tüm kurumların e-posta,
+  telefon ve adresini okuyabiliyordu; artık yalnızca kendi kurumları.
+- **Üye iletişim bilgisi.** Kurumun her üyesi diğerlerinin e-posta ve
+  telefonunu ham tablodan okuyabiliyordu. Bu kolonların okuma yetkisi
+  kaldırıldı; bilgi yalnızca yöneticiye ve kişinin kendisine RPC ile döner.
+- Başvuru formu "onaylanmış" başvuru gönderilmesine izin veriyordu; kapatıldı.
+- Dışa aktarılan CSV'de formül enjeksiyonu: başvuru formundan gelen ad alanına
+  yazılan formül, dosyayı açan yöneticide çalışabiliyordu. Etkisizleştirildi.
+
+### Eklendi — üyeye özel takip ve performans
+
+- **QR ve NFC artık gerçekten ölçülüyor.** QR koduna ve NFC karta yazılan adres
+  kaynağını taşıyor; kart okutarak gelen ziyaretçi, bağlantıya tıklayandan ve
+  adresi elle yazandan ayrılıyor. (Bu işaretten önce basılmış kartlar
+  "doğrudan" görünür.)
+- **Gerçek dönem seçimi.** Aylık, yıllık ve tarih aralığı seçimi sunucuya
+  gidiyor. Önceden seçim yapılıyor ama tüm zamanların verisi gösteriliyordu.
+- **Kurum bazlı doğru sayım.** Üyelikten önceki hareketler kuruma yazılmıyor;
+  kişinin birden fazla kurumda olması sayıları şişirmiyor.
+- **Üye detayı:** karta nereden gelindiği, hangi profilin görüntülendiği, en çok
+  tıklanan bağlantılar ve günlük hareket grafiği.
+- Hesabı olmayan üyeler de raporda görünüyor (önceden listeden düşüyorlardı).
+- Paylaşım (WhatsApp/SMS/e-posta/bağlantı kopyalama) artık kaydediliyor;
+  veritabanı bu olayları reddettiği için bugüne kadar hiç tutulmamıştı.
+
+### Düzeltildi
+
+- **Kurumsal panele kimse giremiyordu.** Panel kişinin kendi aboneliğine
+  bakıyordu (STK/Kurumsal); böyle bir abone olmadığı için panel, üye yönetimi
+  ve bekleyen başvurular kimseye açılmıyordu. Ölçü artık kurumda yönetici olmak.
+- Kayıtlı modu "kurumsal" kalmış kullanıcı bireysel panele dönemiyordu.
+- "Başvuruları Yönet" düğmesi arayüzdeki sabit tür listesi yüzünden `dernek`
+  türündeki kurumu tanımıyordu; karar artık sunucuda.
+- **Herkese açık üye dizini hep boştu:** görünürlük ayarını değiştirecek ekran
+  yoktu. Kurum profiline paylaşım ayarları ve paylaşılabilir bağlantılar
+  (başvuru formu, üye dizini) eklendi. Dizindeki "Invalid Date" kaldırıldı.
+- Üç ayrı görüntülenme sayacı birbirini tutmuyordu; tek yerden güncelleniyor.
+- Kişinin kendi kartına bakması artık görüntülenme sayılmıyor.
+- Kurum profili ve üye durumu güncellemeleri, yetki yokken de "güncellendi"
+  diyordu; etkilenen satır kontrolü eklendi.
+- Kurum başına ayrı ayrı atılan üye ve analiz sorguları tek çağrıya indi.
+
+### Kaldırıldı
+
+- **"10 üyeye ulaştınız, %20 toplu indirim otomatik uygulanacak" vaadi.**
+  Ödeme akışında böyle bir indirim yoktu; yalnızca bir bayrak işaretleniyordu.
+  Fiyat revizyonunda gerçekten uygulanırsa geri gelecek.
+- Başvuru formundaki "size e-posta ile bilgi verilecektir" sözü (e-posta
+  gönderimi henüz yok).
+
+### Bilinen sorunlar
+
+- Yönetici, kayıtlı bir kullanıcıyı onayını almadan kuruma ekleyebiliyor;
+  davet/onay akışı gerekiyor.
+- NFC kart siparişi hâlâ "yakında" diyor.
+- Kişisel paneldeki bazı kayıt işlemleri hâlâ etkilenen satırı kontrol etmiyor.
+- Paketler satın alınamıyor (ödeme sağlayıcı doğrulaması bekliyor).
+
+---
+
 ## [1.8.0] — 2026-09-17
 
 Dijital kimliğin ilk kullanıcıya dönük parçası: **profiller**. Kişi iş,

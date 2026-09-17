@@ -1,7 +1,7 @@
 ﻿import AvatarFlipCard from '../components/AvatarFlipCard'
-import { trackEvent } from '../utils/analyticsHelpers'
+import { trackCardEvent, kaynagiCoz } from '../utils/analyticsHelpers'
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { SITE_URL } from '../lib/siteUrl'
 import { useToast } from '../components/Toast'
@@ -49,6 +49,10 @@ export default function PublicCard() {
   const { username, code } = useParams()
   const [duraklatildi, setDuraklatildi] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
+  // Ziyaretçi karta nereden geldi: QR mı, NFC kart mı, paylaşılan bağlantı mı?
+  // QR ve NFC adresine ?k=qr / ?k=nfc basılır; işaret yoksa doğrudan sayılır.
+  const hedef = { username: username || null, code: code || null, source: kaynagiCoz(location.search, Boolean(code)) }
   const { showToast } = useToast()
   const [profile, setProfile] = useState(null)
   // Alan bazlı gizlilik: yalnızca görünürlüğü 'public' olan alanlar sunucudan
@@ -96,13 +100,10 @@ export default function PublicCard() {
       setOrganizations(data.organizations || [])
       setPaymentInfo(data.payment || null)
 
-      if (data.id) {
-        trackEvent(data.id, 'profile_view')
-        // Sayaç sunucuda. Eskiden istemciden profiles.update deneniyordu;
-        // anon için RLS bunu engelliyor, 0 satır etkiliyor ve hata da
-        // fırlatmıyordu — yani hiç sayılmıyordu (bulgu O-6).
-        supabase.rpc('increment_card_view', code ? { p_code: code } : { p_username: username })
-      }
+      // Görüntülenme, sayaç ve hız sınırı TEK çağrıda, sunucuda. Eskiden
+      // olay istemciden tabloya yazılıyor (sahte veri yazılabiliyordu),
+      // sayaç ise ayrı bir RPC ile artıyordu; ikisi birbirini tutmuyordu.
+      trackCardEvent('profile_view', hedef)
     } catch (err) {
       console.error('Profil yükleme hatası:', err)
       setError('Profil bulunamadı')
@@ -135,7 +136,7 @@ export default function PublicCard() {
     link.href = URL.createObjectURL(blob)
     link.download = `${profile.username||'contact'}.vcf`
     document.body.appendChild(link); link.click(); document.body.removeChild(link)
-    if (profile?.id) trackEvent(profile.id, 'vcard_download')
+    trackCardEvent('vcard_download', hedef)
   }
 
   if (loading) return (
@@ -253,7 +254,7 @@ export default function PublicCard() {
                     if (!href) return null
                     return (
                       <a key={link.id} href={href} target="_blank" rel="noopener noreferrer" title={config.label}
-                        onClick={() => trackEvent(profile.id, 'link_click')}
+                        onClick={() => trackCardEvent('link_click', { ...hedef, meta: { label: config.label, platform: link.platform } })}
                         className="w-10 h-10 rounded-lg flex items-center justify-center text-white hover:opacity-80 transition-opacity"
                         style={{ backgroundColor: config.color }}>
                         <Icon size={18} />
@@ -468,21 +469,21 @@ export default function PublicCard() {
                   href={`https://wa.me/?text=${encodeURIComponent(`${profile.name || 'Profil'} - ${window.location.href}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => trackEvent(profile.id, 'share_whatsapp')}
+                  onClick={() => trackCardEvent('share', { ...hedef, meta: { channel: 'whatsapp' } })}
                   className="flex items-center justify-center gap-2 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold text-sm transition-colors"
                 >
                   💬 WhatsApp
                 </a>
                 <a
                   href={`sms:?body=${encodeURIComponent(`${profile.name || 'Profil'} - ${window.location.href}`)}`}
-                  onClick={() => trackEvent(profile.id, 'share_sms')}
+                  onClick={() => trackCardEvent('share', { ...hedef, meta: { channel: 'sms' } })}
                   className="flex items-center justify-center gap-2 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold text-sm transition-colors"
                 >
                   📱 SMS
                 </a>
                 <a
                   href={`mailto:?subject=${encodeURIComponent(profile.name || 'Profil')}&body=${encodeURIComponent(`${profile.name || ''} dijital kartvizitini gör:\n${window.location.href}`)}`}
-                  onClick={() => trackEvent(profile.id, 'share_email')}
+                  onClick={() => trackCardEvent('share', { ...hedef, meta: { channel: 'eposta' } })}
                   className="flex items-center justify-center gap-2 py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold text-sm transition-colors"
                 >
                   ✉️ E-posta
@@ -492,7 +493,7 @@ export default function PublicCard() {
               <button
                 onClick={() => {
                   copyToClipboard(window.location.href, 'Bağlantı kopyalandı')
-                  trackEvent(profile.id, 'share_copy_link')
+                  trackCardEvent('share', { ...hedef, meta: { channel: 'kopyala' } })
                 }}
                 className="w-full flex items-center justify-center gap-2 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold text-sm transition-colors"
               >

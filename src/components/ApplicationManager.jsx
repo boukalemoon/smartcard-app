@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { Clock, CheckCircle, XCircle, Mail, Phone, MessageSquare } from 'lucide-react'
 
-export default function ApplicationManager({ organizationId }) {
+export default function ApplicationManager({ organizationId, onChange }) {
   const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('pending') // pending, approved, rejected, all
@@ -58,6 +58,7 @@ export default function ApplicationManager({ organizationId }) {
       }
 
       loadApplications()
+      onChange?.()   // kurum listesindeki bekleyen başvuru sayısı tazelensin
       if (newStatus === 'approved') {
         alert(data.hesap_bagli
           ? 'Başvuru onaylandı; kişi QRtım hesabıyla üye olarak eklendi.'

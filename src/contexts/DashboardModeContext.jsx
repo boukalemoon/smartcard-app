@@ -7,13 +7,15 @@ export function DashboardModeProvider({ children }) {
     return localStorage.getItem('dashboardMode') || 'individual'
   })
 
-  // Subscription plan gelince otomatik mod belirle
-  const initMode = (plan) => {
-    const saved = localStorage.getItem('dashboardMode')
-    // STK veya Kurumsal planı → kurumsal mod varsayılan
-    if (!saved && (plan === 'stk' || plan === 'business')) {
-      setMode('corporate')
-    }
+  // Kurumsal mod yetkisi yoksa bireysele dön.
+  //
+  // NEDEN: Mod ilk çizimde localStorage'a yazılıyordu; bu yüzden eski
+  // "plana göre otomatik seç" mantığı hiçbir zaman çalışmadı (kayıt hep
+  // vardı). Daha kötüsü, kayıtlı mod 'corporate' kalmış bir tarayıcıda
+  // yetkisi olmayan kullanıcı geçiş düğmesini göremediği için bireysel
+  // panele DÖNEMİYORDU. Artık yetki yoksa mod kendiliğinden düzeliyor.
+  const ensureAllowed = (canCorporate) => {
+    if (!canCorporate) setMode(prev => (prev === 'corporate' ? 'individual' : prev))
   }
 
   useEffect(() => {
@@ -34,7 +36,7 @@ export function DashboardModeProvider({ children }) {
     toggleMode,
     setIndividual,
     setCorporate,
-    initMode
+    ensureAllowed
   }
 
   return (

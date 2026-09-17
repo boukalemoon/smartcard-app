@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import {
   Building2, Plus, Users, Crown,
   Edit2, Trash2, Check, X, ChevronRight,
-  ChevronLeft, UserPlus, UserMinus, Gift
+  ChevronLeft, UserPlus, UserMinus
 } from 'lucide-react';
 
 // Plan bazlı organizasyon limitleri
@@ -20,9 +20,12 @@ const PLAN_ORG_LIMITS = {
   corporate: 999
 }
 
-// Toplu indirim eşiği
-const BULK_DISCOUNT_THRESHOLD = 10
-const BULK_DISCOUNT_RATE = 0.20
+// TOPLU İNDİRİM VAADİ KALDIRILDI (18.09.2026)
+// Ekran "10 üyeye ulaştınız, %20 indirim aktif edildi, bir sonraki ödemede
+// otomatik uygulanacak" diyordu. Ödeme akışında böyle bir indirim YOK:
+// yalnızca organizations.bulk_discount_active bayrağı doluyordu, fiyat
+// hesabına hiç girmiyordu. Verilmeyen indirimi vaat etmek yerine metin
+// kaldırıldı; fiyat/paket revizyonunda gerçekten uygulanırsa geri gelir.
 
 export default function OrganizationManager({ profileId, subscriptionPlan }) {
   const [organizations, setOrganizations] = useState([]);
@@ -139,14 +142,7 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
       }
 
       const ad = data.ad || inviteEmail.trim();
-      const newCount = data.uye_sayisi;
-      if (newCount === BULK_DISCOUNT_THRESHOLD) {
-        alert(`✅ ${ad} eklendi!\n\n🎉 Tebrikler! ${BULK_DISCOUNT_THRESHOLD} üyeye ulaştınız — %20 toplu indirim aktif edildi!`);
-      } else if (newCount > BULK_DISCOUNT_THRESHOLD) {
-        alert(`✅ ${ad} organizasyona eklendi!`);
-      } else {
-        alert(`✅ ${ad} organizasyona eklendi!\n💡 ${BULK_DISCOUNT_THRESHOLD - newCount} üye daha ekleyin, %20 indirim kazanın!`);
-      }
+      alert(`✅ ${ad} organizasyona eklendi. Toplam üye: ${data.uye_sayisi}`);
 
       setInviteEmail('');
       loadMembers(selectedOrg.id);
@@ -324,8 +320,6 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
 
   // ÜYE YÖNETİMİ EKRANI
   if (selectedOrg) {
-    const bulkDiscountActive = members.length >= BULK_DISCOUNT_THRESHOLD
-    const remaining = BULK_DISCOUNT_THRESHOLD - members.length
 
     return (
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
@@ -342,40 +336,9 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
           </div>
         </div>
 
-        {/* Toplu indirim bilgi kartı */}
-        {bulkDiscountActive ? (
-          <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-            <div className="flex items-center gap-2">
-              <Gift size={18} className="text-green-600" />
-              <p className="text-sm font-semibold text-green-800 dark:text-green-200">
-                🎉 %20 Toplu İndirim Aktif! ({members.length} üye)
-              </p>
-            </div>
-            <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-              Bir sonraki ödeme döneminde indiriminiz otomatik uygulanacaktır.
-            </p>
-          </div>
-        ) : (
-          remaining > 0 && (
-            <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
-              <div className="flex items-center gap-2">
-                <Gift size={18} className="text-blue-600" />
-                <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
-                  {remaining} üye daha ekleyin → %20 indirim kazanın!
-                </p>
-              </div>
-              <div className="mt-2 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div
-                  className="bg-blue-500 h-2 rounded-full transition-all"
-                  style={{ width: `${(members.length / BULK_DISCOUNT_THRESHOLD) * 100}%` }}
-                />
-              </div>
-              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                {members.length}/{BULK_DISCOUNT_THRESHOLD} üye
-              </p>
-            </div>
-          )
-        )}
+        <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+          <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">{members.length} üye</p>
+        </div>
 
         {/* Üye Davet */}
         {selectedOrg.role === 'admin' && (

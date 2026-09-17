@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { Download, Share2 } from 'lucide-react';
-import { cardUrl } from '../lib/siteUrl';
+import { cardUrl, kaynakliAdres } from '../lib/siteUrl';
 
 export default function QRCodeDisplay({ 
   username, 
@@ -18,13 +18,16 @@ export default function QRCodeDisplay({
   // Basılan QR kod bu adresi kalıcı olarak taşır; tarayıcının o anda
   // hangi adreste olduğundan bağımsız olmalı. Bkz. lib/siteUrl.js
   const profileUrl = url || cardUrl(username);
+  // Koda basılan adres kaynağını taşır ("QR ile gelindi"); ekranda gösterilen
+  // ve kopyalanan adres sade kalır.
+  const qrUrl = kaynakliAdres(profileUrl, 'qr');
 
   useEffect(() => {
-    if (canvasRef.current && profileUrl) {
+    if (canvasRef.current && qrUrl) {
       generateQRCode();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profileUrl, qrForegroundColor, qrBackgroundColor, qrLogoEnabled, profileImage]);
+  }, [qrUrl, qrForegroundColor, qrBackgroundColor, qrLogoEnabled, profileImage]);
 
   // Logo QR'nin ortasındaki %20'lik alanı kapatıyor. Varsayılan hata düzeltme
   // seviyesi (M) yalnızca ~%15 kaybı tolere eder → logolu kodların bir kısmı
@@ -36,7 +39,7 @@ export default function QRCodeDisplay({
       const canvas = canvasRef.current;
 
       // Generate QR code on canvas
-      await QRCode.toCanvas(canvasRef.current, profileUrl, {
+      await QRCode.toCanvas(canvasRef.current, qrUrl, {
         width: 300,
         margin: 2,
         errorCorrectionLevel: hataDuzeltme,
@@ -54,7 +57,7 @@ export default function QRCodeDisplay({
 
 
       // Also get data URL for download
-      const dataUrl = await QRCode.toDataURL(profileUrl, {
+      const dataUrl = await QRCode.toDataURL(qrUrl, {
         width: 600,
         margin: 2,
         errorCorrectionLevel: hataDuzeltme,

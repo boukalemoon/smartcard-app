@@ -61,7 +61,7 @@ export default function Dashboard({ session }) {
     variant: 'primary'
   })
 
-  const { mode, isIndividual, isCorporate, initMode } = useDashboardMode()
+  const { mode, isIndividual, isCorporate, ensureAllowed } = useDashboardMode()
   const { subscription, loading: subLoading, getLimits, canAdd, isPremium } = useSubscription(profile?.id)
 
   useEffect(() => { loadProfile() }, [])
@@ -71,9 +71,12 @@ export default function Dashboard({ session }) {
   useEffect(() => {
     if (profile?.id) loadOrganizationCount()
   }, [profile?.id])
+  // Kurumsal panel yetkisi: bir organizasyona bağlı olmak (ya da platform
+  // yöneticisi). Yetki yoksa kayıtlı mod bireysele çekilir; aksi hâlde
+  // kullanıcı panele erişemeden kilitli kalıyordu.
   useEffect(() => {
-    if (subscription?.plan) initMode(subscription.plan)
-  }, [subscription?.plan])
+    ensureAllowed(orgCount > 0 || ['admin', 'superadmin'].includes(profile?.role))
+  }, [orgCount, profile?.role])
 
   const loadProfile = async () => {
     try {
@@ -205,7 +208,7 @@ export default function Dashboard({ session }) {
             <div className="flex items-center justify-between">
               <img src="/qrtım-logo.png" alt="QRtım" className="h-16 w-auto cursor-pointer" onClick={() => navigate('/')} />
               <div className="flex items-center gap-3">
-                <DashboardModeToggle subscription={subscription} profile={profile} />
+                <DashboardModeToggle hasOrganizations={orgCount > 0} profile={profile} />
                 <ThemeToggle />
                 <button onClick={async () => { await supabase.auth.signOut(); navigate('/') }} className="px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-all">Çıkış Yap</button>
               </div>
@@ -243,7 +246,7 @@ export default function Dashboard({ session }) {
           )}
 
           {isCorporate ? (
-            <CorporateDashboard profile={profile} subscription={subscription} />
+            <CorporateDashboard profile={profile} />
           ) : (
             <div className="grid lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
@@ -410,9 +413,12 @@ export default function Dashboard({ session }) {
                     <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Profil Görüntülenme</div>
                     <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{analytics?.profile_views || 0}</div>
                   </div>
+                  {/* QR ve NFC ile gelenler artık gerçekten ölçülüyor: koda ve
+                      karta yazılan adres kaynağını taşıyor. Daha önce basılmış
+                      kartlarda işaret yok, onlar "doğrudan" sayılır. */}
                   <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-green-500">
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">QR Kod Tarama</div>
-                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{analytics?.qr_scans || 0}</div>
+                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">QR / NFC ile Gelen</div>
+                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{(analytics?.qr_views || 0) + (analytics?.nfc_views || 0)}</div>
                   </div>
                   <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-purple-500">
                     <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">vCard İndirme</div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Nfc, AlertCircle, CheckCircle, Smartphone } from 'lucide-react';
-import { cardUrl } from '../lib/siteUrl';
+import { cardUrl, kaynakliAdres } from '../lib/siteUrl';
 
 export default function NFCWriter({ username }) {
   const [isNFCSupported, setIsNFCSupported] = useState(false);
@@ -10,6 +10,10 @@ export default function NFCWriter({ username }) {
 
   // NFC karta yazılan adres sonradan düzeltilemez. Bkz. lib/siteUrl.js
   const profileUrl = cardUrl(username);
+  // Karta YAZILAN adres kendini tanıtır: böylece kart okutularak gelen
+  // ziyaretçi, bağlantıya tıklayarak gelenden ayrılır. Ekranda gösterilen
+  // adres sade kalır.
+  const nfcUrl = kaynakliAdres(profileUrl, 'nfc');
 
   useEffect(() => {
     checkNFCSupport();
@@ -44,7 +48,7 @@ export default function NFCWriter({ username }) {
         records: [
           {
             recordType: "url",
-            data: profileUrl
+            data: nfcUrl
           },
           {
             recordType: "text",

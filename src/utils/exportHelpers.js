@@ -1,4 +1,19 @@
-// CSV Export Helper
+// CSV dışa aktarma
+//
+// FORMÜL ENJEKSİYONU: Excel ve LibreOffice, hücre '=', '+', '-', '@' veya
+// tab/satır başı ile başlıyorsa içeriği FORMÜL olarak çalıştırır. Başvuru
+// formundaki ad alanı giriş yapmamış ziyaretçiden gelir; oraya
+// =HYPERLINK(...) yazan biri, dosyayı açan yöneticinin bilgisayarında
+// istediğini tetikleyebilirdi. Bu yüzden riskli başlangıç karakterleri
+// tek tırnakla etkisizleştirilir.
+const guvenliHucre = (deger) => {
+  if (deger === null || deger === undefined) return ''
+  let metin = String(deger)
+  if (/^[=+\-@\t\r]/.test(metin)) metin = "'" + metin
+  if (/[",\n\r]/.test(metin)) metin = '"' + metin.replace(/"/g, '""') + '"'
+  return metin
+}
+
 export const exportToCSV = (data, filename) => {
   if (!data || data.length === 0) {
     alert('Export edilecek veri yok!')
@@ -10,16 +25,9 @@ export const exportToCSV = (data, filename) => {
   
   // CSV rows
   const csvRows = [
-    headers.join(','), // Header satırı
+    headers.map(guvenliHucre).join(','),
     ...data.map(row => 
-      headers.map(header => {
-        const value = row[header]
-        // Virgül ve tırnak içeren değerleri escape et
-        if (value && typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
-          return `"${value.replace(/"/g, '""')}"`
-        }
-        return value ?? ''
-      }).join(',')
+      headers.map(header => guvenliHucre(row[header])).join(',')
     )
   ]
 

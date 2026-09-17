@@ -1,12 +1,13 @@
 import { useDashboardMode } from '../contexts/DashboardModeContext'
 import { User, Building2 } from 'lucide-react'
 
-export default function DashboardModeToggle({ subscription, profile }) {
-  const { mode, toggleMode, isIndividual, isCorporate } = useDashboardMode()
+export default function DashboardModeToggle({ hasOrganizations = false, profile }) {
+  const { toggleMode, isIndividual } = useDashboardMode()
 
-  const canSeeCorporate = (
-    subscription && (subscription.plan === 'stk' || subscription.plan === 'business')
-  ) || ['admin', 'superadmin'].includes(profile?.role)
+  // Ölçü kişisel abonelik DEĞİL, bir organizasyona bağlı olmak. Eskiden
+  // kişinin planı stk/business değilse düğme hiç görünmüyordu; kimsenin
+  // böyle bir aboneliği olmadığı için kurumsal panele giren olmamıştı.
+  const canSeeCorporate = hasOrganizations || ['admin', 'superadmin'].includes(profile?.role)
 
   if (!canSeeCorporate) return null
 

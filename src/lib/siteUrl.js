@@ -72,6 +72,22 @@ export function personaUrl(shareCode) {
   return `${SITE_URL}/k/${shareCode ?? ''}`
 }
 
+/**
+ * Adrese geliş kaynağı işaretini ekler: QR koda basılan ve NFC karta yazılan
+ * adres kendini tanıtsın diye.
+ *
+ * NEDEN: Kurum panelinde "QR tarama" sütunu vardı ama hiçbir zaman dolmuyordu;
+ * çünkü QR ile gelen ziyaretçi ile adresi elle yazan ziyaretçi birbirinden
+ * ayırt edilemiyordu. İşaret yalnızca QR/NFC adresine basılır — paylaşılan
+ * veya kopyalanan bağlantıda görünmez.
+ *
+ * Daha önce basılmış kartlarda bu işaret yoktur; onlar "doğrudan" sayılır.
+ */
+export function kaynakliAdres(url, kaynak) {
+  if (!url || !kaynak) return url
+  return `${url}${url.includes('?') ? '&' : '?'}k=${encodeURIComponent(kaynak)}`
+}
+
 /** Davet bağlantısı. */
 export function signupUrl(referralCode) {
   return `${SITE_URL}/signup?ref=${encodeURIComponent(referralCode ?? '')}`

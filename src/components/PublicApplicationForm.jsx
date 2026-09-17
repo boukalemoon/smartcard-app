@@ -75,7 +75,8 @@ export default function PublicApplicationForm({ organizationId, organizationName
         {organizationName} Üyelik Başvurusu
       </h2>
       <p className="text-gray-600 dark:text-gray-400 mb-6">
-        Lütfen aşağıdaki formu doldurun. Başvurunuz incelendikten sonra size email ile bilgi verilecektir.
+        Lütfen aşağıdaki formu doldurun. Başvurunuz organizasyon yöneticisine iletilir;
+        onaylandığında üyeliğiniz QRtım hesabınıza tanımlanır.
       </p>
 
       {error && (

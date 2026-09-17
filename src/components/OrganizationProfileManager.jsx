@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import ImageUpload from './ImageUpload'
-import { Building2, Globe, Mail, Phone, MapPin, Save, X } from 'lucide-react'
+import { Building2, Globe, Mail, Phone, MapPin, Save, X, Link2, Copy } from 'lucide-react'
+import { SITE_URL } from '../lib/siteUrl'
+
+// STK türleri sunucudaki is_stk_org_type ile aynı listedir; herkese açık
+// dizin ve başvuru sayfaları yalnızca bu türlerde çalışır.
+const STK_TURLERI = ['association', 'foundation', 'community', 'union',
+                     'dernek', 'vakif', 'vakıf', 'topluluk', 'sendika', 'stk']
 
 export default function OrganizationProfileManager({ organizationId, onClose, onUpdate }) {
   const [organization, setOrganization] = useState(null)
@@ -17,6 +23,12 @@ export default function OrganizationProfileManager({ organizationId, onClose, on
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
   const [city, setCity] = useState('')
+  // Paylaşım ayarları. Bunlar bugüne kadar hiçbir ekrandan değiştirilemiyordu;
+  // varsayılan "yalnızca üyeler" olduğu için herkese açık üye dizini her
+  // organizasyonda BOŞ dönüyordu.
+  const [dizinAcik, setDizinAcik] = useState(false)
+  const [uyelerGorunur, setUyelerGorunur] = useState(false)
+  const [iletisimGorunur, setIletisimGorunur] = useState(false)
 
   useEffect(() => {
     loadOrganization()
@@ -43,6 +55,10 @@ export default function OrganizationProfileManager({ organizationId, onClose, on
       setPhone(data.phone || '')
       setAddress(data.address || '')
       setCity(data.city || '')
+      const ayar = data.settings || {}
+      setDizinAcik(Boolean(ayar.allowPublicDirectory))
+      setUyelerGorunur(String(ayar.memberVisibility || '').toLowerCase() === 'public')
+      setIletisimGorunur(Boolean(ayar.showMemberContact))
     } catch (error) {
       console.error('Error loading organization:', error)
       alert('Organizasyon yüklenemedi!')
@@ -55,7 +71,10 @@ export default function OrganizationProfileManager({ organizationId, onClose, on
     try {
       setSaving(true)
 
-      const { error } = await supabase
+      // Etkilenen satır kontrolü: erişim kuralı engellediğinde Supabase hata
+      // döndürmez, 0 satır günceller. Bu kontrol olmadan yönetici olmayan
+      // kişiye "güncellendi" deniyordu.
+      const { data, error } = await supabase
         .from('organizations')
         .update({
           name,
@@ -66,11 +85,22 @@ export default function OrganizationProfileManager({ organizationId, onClose, on
           phone,
           address,
           city,
+          settings: {
+            ...(organization?.settings || {}),
+            allowPublicDirectory: dizinAcik,
+            memberVisibility: uyelerGorunur ? 'public' : 'members_only',
+            showMemberContact: iletisimGorunur,
+          },
           updated_at: new Date().toISOString()
         })
         .eq('id', organizationId)
+        .select('id')
 
       if (error) throw error
+      if (!data || data.length === 0) {
+        alert('Güncellenemedi. Bu işlem için organizasyon yöneticisi olmanız gerekiyor.')
+        return
+      }
 
       alert('✅ Organizasyon güncellendi!')
       onUpdate?.()
@@ -85,12 +115,17 @@ export default function OrganizationProfileManager({ organizationId, onClose, on
 
   const updateLogo = async (logoUrl) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('organizations')
         .update({ logo_url: logoUrl })
         .eq('id', organizationId)
+        .select('id')
 
       if (error) throw error
+      if (!data || data.length === 0) {
+        alert('Logo güncellenemedi. Bu işlem için organizasyon yöneticisi olmanız gerekiyor.')
+        return
+      }
 
       setOrganization({ ...organization, logo_url: logoUrl })
       alert('Logo güncellendi!')
@@ -136,6 +171,65 @@ export default function OrganizationProfileManager({ organizationId, onClose, on
           maxSize={2}
         />
       </div>
+
+      {/* Herkese açık paylaşım ayarları (yalnızca STK türleri) */}
+      {STK_TURLERI.includes(String(type).toLowerCase()) && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
+            Herkese Açık Sayfalar
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Üye dizini ve başvuru formu bu ayarlara göre çalışır. Kapalıyken
+            bağlantıyı açan kişi boş sayfa görür.
+          </p>
+
+          <div className="space-y-3">
+            {[
+              { deger: dizinAcik, ayarla: setDizinAcik, baslik: 'Herkese açık sayfalar aktif',
+                aciklama: 'Organizasyon bilgileriniz ve başvuru formu paylaşılabilir olur.' },
+              { deger: uyelerGorunur, ayarla: setUyelerGorunur, baslik: 'Üye listesi herkese açık',
+                aciklama: 'Kapalıyken dizin yalnızca üyelere görünür (varsayılan).' },
+              { deger: iletisimGorunur, ayarla: setIletisimGorunur, baslik: 'Üye iletişim bilgileri görünsün',
+                aciklama: 'Üyelerin e-posta ve telefonu dizinde herkese açılır. Açmadan önce üyelerinize sorun.' },
+            ].map(({ deger, ayarla, baslik, aciklama }) => (
+              <label key={baslik} className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                <input
+                  type="checkbox"
+                  checked={deger}
+                  onChange={(e) => ayarla(e.target.checked)}
+                  className="mt-1 w-4 h-4"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-gray-900 dark:text-gray-100">{baslik}</span>
+                  <span className="block text-xs text-gray-500 dark:text-gray-400">{aciklama}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+
+          {/* Paylaşılabilir bağlantılar — hiçbir ekranda gösterilmiyordu */}
+          <div className="mt-4 space-y-2">
+            {[
+              { etiket: 'Başvuru formu', adres: `${SITE_URL}/org/${organizationId}/apply` },
+              { etiket: 'Üye dizini', adres: `${SITE_URL}/org/${organizationId}/members` },
+            ].map(({ etiket, adres }) => (
+              <div key={etiket} className="flex items-center gap-2 text-sm">
+                <Link2 size={14} className="text-gray-400 flex-shrink-0" />
+                <span className="text-gray-600 dark:text-gray-400 w-28 flex-shrink-0">{etiket}</span>
+                <input readOnly value={adres} className="flex-1 px-2 py-1 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded text-xs text-gray-700 dark:text-gray-200" />
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard?.writeText(adres)}
+                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded"
+                  title="Kopyala"
+                >
+                  <Copy size={14} className="text-gray-500" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Profile Information */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">

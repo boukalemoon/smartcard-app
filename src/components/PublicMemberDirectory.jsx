@@ -134,15 +134,6 @@ export default function PublicMemberDirectory({ organizationId, organizationName
                 )}
               </div>
 
-              <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Katılım: {new Date(member.created_at).toLocaleDateString('tr-TR', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric'
-                  })}
-                </p>
-              </div>
             </div>
           ))}
         </div>
