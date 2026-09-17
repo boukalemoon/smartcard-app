@@ -20,6 +20,7 @@ import KVKKAydinlatma from './pages/KVKKAydinlatma'
 import CerezPolitikasi from './pages/CerezPolitikasi'
 import Iletisim from './pages/Iletisim'
 import BrowserLogin from './pages/BrowserLogin'
+import OdemeSonuc from './pages/OdemeSonuc'
 
 function App() {
   const [session, setSession] = useState(null)
@@ -65,6 +66,7 @@ function App() {
               {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/card/:username" element={<PublicCard />} />
+            <Route path="/k/:code" element={<PublicCard />} />
             <Route path="/nfc-cards" element={<NFCCardsPage />} />
             <Route path="/nfc-designer" element={<NFCCard />} />
             <Route path="/org/:orgSlug/apply" element={<PublicApplicationPage />} />
@@ -83,6 +85,7 @@ function App() {
 
             {/* İlgezdi tarayıcısı QR giriş onayı (girişli/girişsiz her durumda render edilir) */}
             <Route path="/browser-login" element={<BrowserLogin />} />
+            <Route path="/odeme/sonuc" element={<OdemeSonuc />} />
 
             {/* Protected routes */}
             <Route 

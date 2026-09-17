@@ -18,7 +18,7 @@ export default function GizlilikPolitikasi() {
 
       <main className="max-w-4xl mx-auto px-4 py-12">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Gizlilik Politikası</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">Son güncelleme: Mart 2026</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">Son güncelleme: Eylül 2026</p>
 
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow p-8 space-y-8 text-gray-700 dark:text-gray-300 leading-relaxed">
 
@@ -57,7 +57,7 @@ export default function GizlilikPolitikasi() {
               <li>Dijital kartvizit hizmetinin sunulması</li>
               <li>Abonelik ve ödeme işlemlerinin yönetimi</li>
               <li>Müşteri desteği sağlanması</li>
-              <li>Platform güvenliğinin sağlanması</li>
+              <li>Platform güvenliğinin sağlanması ve silinmiş hesapların kötüye kullanım amacıyla yeniden açılmasının tespiti</li>
               <li>Yasal yükümlülüklerin yerine getirilmesi</li>
               <li>Hizmet kalitesinin iyileştirilmesi (anonimleştirilmiş verilerle)</li>
             </ul>
@@ -84,10 +84,20 @@ export default function GizlilikPolitikasi() {
 
           <section>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">6. Veri Saklama Süresi</h2>
+            <p className="mb-3">
+              Kişisel verileriniz, hesabınız açık olduğu sürece ve işlendikleri amaç için gerekli olduğu
+              müddetçe saklanır. Hesabınızı sildiğinizde profiliniz, iletişim bilgileriniz ve içerikleriniz
+              silinir.
+            </p>
+            <p className="mb-3">
+              Fatura ve ödeme kayıtları ile silme işleminin kaydı gibi kanuni saklama yükümlülüğü bulunan
+              kayıtlar, ilgili mevzuatta öngörülen süreler boyunca erişimi kısıtlanarak saklanır ve bu
+              sürelerin sonunda silinir, yok edilir veya anonim hâle getirilir.
+            </p>
             <p>
-              Kişisel verileriniz, hesabınız aktif olduğu sürece saklanır. Hesabınızı silmeniz halinde
-              verileriniz 30 gün içinde sistemden kaldırılır. Yasal yükümlülükler kapsamında saklanması
-              gereken veriler ilgili mevzuatta öngörülen süreler boyunca tutulur.
+              Kötüye kullanımı önlemek amacıyla, silinen hesaba ait e-posta adresi ve telefon numarasından
+              geri çevrilemeyen bir güvenlik özeti tutulur. Bu özetten iletişim bilgileriniz elde edilemez;
+              ayrıntılar KVKK Aydınlatma Metni'nde yer alır.
             </p>
           </section>
 

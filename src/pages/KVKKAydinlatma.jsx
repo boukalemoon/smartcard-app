@@ -21,7 +21,7 @@ export default function KVKKAydinlatma() {
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
           6698 Sayılı Kişisel Verilerin Korunması Kanunu Kapsamında
         </p>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">Son güncelleme: Mart 2026</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">Son güncelleme: Eylül 2026</p>
 
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow p-8 space-y-8 text-gray-700 dark:text-gray-300 leading-relaxed">
 
@@ -60,6 +60,7 @@ export default function KVKKAydinlatma() {
                     ['İşlem Güvenliği', 'IP adresi, oturum bilgileri, şifrelenmiş parola'],
                     ['Kullanım', 'QR tarama, profil görüntülenme, bağlantı tıklama istatistikleri'],
                     ['Finansal', 'Abonelik planı, ödeme durumu (kart bilgisi saklanmaz)'],
+                    ['Güvenlik Özeti', 'Hesap silindiğinde e-posta adresi ve telefon numarasından üretilen, geri çevrilemeyen tek yönlü özet (ad, profil ve içerik saklanmaz)'],
                   ].map(([cat, data], i) => (
                     <tr key={i} className="border-b border-gray-200 dark:border-gray-700">
                       <td className="p-3 border border-gray-200 dark:border-gray-600 font-medium">{cat}</td>
@@ -88,6 +89,8 @@ export default function KVKKAydinlatma() {
                     ['Abonelik ve ödeme yönetimi', 'Sözleşmenin ifası / Kanuni yükümlülük'],
                     ['Müşteri desteği', 'Meşru menfaat'],
                     ['Platform güvenliği ve hata tespiti', 'Meşru menfaat'],
+                    ['Silinmiş hesapların kötüye kullanım amacıyla yeniden açılmasının tespiti', 'Meşru menfaat'],
+                    ['Silme ve imha işlemlerinin kayıt altına alınması', 'Kanuni yükümlülük'],
                     ['Yasal bildirim yükümlülükleri', 'Kanuni yükümlülük'],
                     ['Hizmet kalitesinin ölçülmesi (anonimleştirilmiş)', 'Meşru menfaat'],
                   ].map(([purpose, basis], i) => (
@@ -113,12 +116,24 @@ export default function KVKKAydinlatma() {
           </section>
 
           <section>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">5. Saklama Süreleri</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">5. Saklama Süreleri ve İmha</h2>
+            <p className="mb-3">
+              Kişisel verileriniz, işlendikleri amaç için gerekli olan süre ve ilgili mevzuatta öngörülen
+              süreler boyunca saklanır; bu sürelerin sonunda Kişisel Verilerin Silinmesi, Yok Edilmesi veya
+              Anonim Hale Getirilmesi Hakkında Yönetmelik uyarınca silinir, yok edilir veya anonim hâle getirilir.
+            </p>
             <ul className="list-disc pl-6 space-y-2">
-              <li>Aktif hesap verileri: Hesap aktif olduğu sürece</li>
-              <li>Hesap kapatma sonrası: 30 gün içinde silme/anonimleştirme</li>
-              <li>Fatura ve ödeme kayıtları: Vergi mevzuatı gereği 10 yıl</li>
-              <li>Güvenlik logları: 2 yıl</li>
+              <li><strong>Hesap ve profil verileri:</strong> Hesabınız açık olduğu sürece saklanır. Hesabınız silindiğinde profiliniz, iletişim bilgileriniz, içerikleriniz ve kullanım verileriniz silinir.</li>
+              <li><strong>Kanuni saklama yükümlülüğü bulunan kayıtlar:</strong> Fatura, ödeme ve ticari kayıtlar vergi ve ticaret mevzuatında öngörülen süreler boyunca, erişimi kısıtlanarak saklanır. Bu kayıtların hesabınızla bağı silme anında koparılır.</li>
+              <li><strong>İşlem güvenliği kayıtları:</strong> İlgili mevzuatta öngörülen süreler boyunca saklanır.</li>
+              <li><strong>Silme ve imha kayıtları:</strong> Silme işleminin ne zaman ve hangi gerekçeyle yapıldığını gösteren kayıt, imha yönetmeliğinin öngördüğü şekilde saklanır. Bu kayıtta e-posta adresiniz yalnızca maskelenmiş olarak yer alır.</li>
+              <li>
+                <strong>Güvenlik özeti:</strong> Hesabınız silindiğinde e-posta adresiniz ve telefon numaranızdan,
+                gizli bir anahtar kullanılarak tek yönlü bir özet üretilir. Bu özetten e-posta adresiniz veya telefon
+                numaranız elde edilemez; adınız, profiliniz ve içerikleriniz saklanmaz. Özet yalnızca aynı bilgilerle
+                yeniden hesap açıldığında bunu tespit etmek ve kötüye kullanımı önlemek amacıyla kullanılır, yeni
+                kaydı engellemez ve başka hiçbir amaçla işlenmez.
+              </li>
             </ul>
           </section>
 

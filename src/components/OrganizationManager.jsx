@@ -7,12 +7,17 @@ import {
 } from 'lucide-react';
 
 // Plan bazlı organizasyon limitleri
+// NOT: Bu harita yalnızca arayüz ipucu içindir; gerçek sınır sunucuda
+// (create_organization) uygulanır. 'corporate' eksikti — fiyat listesinde
+// var ama burada tanımsız olduğu için `?? 2` ile en üst plana ödeyen
+// kullanıcı 2 organizasyonla sınırlanıyordu.
 const PLAN_ORG_LIMITS = {
   free: 2,
   student: 1,
   professional: 999, // sınırsız
   stk: 999,
-  business: 999
+  business: 999,
+  corporate: 999
 }
 
 // Toplu indirim eşiği
@@ -85,41 +90,18 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
   const loadMembers = async (orgId) => {
     setMembersLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('members')
-        .select(`
-          id, role, created_at,
-          profiles (id, name, email, avatar_url, title, company)
-        `)
-        .eq('organization_id', orgId);
-
+      // Başka kullanıcıların profili istemciden okunamaz (gizlilik). Üye bilgisi
+      // sunucudan, kişinin paylaşım tercihlerine göre süzülerek gelir: e-postasını
+      // gizli tutan üyenin e-postası burada da görünmez.
+      const { data, error } = await supabase.rpc('org_member_list', { p_org_id: orgId });
       if (error) throw error;
       setMembers(data || []);
-
-      // Toplu indirim kontrolü
-      if (data && data.length >= BULK_DISCOUNT_THRESHOLD) {
-        await checkAndApplyBulkDiscount(orgId, data.length)
-      }
     } catch (error) {
       console.error('Error loading members:', error);
     } finally {
       setMembersLoading(false);
     }
   };
-
-  const checkAndApplyBulkDiscount = async (orgId, memberCount) => {
-    try {
-      if (memberCount >= BULK_DISCOUNT_THRESHOLD) {
-        const { error } = await supabase
-          .from('organizations')
-          .update({ bulk_discount_active: true, member_count: memberCount })
-          .eq('id', orgId)
-        if (error) console.error('Bulk discount update error:', error)
-      }
-    } catch (error) {
-      console.error('Bulk discount check error:', error)
-    }
-  }
 
   const openMemberManager = (org) => {
     setSelectedOrg(org);
@@ -132,50 +114,38 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
     setInviteEmail('');
   };
 
+  const UYE_EKLEME_HATALARI = {
+    yetkisiz: 'Bu organizasyona üye eklemek için yönetici olmanız gerekiyor.',
+    kullanici_bulunamadi: '❌ Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı.\n\nKullanıcının önce QRtım hesabı oluşturması gerekiyor.',
+    zaten_uye: '⚠️ Bu kullanıcı zaten organizasyon üyesi.',
+    cok_fazla_deneme: 'Çok fazla deneme yaptınız. Lütfen bir saat sonra tekrar deneyin.',
+  };
+
   const inviteMember = async () => {
     if (!inviteEmail.trim()) return;
     setInviting(true);
 
     try {
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, name, email')
-        .eq('email', inviteEmail.trim().toLowerCase())
-        .single();
-
-      if (profileError || !profile) {
-        alert('❌ Bu email adresiyle kayıtlı kullanıcı bulunamadı.\n\nKullanıcının önce QRtım hesabı oluşturması gerekiyor.');
+      // Arama, yetki kontrolü ve ekleme sunucuda tek adımda. Toplu indirim
+      // bayrağı artık istemciden yazılmıyor; üye sayısından sunucuda türetiliyor.
+      const { data, error } = await supabase.rpc('org_add_member_by_email', {
+        p_org_id: selectedOrg.id,
+        p_email: inviteEmail.trim(),
+      });
+      if (error) throw error;
+      if (!data?.ok) {
+        alert(UYE_EKLEME_HATALARI[data?.hata] || 'Üye eklenemedi.');
         return;
       }
 
-      const alreadyMember = members.some(m => m.profiles?.id === profile.id);
-      if (alreadyMember) {
-        alert('⚠️ Bu kullanıcı zaten organizasyon üyesi.');
-        return;
-      }
-
-      const { error: memberError } = await supabase
-        .from('members')
-        .insert({
-          organization_id: selectedOrg.id,
-          profile_id: profile.id,
-          role: 'member'
-        });
-
-      if (memberError) throw memberError;
-
-      // Yeni üye sayısını kontrol et
-      const newCount = members.length + 1
-      if (newCount >= BULK_DISCOUNT_THRESHOLD) {
-        await checkAndApplyBulkDiscount(selectedOrg.id, newCount)
-        if (newCount === BULK_DISCOUNT_THRESHOLD) {
-          alert(`✅ ${profile.name || profile.email} eklendi!\n\n🎉 Tebrikler! 10 üyeye ulaştınız — %20 toplu indirim aktif edildi!`)
-        } else {
-          alert(`✅ ${profile.name || profile.email} organizasyona eklendi!`)
-        }
+      const ad = data.ad || inviteEmail.trim();
+      const newCount = data.uye_sayisi;
+      if (newCount === BULK_DISCOUNT_THRESHOLD) {
+        alert(`✅ ${ad} eklendi!\n\n🎉 Tebrikler! ${BULK_DISCOUNT_THRESHOLD} üyeye ulaştınız — %20 toplu indirim aktif edildi!`);
+      } else if (newCount > BULK_DISCOUNT_THRESHOLD) {
+        alert(`✅ ${ad} organizasyona eklendi!`);
       } else {
-        const remaining = BULK_DISCOUNT_THRESHOLD - newCount
-        alert(`✅ ${profile.name || profile.email} organizasyona eklendi!\n💡 ${remaining} üye daha ekleyin, %20 indirim kazanın!`)
+        alert(`✅ ${ad} organizasyona eklendi!\n💡 ${BULK_DISCOUNT_THRESHOLD - newCount} üye daha ekleyin, %20 indirim kazanın!`);
       }
 
       setInviteEmail('');
@@ -190,8 +160,12 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
   const removeMember = async (memberId, memberName) => {
     if (!confirm(`${memberName} adlı üyeyi organizasyondan çıkarmak istediğinizden emin misiniz?`)) return;
     try {
-      const { error } = await supabase.from('members').delete().eq('id', memberId);
+      const { data, error } = await supabase.from('members').delete().eq('id', memberId).select('id');
       if (error) throw error;
+      if (!data || data.length === 0) {
+        alert('Üye çıkarılamadı. Yönetici olmanız gerekiyor; son yönetici ise önce başka bir yönetici atayın.');
+        return;
+      }
       loadMembers(selectedOrg.id);
     } catch (error) {
       alert('Hata: ' + error.message);
@@ -200,12 +174,24 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
 
   const changeRole = async (memberId, newRole) => {
     try {
-      const { error } = await supabase.from('members').update({ role: newRole }).eq('id', memberId);
+      const { data, error } = await supabase.from('members').update({ role: newRole }).eq('id', memberId).select('id');
       if (error) throw error;
+      if (!data || data.length === 0) {
+        alert('Rol değiştirilemedi. Yönetici olmanız gerekiyor; son yöneticiyi düşüremezsiniz.');
+        return;
+      }
       loadMembers(selectedOrg.id);
     } catch (error) {
       alert('Hata: ' + error.message);
     }
+  };
+
+  // Sunucu tarafı hata kodlarının kullanıcıya gösterilecek karşılıkları
+  const KURUM_HATALARI = {
+    profil_yok:    'Profiliniz henüz hazır değil. Sayfayı yenileyip tekrar deneyin.',
+    ad_zorunlu:    'Organizasyon adı zorunludur.',
+    ayni_isim_var: 'Bu isimde bir organizasyonunuz zaten var.',
+    limit_asildi:  'Planınızın organizasyon sınırına ulaştınız.',
   };
 
   const createOrganization = async () => {
@@ -214,33 +200,37 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
 
     try {
       setLoading(true);
-      const { data: orgData, error: orgError } = await supabase
-        .from('organizations')
-        .insert({
-          name: newOrg.name,
-          type: newOrg.type,
-          description: newOrg.description,
-          website: newOrg.website,
-          email: newOrg.email,
-          phone: newOrg.phone
-        })
-        .select()
-        .single();
 
-      if (orgError) throw orgError;
+      // Kurum ve kurucu üyelik TEK işlemde oluşturulur.
+      // Eskiden iki ayrı yazma yapılıyordu ve arada işlem yoktu: ikinci adım
+      // patlayınca kurum kaydı zaten kaydedilmiş oluyor, arayüz kurumları
+      // üyelik üzerinden listelediği için kullanıcı hiçbir şey görmüyor ve
+      // tekrar deniyordu. Her deneme bir yetim kurum bırakıyordu (33 kurumun
+      // 24'ü bu şekilde oluşmuş). Limit kontrolü de artık sunucuda.
+      const { data, error } = await supabase.rpc('create_organization', {
+        p_name: newOrg.name,
+        p_type: newOrg.type,
+        p_description: newOrg.description || null,
+        p_website: newOrg.website || null,
+        p_email: newOrg.email || null,
+        p_phone: newOrg.phone || null,
+      });
 
-      const { error: memberError } = await supabase
-        .from('members')
-        .insert({ organization_id: orgData.id, profile_id: profileId, role: 'admin' });
+      if (error) throw error;
 
-      if (memberError) throw memberError;
+      if (!data?.ok) {
+        if (data?.hata === 'limit_asildi') { setShowUpgrade(true); return; }
+        alert(KURUM_HATALARI[data?.hata] ?? 'Organizasyon oluşturulamadı.');
+        return;
+      }
 
       setNewOrg({ name: '', type: 'company', description: '', website: '', email: '', phone: '' });
       setCreating(false);
       loadOrganizations();
       alert('✅ Organizasyon oluşturuldu!');
     } catch (error) {
-      alert('Hata: ' + error.message);
+      console.error('Organizasyon oluşturma hatası:', error);
+      alert('Organizasyon oluşturulamadı. Lütfen tekrar deneyin.');
     } finally {
       setLoading(false);
     }
@@ -433,20 +423,20 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Toplam {members.length} üye</p>
             {members.map((member) => {
               const roleBadge = getRoleBadge(member.role);
-              const isCurrentUser = member.profiles?.id === profileId;
+              const isCurrentUser = member.is_me;
               return (
                 <div key={member.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-xl">
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                    {member.profiles?.name?.charAt(0) || member.profiles?.email?.charAt(0) || '?'}
+                    {member.name?.charAt(0) || member.email?.charAt(0) || '?'}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">
-                      {member.profiles?.name || 'İsimsiz'}
+                      {member.name || 'İsimsiz'}
                       {isCurrentUser && <span className="ml-1 text-xs text-gray-400">(Siz)</span>}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{member.profiles?.email}</p>
-                    {member.profiles?.title && (
-                      <p className="text-xs text-gray-400 truncate">{member.profiles.title}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{member.email}</p>
+                    {member.title && (
+                      <p className="text-xs text-gray-400 truncate">{member.title}</p>
                     )}
                   </div>
                   <span className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${roleBadge.color}`}>
@@ -463,7 +453,7 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
                           <Users size={14} />
                         </button>
                       )}
-                      <button onClick={() => removeMember(member.id, member.profiles?.name || member.profiles?.email)} title="Üyeyi çıkar" className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                      <button onClick={() => removeMember(member.id, member.name || member.email)} title="Üyeyi çıkar" className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
                         <UserMinus size={14} />
                       </button>
                     </div>

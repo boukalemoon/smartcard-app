@@ -47,14 +47,19 @@ export default function MemberManager({ organizationId, onClose }) {
     }
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('members')
         .insert({
           organization_id: organizationId,
           ...formData
         })
+        .select('id')
 
       if (error) throw error
+      if (!data || data.length === 0) {
+        alert('Üye eklenemedi. Bu işlem için organizasyon yöneticisi olmanız gerekiyor.')
+        return
+      }
 
       alert('Üye eklendi!')
       setFormData({ name: '', email: '', phone: '', role: 'member', status: 'active' })
@@ -68,12 +73,20 @@ export default function MemberManager({ organizationId, onClose }) {
 
   const handleUpdate = async (memberId) => {
     try {
-      const { error } = await supabase
+      // .select() olmadan etkilenen satiri goremeyiz: erisim kurali
+      // engellediginde Supabase hata DONDURMEZ, sadece 0 satir gunceller.
+      // Bu kontrol olmadan kullaniciya "guncellendi" yalani soyleniyordu.
+      const { data, error } = await supabase
         .from('members')
         .update(formData)
         .eq('id', memberId)
+        .select('id')
 
       if (error) throw error
+      if (!data || data.length === 0) {
+        alert('Üye güncellenemedi. Bu işlem için organizasyon yöneticisi olmanız gerekiyor.')
+        return
+      }
 
       alert('Üye güncellendi!')
       setEditingId(null)
@@ -89,12 +102,17 @@ export default function MemberManager({ organizationId, onClose }) {
     if (!confirm('Bu üyeyi silmek istediğinize emin misiniz?')) return
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('members')
         .delete()
         .eq('id', memberId)
+        .select('id')
 
       if (error) throw error
+      if (!data || data.length === 0) {
+        alert('Üye silinemedi. Yönetici olmanız gerekiyor; son yönetici ise önce başka bir yönetici atayın.')
+        return
+      }
 
       alert('Üye silindi!')
       loadMembers()

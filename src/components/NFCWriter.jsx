@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Nfc, AlertCircle, CheckCircle, Smartphone } from 'lucide-react';
+import { cardUrl } from '../lib/siteUrl';
 
 export default function NFCWriter({ username }) {
   const [isNFCSupported, setIsNFCSupported] = useState(false);
@@ -7,7 +8,8 @@ export default function NFCWriter({ username }) {
   const [status, setStatus] = useState('');
   const [statusType, setStatusType] = useState('info'); // info, success, error
 
-  const profileUrl = `${window.location.origin}/card/${username}`;
+  // NFC karta yazılan adres sonradan düzeltilemez. Bkz. lib/siteUrl.js
+  const profileUrl = cardUrl(username);
 
   useEffect(() => {
     checkNFCSupport();

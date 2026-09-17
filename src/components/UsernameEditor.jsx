@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Check, X, AlertCircle, Loader } from 'lucide-react';
+import { SITE_URL } from '../lib/siteUrl';
 
 export default function UsernameEditor({ currentUsername, profileId, onUpdate }) {
   const [editing, setEditing] = useState(false);
@@ -51,17 +52,14 @@ export default function UsernameEditor({ currentUsername, profileId, onUpdate })
     setError('');
 
     try {
-      const { data, error: dbError } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('username', value)
-        .single();
+      // Başka kullanıcıların profili istemciden okunamaz; müsaitlik sunucuda
+      // kontrol edilir (kullanıcı adları zaten herkese açık kart adresi).
+      const { data: musait, error: dbError } = await supabase
+        .rpc('is_username_available', { p_username: value });
 
-      if (dbError && dbError.code !== 'PGRST116') {
-        throw dbError;
-      }
+      if (dbError) throw dbError;
 
-      if (data) {
+      if (!musait) {
         setError('Bu username kullanılıyor');
         setAvailable(false);
       } else {
@@ -147,7 +145,7 @@ export default function UsernameEditor({ currentUsername, profileId, onUpdate })
           <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Profil URL'iniz:</p>
             <p className="text-sm font-mono text-gray-900 dark:text-gray-100">
-              {window.location.origin}/card/<span className="text-blue-600 dark:text-blue-400 font-bold">{username || '...'}</span>
+              {SITE_URL}/card/<span className="text-blue-600 dark:text-blue-400 font-bold">{username || '...'}</span>
             </p>
           </div>
 

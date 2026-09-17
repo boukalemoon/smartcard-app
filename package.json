@@ -2,7 +2,7 @@
   "name": "qartim",
   "description": "Qartim - Dijital Kartvizit Platformu",
   "private": true,
-  "version": "1.4.0",
+  "version": "1.8.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

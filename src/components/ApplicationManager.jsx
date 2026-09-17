@@ -36,46 +36,35 @@ export default function ApplicationManager({ organizationId }) {
     }
   }
 
+  const BASVURU_HATALARI = {
+    yetkisiz: 'Bu başvuruyu sonuçlandırmak için organizasyon yöneticisi olmanız gerekiyor.',
+    zaten_sonuclandi: 'Bu başvuru zaten sonuçlandırılmış.',
+    basvuru_bulunamadi: 'Başvuru bulunamadı.',
+  }
+
   const updateApplicationStatus = async (applicationId, newStatus) => {
     try {
-      const { error } = await supabase
-        .from('applications')
-        .update({
-          status: newStatus,
-          reviewed_at: new Date().toISOString()
-        })
-        .eq('id', applicationId)
-
+      // Durum, profil eşleme ve üye ekleme sunucuda tek işlemde. Önceden durumu
+      // "onaylandı" yapıp, başvuranın hesabı yoksa üyeyi eklemiyordu; ayrıca
+      // başka kullanıcının profilini istemciden okuyordu.
+      const { data, error } = await supabase.rpc('approve_application', {
+        p_application_id: applicationId,
+        p_decision: newStatus,
+      })
       if (error) throw error
-
-      // Eğer onaylandıysa, member olarak ekle
-      if (newStatus === 'approved') {
-        const application = applications.find(app => app.id === applicationId)
-        
-        if (application) {
-          const { data: profileData } = await supabase
-  .from('profiles')
-  .select('id')
-  .eq('email', application.applicant_email)
-  .single()
-
-if (profileData) {
-  await supabase
-    .from('members')
-    .insert({
-      organization_id: organizationId,
-      profile_id: profileData.id,
-      role: 'member',
-      status: 'active'
-    })
-} else {
-  alert('⚠️ Başvuru sahibi henüz QRtım hesabı oluşturmamış. Üye eklenemedi.')
-}
-        }
+      if (!data?.ok) {
+        alert(BASVURU_HATALARI[data?.hata] || 'Başvuru güncellenemedi.')
+        return
       }
 
       loadApplications()
-      alert(newStatus === 'approved' ? 'Başvuru onaylandı ve üye eklendi!' : 'Başvuru reddedildi')
+      if (newStatus === 'approved') {
+        alert(data.hesap_bagli
+          ? 'Başvuru onaylandı; kişi QRtım hesabıyla üye olarak eklendi.'
+          : 'Başvuru onaylandı ve üye olarak eklendi. Kişinin QRtım hesabı olmadığı için üye kaydı başvuru bilgileriyle oluşturuldu.')
+      } else {
+        alert('Başvuru reddedildi')
+      }
     } catch (error) {
       alert('Hata: ' + error.message)
     }

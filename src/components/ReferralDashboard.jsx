@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { Users, TrendingUp, Gift, Copy, Check, RefreshCw } from 'lucide-react'
+import { signupUrl } from '../lib/siteUrl'
 
 export default function ReferralDashboard({ profile }) {
   const [referralCode, setReferralCode] = useState(null)
@@ -25,24 +26,16 @@ export default function ReferralDashboard({ profile }) {
         .from('referral_codes')
         .select('*')
         .eq('profile_id', profile.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
+        .maybeSingle()
 
       if (codeData) {
         setReferralCode(codeData)
       }
 
       // Referral istatistikleri
-      const { data: referralList } = await supabase
-        .from('referrals')
-        .select(`
-          *,
-          referee:profiles!referrals_referee_id_fkey(
-            name, email, subscription_plan
-          )
-        `)
-        .eq('referrer_id', profile.id)
+      // Davet ettiklerinin yalnızca adı gelir; e-postaları ve planları
+      // davet edene açık değil.
+      const { data: referralList } = await supabase.rpc('my_referrals')
 
       if (referralList) {
         setReferrals(referralList)
@@ -63,29 +56,11 @@ export default function ReferralDashboard({ profile }) {
   const generateReferralCode = async () => {
     setGenerating(true)
     try {
-      // Kullanıcı adından kişiye özel kod oluştur
-      const baseName = (profile.name || profile.email.split('@')[0])
-        .toLowerCase()
-        .replace(/\s+/g, '')
-        .replace(/[^a-z0-9]/g, '')
-        .substring(0, 10)
-
-      const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase()
-      const code = `${baseName}-${randomSuffix}`
-
-      const { data, error } = await supabase
-        .from('referral_codes')
-        .insert({
-          profile_id: profile.id,
-          code: code,
-          usage_count: 0,
-          total_earnings: 0
-        })
-        .select()
-        .single()
-
+      // Sunucuda, profil başına tek kod. Önceden her tıklama yeni bir kod
+      // satırı ekliyordu (bir hesapta 8 kod birikmişti).
+      const { data, error } = await supabase.rpc('get_or_create_referral_code')
       if (error) throw error
-
+      if (!data?.ok) throw new Error(data?.hata || 'kod oluşturulamadı')
       setReferralCode(data)
     } catch (error) {
       alert('Kod oluşturulamadı: ' + error.message)
@@ -96,7 +71,7 @@ export default function ReferralDashboard({ profile }) {
 
   const copyReferralLink = () => {
     if (!referralCode) return
-    const link = `${window.location.origin}/signup?ref=${referralCode.code}`
+    const link = signupUrl(referralCode.code)
     navigator.clipboard.writeText(link)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -188,7 +163,7 @@ export default function ReferralDashboard({ profile }) {
               <div className="flex gap-3">
                 <input
                   type="text"
-                  value={`${window.location.origin}/signup?ref=${referralCode.code}`}
+                  value={signupUrl(referralCode.code)}
                   readOnly
                   className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-300"
                 />
@@ -245,15 +220,15 @@ export default function ReferralDashboard({ profile }) {
               >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                    {referral.referee?.name?.charAt(0) || '?'}
+                    {referral.davetli_adi?.charAt(0) || '?'}
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
-                      {referral.referee?.name || 'Kullanıcı'}
+                      {referral.davetli_adi || 'Kullanıcı'}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {referral.referee?.email}
-                    </p>
+                    {referral.hesap_silinmis && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Hesabını sildi</p>
+                    )}
                   </div>
                 </div>
                 <div className="text-right">

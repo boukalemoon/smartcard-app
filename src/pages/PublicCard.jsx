@@ -3,6 +3,7 @@ import { trackEvent } from '../utils/analyticsHelpers'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
+import { SITE_URL } from '../lib/siteUrl'
 import { useToast } from '../components/Toast'
 import { Linkedin, Facebook, Twitter, Instagram, Play, Github, Globe, Music, Twitch, ExternalLink, ArrowLeft, Download, Mail, Phone, MapPin, ChevronDown, ChevronUp } from 'lucide-react'
 
@@ -44,7 +45,9 @@ function safeUrl(url) {
 }
 
 export default function PublicCard() {
-  const { username } = useParams()
+  // /card/:username → ana profil, /k/:code → seçilmiş profil (persona)
+  const { username, code } = useParams()
+  const [duraklatildi, setDuraklatildi] = useState(false)
   const navigate = useNavigate()
   const { showToast } = useToast()
   const [profile, setProfile] = useState(null)
@@ -70,7 +73,7 @@ export default function PublicCard() {
   }
 
   useEffect(() => { document.documentElement.classList.remove('dark') }, [])
-  useEffect(() => { if (username) loadProfile() }, [username])
+  useEffect(() => { if (username || code) loadProfile() }, [username, code])
 
   const loadProfile = async () => {
     try {
@@ -79,10 +82,13 @@ export default function PublicCard() {
       // Kartın TEK veri kaynağı. Görünürlük filtresi, plan bazlı organizasyon
       // sınırı ve ödeme onayı kontrolü sunucuda uygulanır; istemci artık
       // profiles/social_links/members/organizations tablolarına dokunmuyor.
-      const { data, error: rpcError } = await supabase
-        .rpc('get_public_card', { p_username: username })
+      // Persona bağlantısı kodla çözülür; profil ADIYLA başka profile ulaşılamaz.
+      const { data, error: rpcError } = code
+        ? await supabase.rpc('get_public_card_by_code', { p_code: code })
+        : await supabase.rpc('get_public_card', { p_username: username })
       if (rpcError) throw rpcError
       if (!data) { setError('Profil bulunamadı'); return }
+      if (data.paused) { setDuraklatildi(true); return }
 
       setProfile(data)
       setFields(data.fields || {})
@@ -95,7 +101,7 @@ export default function PublicCard() {
         // Sayaç sunucuda. Eskiden istemciden profiles.update deneniyordu;
         // anon için RLS bunu engelliyor, 0 satır etkiliyor ve hata da
         // fırlatmıyordu — yani hiç sayılmıyordu (bulgu O-6).
-        supabase.rpc('increment_card_view', { p_username: username })
+        supabase.rpc('increment_card_view', code ? { p_code: code } : { p_username: username })
       }
     } catch (err) {
       console.error('Profil yükleme hatası:', err)
@@ -123,7 +129,7 @@ export default function PublicCard() {
     const firstName = nameParts.join(' ') || 'Unknown'
     // vCard yalnızca herkese açık alanlardan üretilir; gizli tutulan bir alan
     // zaten istemciye hiç gelmediği için kişi kartına da yazılamaz.
-    const vCard = ['BEGIN:VCARD','VERSION:3.0',`FN:${profile.name||''}`,`N:${lastName};${firstName};;;`,`TEL:${fields.phone||''}`,`EMAIL:${fields.email||''}`,`TITLE:${fields.title||''}`,`ORG:${fields.company||''}`,`NOTE:${fields.bio||''}`,`URL:${window.location.origin}/card/${profile.username}`,'END:VCARD'].join('\n')
+    const vCard = ['BEGIN:VCARD','VERSION:3.0',`FN:${profile.name||''}`,`N:${lastName};${firstName};;;`,`TEL:${fields.phone||''}`,`EMAIL:${fields.email||''}`,`TITLE:${fields.title||''}`,`ORG:${fields.company||''}`,`NOTE:${fields.bio||''}`,`URL:${SITE_URL}${profile.share_path || `/card/${profile.username}`}`,'END:VCARD'].join('\n')
     const blob = new Blob([vCard], { type: 'text/vcard;charset=utf-8' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
@@ -137,6 +143,17 @@ export default function PublicCard() {
       <div className="text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
         <p className="mt-4 text-gray-600">Yükleniyor...</p>
+      </div>
+    </div>
+  )
+
+  if (duraklatildi) return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full text-center">
+        <div className="text-6xl mb-4">⏸️</div>
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">Bu profil şu an paylaşılmıyor</h1>
+        <p className="text-gray-600 mb-6">Profil sahibi bu bağlantıyı geçici olarak duraklatmış.</p>
+        <button onClick={() => navigate('/')} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Ana Sayfaya Dön</button>
       </div>
     </div>
   )
@@ -179,6 +196,8 @@ export default function PublicCard() {
               <h1 className="text-3xl font-bold mb-2">{profile.name || ''}</h1>
               {fields.title && <p className="text-blue-100 text-lg mb-1">{fields.title}</p>}
               {fields.company && <p className="text-blue-200">{fields.company}</p>}
+              {fields.department && <p className="text-blue-200 text-sm">{fields.department}</p>}
+              {fields.city && <p className="text-blue-200 text-sm flex items-center justify-center gap-1"><MapPin size={14} />{fields.city}</p>}
             </div>
           </div>
 
@@ -204,6 +223,20 @@ export default function PublicCard() {
                 <a href={`tel:${fields.phone}`} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                   <Phone size={20} style={{ color: themeColor }} />
                   <span className="text-gray-700">{fields.phone}</span>
+                </a>
+              )}
+              {fields.whatsapp && (
+                <a href={`https://wa.me/${String(fields.whatsapp).replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                  <Phone size={20} style={{ color: '#25D366' }} />
+                  <span className="text-gray-700">WhatsApp: {fields.whatsapp}</span>
+                </a>
+              )}
+              {safeUrl(fields.website) && (
+                <a href={safeUrl(fields.website)} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                  <Globe size={20} style={{ color: themeColor }} />
+                  <span className="text-gray-700 truncate">{fields.website.replace(/^https?:\/\//, '')}</span>
                 </a>
               )}
             </div>

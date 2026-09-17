@@ -16,8 +16,14 @@ const AUTH_ERROR_MESSAGES = [
   ['Email not confirmed', 'Hesabınız henüz etkinleştirilmemiş. E-postanıza gönderdiğimiz doğrulama bağlantısına tıklayın.'],
   ['User already registered', 'Bu e-posta ile daha önce kayıt olunmuş. Giriş yapmayı deneyin.'],
   ['Password should be at least', `Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalı.`],
+  // Doğrulama e-postası gönderilemediğinde kayıt 500 ile tamamen başarısız
+  // oluyor ve kullanıcı ham İngilizce hata görüyordu. İki ayrı sebep var:
+  // adres teslim edilemiyor (SMTP 501/550) ya da saatlik e-posta kotası dolu.
+  ['Error sending confirmation email',
+   'Doğrulama e-postası gönderilemedi. E-posta adresinizi kontrol edin; adres doğruysa birkaç dakika sonra tekrar deneyin.'],
+  ['Unable to validate email address', 'E-posta adresi geçerli görünmüyor. Yazımını kontrol edin.'],
+  ['over_email_send_rate_limit', 'Şu an çok fazla e-posta gönderiliyor. Lütfen birkaç dakika sonra tekrar deneyin.'],
   ['rate limit', 'Çok fazla deneme yapıldı. Lütfen birkaç dakika bekleyip tekrar deneyin.'],
-  ['over_email_send_rate_limit', 'Çok fazla e-posta gönderildi. Lütfen birkaç dakika bekleyin.'],
 ]
 
 function friendlyAuthError(error) {
@@ -181,7 +187,11 @@ export default function Auth({ initialMode = 'signup' }) {
           password,
           options: {
             data: {
-              name: name || email.split('@')[0]
+              name: name || email.split('@')[0],
+              // Davet kodu önceden tarayıcıda saklanıp HİÇBİR YERE gönderilmiyordu:
+              // davetle gelen kimse davet edene bağlanmıyordu. Davet kaydını artık
+              // sunucu (handle_new_user) oluşturur; kod yanlışsa kayıt yine tamamlanır.
+              ...(referralCode ? { referral_code: String(referralCode).trim().slice(0, 40) } : {})
             }
           }
         })

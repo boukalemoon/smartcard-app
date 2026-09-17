@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { X, CreditCard, Check } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 
-export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal = false, currentSubscription = null, profile }) {
+export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal = false, currentSubscription = null }) {
   const [selectedPeriod, setSelectedPeriod] = useState('monthly')
   const [includeNFC, setIncludeNFC] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -61,46 +61,73 @@ export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal 
 
   const yearlyDiscount = currentPlan.monthly * 12 - currentPlan.yearly
 
-  const getPlanNFCCards = () => {
-    if (selectedPeriod !== 'yearly') return 0
-    return currentPlan.nfcIncluded || 0
+  // Sunucudan dönebilecek hata kodlarının kullanıcıya gösterilecek karşılıkları.
+  const ODEME_HATALARI = {
+    oturum_yok: 'Oturumunuzun süresi dolmuş. Sayfayı yenileyip tekrar giriş yapın.',
+    plan_bulunamadi: 'Seçtiğiniz plan şu an satışta değil.',
+    odeme_altyapisi_hazir_degil: 'Ödeme altyapısı henüz aktif değil. Çok yakında hizmetinizde olacak.',
+    niyet_kullanilamaz: 'Bu ödeme isteği artık geçerli değil. Lütfen tekrar deneyin.',
+    niyet_bulunamadi: 'Ödeme isteği bulunamadı. Lütfen tekrar deneyin.',
   }
 
-  const updateNFCCardTracking = async () => {
-    try {
-      const planNFCCards = getPlanNFCCards()
-      if (planNFCCards > 0 && profile?.id) {
-        const { error } = await supabase
-          .from('subscriptions')
-          .update({
-            nfc_cards_used: planNFCCards,
-            nfc_cards_included: planNFCCards,
-            updated_at: new Date().toISOString()
-          })
-          .eq('profile_id', profile.id)
-        if (error) console.error('NFC tracking error:', error)
-      }
-    } catch (error) {
-      console.error('NFC tracking failed:', error)
-    }
-  }
-
+  // ÖNCEKİ HÂLİ: `const paymentSuccess = true` — ödeme HİÇ ALINMADAN
+  // aboneliğe NFC hakkı yazılıyordu. Artık:
+  //   1. Tutarı SUNUCU belirler (payment_create_intent). Ekrandaki fiyat
+  //      yalnızca gösterim içindir; tarayıcıda değiştirilse de etkisi yoktur.
+  //   2. İmzalı istek Edge Function'da üretilir; banka sırrı tarayıcıya gelmez.
+  //   3. Hak, yalnızca bankanın imzalı ve tutarı doğrulanmış bildirimiyle
+  //      sunucuda tanımlanır. Bu bileşen hiçbir hakkı kendisi yazmaz.
   const handlePayment = async () => {
     try {
       setLoading(true)
 
-      // TODO: Pazartesi — gerçek ödeme entegrasyonu buraya gelecek
-      const paymentSuccess = true
-
-      if (paymentSuccess) {
-        await updateNFCCardTracking()
-        alert(`${isRenewal ? 'Yenileme' : 'Ödeme'} başarılı! Toplam: ₺${totalPrice.toLocaleString('tr-TR')}`)
-        onClose()
-        window.location.reload()
+      const { data: niyet, error: niyetHatasi } = await supabase.rpc('payment_create_intent', {
+        p_plan: selectedPlan,
+        p_period: selectedPeriod,
+        p_with_nfc: selectedPeriod === 'yearly' && includeNFC,
+      })
+      if (niyetHatasi) throw niyetHatasi
+      if (!niyet?.ok) {
+        alert(ODEME_HATALARI[niyet?.hata] || 'Ödeme başlatılamadı. Lütfen tekrar deneyin.')
+        return
       }
+
+      // Ekrandaki fiyat sunucununkinden farklıysa kullanıcı habersiz ödemesin.
+      const sunucuTutari = niyet.tutar_kurus / 100
+      if (niyet.tutar_kurus !== Math.round(totalPrice * 100)) {
+        const devam = confirm(
+          `Güncel tutar ₺${sunucuTutari.toLocaleString('tr-TR')} olarak hesaplandı ` +
+          `(ekranda ₺${totalPrice.toLocaleString('tr-TR')} görünüyordu). Devam etmek istiyor musunuz?`
+        )
+        if (!devam) return
+      }
+
+      const { data: istek, error: baslatmaHatasi } = await supabase.functions.invoke('payment-start', {
+        body: { intent_id: niyet.intent_id },
+      })
+      if (baslatmaHatasi) {
+        let kod = null
+        try { kod = (await baslatmaHatasi.context?.json())?.hata } catch { /* gövde okunamadı */ }
+        alert(ODEME_HATALARI[kod] || 'Ödeme başlatılamadı. Lütfen tekrar deneyin.')
+        return
+      }
+
+      // Bankanın 3D ödeme sayfasına yönlendir (form POST).
+      const form = document.createElement('form')
+      form.method = 'POST'
+      form.action = istek.action_url
+      for (const [ad, deger] of Object.entries(istek.fields || {})) {
+        const alan = document.createElement('input')
+        alan.type = 'hidden'
+        alan.name = ad
+        alan.value = deger
+        form.appendChild(alan)
+      }
+      document.body.appendChild(form)
+      form.submit()
     } catch (error) {
-      console.error('Ödeme hatası:', error)
-      alert('Ödeme işlemi başarısız oldu.')
+      console.error('Ödeme başlatma hatası:', error)
+      alert('Ödeme işlemi başlatılamadı. Lütfen tekrar deneyin.')
     } finally {
       setLoading(false)
     }

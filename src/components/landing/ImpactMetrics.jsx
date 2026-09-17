@@ -17,26 +17,15 @@ export default function ImpactMetrics() {
 
   const calculateImpact = async () => {
     try {
-      // 1. Toplam kullanıcı sayısı
-      const { count: userCount } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
+      // Açılış sayfası anonim ziyaretçiye açık, profiller ve abonelikler değil.
+      // Yalnızca toplamları döndüren fonksiyon kullanılıyor. (Önceki doğrudan
+      // okumalar anonim erişim kapatıldığından beri boş dönüyordu.)
+      const { data: istatistik, error: istatistikHatasi } = await supabase.rpc('get_platform_stats');
+      if (istatistikHatasi) throw istatistikHatasi;
 
-      // 2. Toplam profil görüntülenme
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('card_views');
-
-      const totalViews = profilesData?.reduce((sum, p) => sum + (p.card_views || 0), 0) || 0;
-
-      // 3. CANLI VERİ: Toplam sipariş edilen NFC kartlar
-      const { data: subscriptionsData } = await supabase
-        .from('subscriptions')
-        .select('nfc_cards_used, nfc_cards_included');
-
-      const totalNFCCards = subscriptionsData?.reduce((sum, sub) => {
-        return sum + (sub.nfc_cards_used || 0);
-      }, 0) || 0;
+      const userCount = istatistik?.kullanici || 0;
+      const totalViews = istatistik?.kart_goruntulenme || 0;
+      const totalNFCCards = istatistik?.nfc_kart || 0;
 
       // HESAPLAMALAR (Bilimsel kaynaklara göre)
       const avgCardsPerYear = 200; // Ortalama kişi başı yıllık kartvizit kullanımı

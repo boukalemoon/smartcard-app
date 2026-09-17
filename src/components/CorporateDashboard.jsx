@@ -174,15 +174,13 @@ const loadOrganizationAnalytics = async (orgs, filter = null) => {
     try {
       const allMembers = []
       for (const org of organizations) {
-        const { data: members } = await supabase
-          .from('members')
-          .select('*, profiles (name, email)')
-          .eq('organization_id', org.id)
+        // Üye bilgisi kişinin paylaşım tercihlerine göre süzülmüş olarak gelir.
+        const { data: members } = await supabase.rpc('org_member_list', { p_org_id: org.id })
         if (members) {
           allMembers.push(...members.map(m => ({
             'Organizasyon': org.name,
-            'Ad Soyad': m.profiles?.name || '-',
-            'Email': m.profiles?.email || '-',
+            'Ad Soyad': m.name || '-',
+            'Email': m.email || '-',
             'Rol': m.role,
             'Durum': m.status,
             'Katılım Tarihi': new Date(m.joined_at).toLocaleDateString('tr-TR')

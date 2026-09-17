@@ -45,19 +45,68 @@ export default function AdminCRM() {
     }
   }
 
-  const handleDeleteUser = async (user) => {
-    if (!confirm(`"${user.name || user.email}" kullanıcısını silmek istediğinize emin misiniz?\n\nBu işlem geri alınamaz!`)) return
+  // ÖNCEKİ HÂLİ: istemciden 6 tabloyu hata kontrolü olmadan siliyordu. Erişim
+  // kuralları başka kullanıcının satırlarını silmeye izin vermediği için hiçbir
+  // şey silinmiyor, yalnızca davet geçmişi gibi bazı kayıtlar yok olabiliyordu;
+  // auth kaydı ise hiç silinmiyordu ("Supabase panelinden silin" diyordu, orada
+  // da referrals_referee_id_fkey yüzünden silinemiyordu).
+  // Artık tek denetimli RPC: gerekçe zorunlu, denetim kaydına critical düşer,
+  // finansal ve davet kayıtları korunur, kişiye bağı kopar.
+  const SILME_HATALARI = {
+    yetkisiz: 'Bu işlem için yönetici olmanız gerekiyor.',
+    kendini_silemezsin: 'Kendi hesabınızı buradan silemezsiniz.',
+    yonetici_silinemez: 'Yönetici hesapları silinemez. Önce yönetici yetkisini kaldırın.',
+    gerekce_zorunlu: 'Silme gerekçesi zorunludur.',
+    kullanici_bulunamadi: 'Kullanıcı bulunamadı; zaten silinmiş olabilir.',
+  }
+
+  const handleDeleteUser = async (user, zorla = false, oncekiGerekce = null, oncekiKotuyeKullanim = false) => {
+    if (!user.user_id) {
+      alert('Bu profilin bağlı bir kullanıcı hesabı yok.')
+      return
+    }
+    if (!zorla && !confirm(`"${user.name || user.email}" kullanıcısını silmek istediğinize emin misiniz?
+
+Bu işlem geri alınamaz!`)) return
+    const gerekce = zorla ? `${oncekiGerekce} [sahipsiz kalacak organizasyon uyarısı onaylandı]` : prompt('Silme gerekçesi (denetim kaydına yazılır):')
+    if (!gerekce || !gerekce.trim()) return
+
+    // Yalnızca gerçekten kötüye kullanımda işaretlenmeli: aynı e-posta/telefonla
+    // yeniden kayıt olunursa kritik güvenlik kaydı düşer (kayıt engellenmez).
+    const kotuyeKullanim = zorla ? oncekiKotuyeKullanim : confirm(`Bu hesap KÖTÜYE KULLANIM nedeniyle mi siliniyor? (spam, sahte hesap, saldırı)
+
+Tamam: aynı e-posta veya telefonla yeniden kayıt olunursa kritik güvenlik kaydı oluşur.
+İptal: normal yönetici silmesi.`)
+
     setActionLoading(user.id)
     try {
-      // Önce bağlı tabloları temizle
-      await supabase.from('referrals').delete().or(`referrer_id.eq.${user.id},referee_id.eq.${user.id}`)
-      await supabase.from('social_links').delete().eq('profile_id', user.id)
-      await supabase.from('members').delete().eq('profile_id', user.id)
-      await supabase.from('subscriptions').delete().eq('profile_id', user.id)
-      await supabase.from('referral_codes').delete().eq('profile_id', user.id)
-      await supabase.from('profiles').delete().eq('id', user.id)
+      const { data, error } = await supabase.rpc('admin_delete_user', {
+        p_user_id: user.user_id,
+        p_reason: gerekce.trim(),
+        p_force: zorla,
+        p_kotuye_kullanim: kotuyeKullanim,
+      })
+      if (error) throw error
+
+      if (!data?.ok && data?.hata === 'sahipsiz_kalacak_organizasyon') {
+        const adlar = (data.organizasyonlar || []).map(o => o.ad).join(', ')
+        if (confirm(`Bu kişi şu organizasyonların TEK yöneticisi ve başka üyeleri var: ${adlar}
+
+Silinirse bu organizasyonlar yöneticisiz kalır. Yine de silinsin mi?`)) {
+          setActionLoading(null)
+          return handleDeleteUser(user, true, gerekce.trim(), kotuyeKullanim)
+        }
+        return
+      }
+      if (!data?.ok) {
+        alert(SILME_HATALARI[data?.hata] || ('Kullanıcı silinemedi: ' + (data?.hata || 'bilinmeyen hata')))
+        return
+      }
+
       setUsers(prev => prev.filter(u => u.id !== user.id))
-      alert('✅ Kullanıcı silindi. Supabase Dashboard → Authentication → Users kısmından da auth kaydını silin.')
+      alert(data.kalan_dosya > 0
+        ? `✅ Kullanıcı silindi. Uyarı: ${data.kalan_dosya} dosyası depolamada kaldı.`
+        : '✅ Kullanıcı ve hesabı tamamen silindi.')
     } catch (error) {
       alert('Hata: ' + error.message)
     } finally {
@@ -69,10 +118,29 @@ export default function AdminCRM() {
     if (!confirm(`"${user.name || user.email}" kullanıcısının rolünü "${newRole}" olarak değiştirmek istediğinize emin misiniz?`)) return
     setActionLoading(user.id)
     try {
-      const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', user.id)
+      // Önceden başka kullanıcının profilini istemciden güncelliyordu: güncelleme
+      // kuralı yalnızca kişinin kendi profiline açık olduğu için 0 satır
+      // etkileniyor, ekran yine de "güncellendi" diyordu.
+      const gerekce = prompt('Rol değişikliğinin gerekçesi (denetim kaydına yazılır):')
+      if (!gerekce || !gerekce.trim()) return
+      const { data, error } = await supabase.rpc('admin_set_role', {
+        p_profile_id: user.id,
+        p_role: newRole,
+        p_reason: gerekce.trim(),
+      })
       if (error) throw error
+      if (!data?.ok) {
+        const mesajlar = {
+          yetkisiz: 'Bu işlem için yönetici olmanız gerekiyor.',
+          kendi_rolunu_degistiremezsin: 'Kendi rolünüzü değiştiremezsiniz.',
+          son_yonetici: 'Sistemdeki son yöneticinin yetkisi kaldırılamaz.',
+          gecersiz_rol: 'Geçersiz rol.',
+        }
+        alert(mesajlar[data?.hata] || ('Rol değiştirilemedi: ' + (data?.hata || 'bilinmeyen hata')))
+        return
+      }
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, role: newRole } : u))
-      alert(`✅ Rol "${newRole}" olarak güncellendi!`)
+      alert(`✅ Rol "${data.eski_rol}" → "${newRole}" olarak güncellendi.`)
     } catch (error) {
       alert('Hata: ' + error.message)
     } finally {
@@ -83,10 +151,24 @@ export default function AdminCRM() {
   const handleChangePlan = async (userId, newPlan) => {
     setActionLoading(userId)
     try {
-      const { error } = await supabase.from('subscriptions').update({ plan: newPlan }).eq('profile_id', userId)
+      // Doğrudan tablo güncellemesi başka kullanıcının aboneliğinde 0 satır
+      // etkiliyordu (yönetici politikası yok) ama ekran yine de planı
+      // değiştirip "güncellendi" diyordu. Artık denetimli RPC; ödemesiz plan
+      // değişikliği denetim kaydına critical olarak düşer.
+      const gerekce = prompt('Plan değişikliğinin gerekçesi (denetim kaydına yazılır):')
+      if (gerekce === null) return
+      const { data, error } = await supabase.rpc('admin_set_plan', {
+        p_profile_id: userId,
+        p_plan: newPlan,
+        p_reason: gerekce || null,
+      })
       if (error) throw error
+      if (!data?.ok) {
+        alert('Plan değiştirilemedi: ' + (data?.hata || 'bilinmeyen hata'))
+        return
+      }
       setSubscriptions(prev => prev.map(s => s.profile_id === userId ? { ...s, plan: newPlan } : s))
-      alert(`✅ Plan "${newPlan}" olarak güncellendi!`)
+      alert(`✅ Plan "${data.eski_plan}" → "${newPlan}" olarak güncellendi.`)
     } catch (error) {
       alert('Hata: ' + error.message)
     } finally {

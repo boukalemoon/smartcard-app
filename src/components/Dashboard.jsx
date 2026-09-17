@@ -17,12 +17,13 @@ import { useSubscription } from '../hooks/useSubscription'
 import { useDashboardMode } from '../contexts/DashboardModeContext'
 import ThemeToggle from './ThemeToggle'
 import DashboardModeToggle from './DashboardModeToggle'
-import QRCodeDisplay from './QRCodeDisplay'
 import NFCWriter from './NFCWriter'
 import SocialLinksManager from './SocialLinksManager'
 import UsernameEditor from './UsernameEditor'
 import QrtimIdCard from './QrtimIdCard'
-import FieldVisibilityManager from './FieldVisibilityManager'
+import PersonaManager from './PersonaManager'
+import PersonaShare from './PersonaShare'
+import ActivityLog from './ActivityLog'
 import { validateCatalogLink, validateService, validateProfile } from '../utils/inputValidation'
 import { checkProfileUpdateRateLimit } from '../utils/rateLimiting'
 import { useNavigate } from 'react-router-dom'
@@ -139,19 +140,30 @@ export default function Dashboard({ session }) {
       }
 
       if (profile) {
-        const { error } = await supabase
+        // .select() ŞART: satır sayısı kontrol edilmezse, erişim kuralı
+        // güncellemeyi engellediğinde `error` boş döner, 0 satır güncellenir
+        // ve kullanıcıya yine "Profil kaydedildi" gösterilirdi. Görüntülenme
+        // sayacında aynı sessiz hata aylarca fark edilmeden kalmıştı.
+        const { data, error } = await supabase
           .from('profiles')
           .update({ ...validation.sanitized, updated_at: new Date().toISOString() })
           .eq('user_id', userId)
+          .select('id')
         if (error) throw error
+        if (!data || data.length === 0) {
+          showToast('Profil kaydedilemedi — oturumunuzu yenileyip tekrar deneyin.', 'error')
+          return
+        }
       } else {
-        // Trigger'ın oluşturmadığı durum — id'yi açıkça set et (RLS uyumluluğu)
-        const { error } = await supabase.from('profiles').insert({
+        // Trigger'ın oluşturmadığı durum — id'yi açıkça set et (RLS uyumluluğu).
+        // Profil zaten varsa birincil anahtar çakışması yerine güncelle:
+        // kullanıcılar "kaydedilemiyor" hatasını tam olarak bu yüzden alıyordu.
+        const { error } = await supabase.from('profiles').upsert({
           id: userId,
           user_id: userId,
           email: currentSession.user.email,
           ...validation.sanitized
-        })
+        }, { onConflict: 'id' })
         if (error) throw error
       }
 
@@ -413,11 +425,12 @@ export default function Dashboard({ session }) {
                 </div>
 
                 {profile?.id && <UsernameEditor currentUsername={profile.username} profileId={profile.id} onUpdate={(newUsername) => setProfile({ ...profile, username: newUsername })} />}
-                {profile?.id && <FieldVisibilityManager profileId={profile.id} />}
+                {profile?.id && <PersonaManager username={profile.username} />}
                 {profile?.user_id && <QrtimIdCard userId={profile.user_id} />}
                 {profile && <SocialLinksManager profileId={profile.id} subscriptionPlan={subscription?.plan || 'free'} />}
                 {profile && <OrganizationManager profileId={profile.id} subscriptionPlan={subscription?.plan || 'free'} />}
                 {profile && <ReferralDashboard profile={profile} />}
+                {profile && <ActivityLog />}
               </div>
 
               <div className="space-y-6">
@@ -789,7 +802,7 @@ export default function Dashboard({ session }) {
                       )}
                     </div>
 
-                    <QRCodeDisplay username={profile.username} fullName={profile.name || session.user.email} qrForegroundColor={profile.qr_foreground_color} qrBackgroundColor={profile.qr_background_color} qrLogoEnabled={profile.qr_logo_enabled} profileImage={profile.avatar_url} />
+                    <PersonaShare profile={profile} fallbackName={session.user.email} />
                     <NFCWriter username={profile.username} />
 
                     {subscription?.plan === 'free' ? (

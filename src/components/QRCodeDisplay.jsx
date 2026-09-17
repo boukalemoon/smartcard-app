@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { Download, Share2 } from 'lucide-react';
+import { cardUrl } from '../lib/siteUrl';
 
 export default function QRCodeDisplay({ 
   username, 
+  url = null,        // verilirse bu adres kodlanir (persona paylasimi)
+  fileLabel = null,  // indirilen dosyanin adi
   fullName,
   qrForegroundColor = '#1F2937',  // ← YENİ!
   qrBackgroundColor = '#FFFFFF',  // ← YENİ!
@@ -12,13 +15,21 @@ export default function QRCodeDisplay({
  }) {
   const canvasRef = useRef(null);
   const [qrDataUrl, setQrDataUrl] = useState('');
-  const profileUrl = `${window.location.origin}/card/${username}`;
+  // Basılan QR kod bu adresi kalıcı olarak taşır; tarayıcının o anda
+  // hangi adreste olduğundan bağımsız olmalı. Bkz. lib/siteUrl.js
+  const profileUrl = url || cardUrl(username);
 
   useEffect(() => {
-    if (canvasRef.current && username) {
+    if (canvasRef.current && profileUrl) {
       generateQRCode();
     }
-  }, [username, qrForegroundColor, qrBackgroundColor]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileUrl, qrForegroundColor, qrBackgroundColor, qrLogoEnabled, profileImage]);
+
+  // Logo QR'nin ortasındaki %20'lik alanı kapatıyor. Varsayılan hata düzeltme
+  // seviyesi (M) yalnızca ~%15 kaybı tolere eder → logolu kodların bir kısmı
+  // okunamıyordu. Logo varken en yüksek seviye (H, ~%30) kullanılır.
+  const hataDuzeltme = qrLogoEnabled && profileImage ? 'H' : 'M';
 
   const generateQRCode = async () => {
     try {
@@ -28,6 +39,7 @@ export default function QRCodeDisplay({
       await QRCode.toCanvas(canvasRef.current, profileUrl, {
         width: 300,
         margin: 2,
+        errorCorrectionLevel: hataDuzeltme,
         color: {
           dark: qrForegroundColor,   // ← ÖZELLEŞ!
           light: qrBackgroundColor   // ← ÖZELLEŞ!
@@ -45,6 +57,7 @@ export default function QRCodeDisplay({
       const dataUrl = await QRCode.toDataURL(profileUrl, {
         width: 600,
         margin: 2,
+        errorCorrectionLevel: hataDuzeltme,
         color: {
           dark: qrForegroundColor,   // ← ÖZELLEŞ!
           light: qrBackgroundColor   // ← ÖZELLEŞ!
@@ -92,7 +105,7 @@ const addLogoToQR = (canvas, logoUrl) => {
   const downloadQRCode = () => {
     if (qrDataUrl) {
       const link = document.createElement('a');
-      link.download = `${username}-qr-code.png`;
+      link.download = `${fileLabel || username}-qr-code.png`;
       link.href = qrDataUrl;
       link.click();
     }
