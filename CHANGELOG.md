@@ -50,6 +50,16 @@ saklama süreleri koddan çıkarılıp hukuki teyide bağlandı.
 
 ### Güvenlik
 
+- **Kritik:** giriş yapmış herhangi bir kullanıcı herhangi bir kuruma kendini
+  **yönetici** olarak ekleyebiliyordu (1.6.0'daki üye ekleme politikası rol
+  ve kurum sınırlamıyordu). Böylece başvuranların kişisel verilerini ve üye
+  analitiğini görebiliyordu. Sıradan hesapla denenerek doğrulandı ve
+  kapatıldı; doğrudan üye ekleme artık yalnızca kurum yöneticisinde. Mevcut
+  10 yönetici kaydının hepsi kurucu, istismar izi yok.
+- Başvuru formu başvuruyu "onaylanmış" olarak gönderebiliyordu; artık yalnızca
+  bekleyen başvuru yazılabiliyor.
+- Başvuru formu giriş yapmamış ziyaretçiler için hiç çalışmıyordu (politika
+  ziyaretçinin okuyamadığı kurum tablosuna bakıyordu); düzeltildi.
 - Başka bir profilin persona'sına alan eklenemiyor: bileşik yabancı anahtar
   (`persona_id + profile_id`) veritabanı seviyesinde engelliyor. Doğrudan
   satır ekleme denemesiyle doğrulandı.
