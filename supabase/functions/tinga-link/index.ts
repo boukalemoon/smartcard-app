@@ -72,11 +72,37 @@ Deno.serve(async (req: Request) => {
       }, 403);
     }
 
-    // Tek kullanımlık: hemen kullanıldı olarak işaretle
-    await admin
+    // Tek kullanımlık — ATOMİK yakma (20.09.2026).
+    //
+    // Eskiden önce okunup sonra koşulsuz işaretleniyordu. Aynı belirteçle
+    // aynı anda gelen iki istek ikisi de "kullanılmamış" görüp ikisi de
+    // geçerli sayılabiliyordu. Artık tek UPDATE, yalnızca kullanılmamış ve
+    // süresi dolmamış satırı işaretler; satır dönmezse başkası önce yakmıştır.
+    const simdi = new Date().toISOString();
+    const { data: yakilan, error: yakErr } = await admin
       .from("partner_link_tokens")
-      .update({ used_at: new Date().toISOString() })
-      .eq("token", token);
+      .update({ used_at: simdi })
+      .eq("token", token)
+      .eq("partner", "tinga")
+      .is("used_at", null)
+      .gt("expires_at", simdi)
+      .select("user_id")
+      .maybeSingle();
+    if (yakErr) return json({ valid: false, error: "Doğrulama hatası" }, 500);
+    if (!yakilan) return json({ valid: false, error: "Token zaten kullanıldı" }, 401);
+
+    await admin.rpc("log_event", {
+      p_action: "partner.token_redeemed",
+      p_actor_user_id: tok.user_id,
+      p_app_key: "tinga",
+      p_resource_type: "partner_token",
+      p_result: "success",
+      p_severity: "info",
+      p_visibility: "user",
+      p_meta: { partner: "tinga" },
+      p_actor_kind: "service",
+      p_subject: tok.user_id,
+    });
 
     const { data: prof } = await admin
       .from("profiles")
@@ -130,7 +156,8 @@ Deno.serve(async (req: Request) => {
       // Mini Ülgen bunu saklar; signal-ingest'e sinyal yazarken gönderir.
       link_secret: link?.link_secret ?? null,
     });
-  } catch (e) {
-    return json({ valid: false, error: String(e) }, 500);
+  } catch (_e) {
+    // İç hata ayrıntısı dışarı verilmez.
+    return json({ valid: false, error: "Beklenmeyen hata" }, 500);
   }
 });

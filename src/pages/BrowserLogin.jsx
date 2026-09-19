@@ -10,6 +10,12 @@ import { supabase } from '../lib/supabaseClient'
  *  2. Girişliyse onay ister,
  *  3. Onayda `ilgezdi-qr` Edge Function'ına (action: approve) kullanıcının
  *     JWT'siyle istek atar — tabloya doğrudan yazım yoktur.
+ *
+ * SAHTE QR İLE OTURUM ÇALMA (QRLjacking): Saldırgan kendi bilgisayarında QR
+ * üretip "şunu okut" diye kurbana gönderirse, kurban onayladığında oturum
+ * SALDIRGANIN tarayıcısında açılır. Tek savunma, onaylayan kişinin isteğin
+ * kendi cihazından geldiğini görebilmesidir. Bu yüzden onaydan önce istek
+ * incelenir (action: inspect) ve cihaz etiketi ile zaman gösterilir.
  */
 export default function BrowserLogin() {
   const [session, setSession] = useState(null)
@@ -19,6 +25,7 @@ export default function BrowserLogin() {
   const [error, setError] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [istek, setIstek] = useState(null) // { requester_label, created_at, expires_at }
 
   const token = new URLSearchParams(window.location.search).get('token')
 
@@ -30,6 +37,25 @@ export default function BrowserLogin() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
     return () => subscription.unsubscribe()
   }, [])
+
+  // Oturum varsa isteği incele: hangi cihaz, ne zaman.
+  useEffect(() => {
+    if (!session?.access_token || !token) return
+    let iptal = false
+    fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ilgezdi-qr`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ action: 'inspect', session_token: token }),
+    })
+      .then(r => r.json().then(d => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => {
+        if (iptal) return
+        if (ok) setIstek(d)
+        else if (d.error === 'not_found_or_expired') setError('QR kodun süresi dolmuş. İlgezdi tarayıcısında QR kodu yenileyip tekrar okutun.')
+      })
+      .catch(() => {})
+    return () => { iptal = true }
+  }, [session?.access_token, token])
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -60,6 +86,10 @@ export default function BrowserLogin() {
         setDone(true)
       } else if (data.error === 'not_found_or_expired') {
         setError('QR kodun süresi dolmuş. İlgezdi tarayıcısında QR kodu yenileyip tekrar okutun.')
+      } else if (data.error === 'email_not_verified') {
+        setError('Başka bir cihazda oturum açmadan önce e-posta adresinizi doğrulamanız gerekiyor.')
+      } else if (data.error === 'rate_limited') {
+        setError('Çok fazla deneme. Bir dakika sonra tekrar deneyin.')
       } else {
         setError('Onay başarısız oldu, lütfen tekrar deneyin.')
       }
@@ -134,7 +164,16 @@ export default function BrowserLogin() {
       <p className="text-gray-700 mb-1">
         <span className="font-semibold">{session.user?.email}</span> hesabıyla
       </p>
-      <p className="text-gray-600 mb-6">İlgezdi tarayıcısında oturum açılsın mı?</p>
+      <p className="text-gray-600 mb-4">İlgezdi tarayıcısında oturum açılsın mı?</p>
+      {istek && (
+        <div className="mb-6 p-3 bg-gray-50 border border-gray-200 rounded-lg text-left text-sm">
+          <div className="text-gray-500">İsteği yapan cihaz</div>
+          <div className="font-semibold text-gray-800">{istek.requester_label}</div>
+          <div className="text-gray-500 mt-1">
+            {new Date(istek.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} itibarıyla bekliyor
+          </div>
+        </div>
+      )}
       <div className="flex gap-3">
         <button
           onClick={() => window.close()}
@@ -149,8 +188,10 @@ export default function BrowserLogin() {
           {busy ? 'Onaylanıyor...' : 'Onayla'}
         </button>
       </div>
-      <p className="mt-4 text-xs text-gray-400">
-        Bu isteği siz başlatmadıysanız "Vazgeç" deyin — QR kod 5 dakika içinde geçersiz olur.
+      <p className="mt-4 text-xs text-gray-500">
+        <strong>Yalnızca QR kodu şu an KENDİ bilgisayarınızın ekranında görüyorsanız onaylayın.</strong>{' '}
+        Birisi size bir QR kod gönderip "bunu okut" dediyse onaylamayın: onay, oturumu
+        QR'ı üreten cihazda açar. QR kod 5 dakika içinde geçersiz olur.
       </p>
     </div>
   )
