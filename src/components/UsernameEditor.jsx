@@ -96,14 +96,21 @@ export default function UsernameEditor({ currentUsername, profileId, onUpdate })
     setSaving(true);
 
     try {
-      const { error: updateError } = await supabase
+      // .select() olmadan erişim kuralı engellediğinde hata DÖNMEZ, 0 satır
+      // güncellenir ve kullanıcıya "güncellendi" yalanı söylenirdi.
+      const { data, error: updateError } = await supabase
         .from('profiles')
         .update({ username })
-        .eq('id', profileId);
+        .eq('id', profileId)
+        .select('id');
 
       if (updateError) throw updateError;
+      if (!data || data.length === 0) {
+        alert('Kullanıcı adı güncellenemedi: bu işlem için yetkiniz yok.');
+        return;
+      }
 
-      alert('Username güncellendi!');
+      alert('Kullanıcı adınız güncellendi.');
       setEditing(false);
       if (onUpdate) onUpdate(username);
     } catch (err) {

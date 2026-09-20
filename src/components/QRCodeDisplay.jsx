@@ -196,7 +196,7 @@ const addLogoToQR = (canvas, logoUrl) => {
           <ul className="text-sm text-blue-800 dark:text-blue-400 space-y-1">
             <li>• QR kodu indirip baskı yaptırabilirsiniz</li>
             <li>• Dijital imzanızda kullanabilirsiniz</li>
-            <li>• NFC etiketine yazabilirsiniz (yakında)</li>
+            <li>• NFC etiketine yazabilirsiniz</li>
             <li>• Link ile doğrudan paylaşabilirsiniz</li>
           </ul>
         </div>

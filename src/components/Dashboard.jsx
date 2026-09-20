@@ -24,9 +24,15 @@ import QrtimIdCard from './QrtimIdCard'
 import PersonaManager from './PersonaManager'
 import PersonaShare from './PersonaShare'
 import ActivityLog from './ActivityLog'
-import { validateCatalogLink, validateService, validateProfile } from '../utils/inputValidation'
+import { validateProfile } from '../utils/inputValidation'
 import { checkProfileUpdateRateLimit } from '../utils/rateLimiting'
 import { useNavigate } from 'react-router-dom'
+
+// plan_features'ta 999 "sınırsız" anlamına gelir; kullanıcıya sayı olarak
+// göstermek yerine kelimeyle yazılır.
+function sinirYazi(deger) {
+  return deger >= 999 ? 'Sınırsız' : String(deger)
+}
 
 export default function Dashboard({ session }) {
   const navigate = useNavigate()
@@ -40,6 +46,12 @@ export default function Dashboard({ session }) {
   const [isAdmin, setIsAdmin] = useState(false)
   const [analytics, setAnalytics] = useState(null)
   const [orgCount, setOrgCount] = useState(0)
+  // Plan sınırları TEK kaynaktan (my_plan_limits): eskiden aynı sayı üç ayrı
+  // yerde farklı yazıyordu ve kullanıcıya yanlış gösteriliyordu.
+  const [planBilgisi, setPlanBilgisi] = useState(null)
+  // Kuruma üyelik artık kişinin onayıyla başlıyor.
+  const [davetler, setDavetler] = useState([])
+  const [davetIsleniyor, setDavetIsleniyor] = useState(null)
   const [socialLinks, setSocialLinks] = useState([])
   const [name, setName] = useState('')
   const [title, setTitle] = useState('')
@@ -61,15 +73,19 @@ export default function Dashboard({ session }) {
     variant: 'primary'
   })
 
-  const { mode, isIndividual, isCorporate, ensureAllowed } = useDashboardMode()
-  const { subscription, loading: subLoading, getLimits, canAdd, isPremium } = useSubscription(profile?.id)
+  const { isCorporate, ensureAllowed } = useDashboardMode()
+  const { subscription, loading: subLoading, getLimits } = useSubscription(profile?.id)
 
   useEffect(() => { loadProfile() }, [])
   useEffect(() => {
     if (profile?.role && ['admin', 'superadmin'].includes(profile.role)) setIsAdmin(true)
   }, [profile])
   useEffect(() => {
-    if (profile?.id) loadOrganizationCount()
+    if (profile?.id) {
+      loadOrganizationCount()
+      planSinirlariniYukle()
+      davetleriYukle()
+    }
   }, [profile?.id])
   // Kurumsal panel yetkisi: bir organizasyona bağlı olmak (ya da platform
   // yöneticisi). Yetki yoksa kayıtlı mod bireysele çekilir; aksi hâlde
@@ -107,6 +123,59 @@ export default function Dashboard({ session }) {
       console.error('Error loading profile:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Profil alanı kaydetme — TEK yol.
+  //
+  // NEDEN: Supabase'de erişim kuralı bir güncellemeyi engellediğinde HATA
+  // DÖNMEZ, yalnızca 0 satır günceller. Bu dosyadaki 14 ayrı yazma yalnızca
+  // `error` alanına bakıyordu; yetki reddedildiğinde kullanıcıya "kaydedildi"
+  // deniyor ama hiçbir şey değişmiyordu. Artık etkilenen satır kontrol edilir.
+  const profilAlaniKaydet = async (yama) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(yama)
+      .eq('user_id', session.user.id)
+      .select('id')
+    if (error) throw error
+    if (!data || data.length === 0) {
+      throw new Error('Değişiklik kaydedilemedi: bu işlem için yetkiniz yok.')
+    }
+    return true
+  }
+
+  const planSinirlariniYukle = async () => {
+    const { data, error } = await supabase.rpc('my_plan_limits')
+    if (error) { console.error('Plan sınırları alınamadı:', error); return }
+    if (data?.ok) setPlanBilgisi(data)
+  }
+
+  const davetleriYukle = async () => {
+    const { data, error } = await supabase.rpc('my_pending_invitations')
+    if (error) { console.error('Davetler alınamadı:', error); return }
+    setDavetler(data || [])
+  }
+
+  const daveteYanitVer = async (davet, kabul) => {
+    setDavetIsleniyor(davet.member_id)
+    try {
+      const { data, error } = await supabase.rpc('invitation_respond', {
+        p_member_id: davet.member_id, p_accept: kabul,
+      })
+      if (error) throw error
+      if (!data?.ok) {
+        showToast(data?.hata === 'zaten_uyesiniz' ? 'Zaten bu organizasyonun üyesisiniz.' : 'Davet yanıtlanamadı.', 'error')
+        return
+      }
+      showToast(kabul ? `${data.kurum} üyeliğiniz başladı.` : 'Davet reddedildi.', 'success')
+      davetleriYukle()
+      loadOrganizationCount()
+      planSinirlariniYukle()
+    } catch (e) {
+      showToast('Hata: ' + e.message, 'error')
+    } finally {
+      setDavetIsleniyor(null)
     }
   }
 
@@ -182,8 +251,7 @@ export default function Dashboard({ session }) {
 
   const updateAvatar = async (avatarUrl) => {
     try {
-      const { error } = await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('user_id', session.user.id)
-      if (error) throw error
+      await profilAlaniKaydet({ avatar_url: avatarUrl })
       setProfile({ ...profile, avatar_url: avatarUrl })
       showToast('Profil fotoğrafı güncellendi', 'success')
     } catch (error) {
@@ -222,8 +290,17 @@ export default function Dashboard({ session }) {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-bold text-blue-900 dark:text-blue-100">📊 {limits?.name || subscription.plan} {isCorporate && '- Kurumsal Mod'}</h3>
+                  {/* Sayılar plan_features'tan gelir (my_plan_limits); daha önce
+                      abonelik satırındaki kolonlar gösteriliyordu ve sunucunun
+                      uyguladığı kuralla çelişiyordu. */}
                   <p className="text-sm text-blue-800 dark:text-blue-200">
-                    Organizasyonlar: {orgCount}/{subscription.organizations_limit === 999 ? '∞' : subscription.organizations_limit} • Sosyal Medya: {subscription.social_links_limit === 999 ? '∞' : subscription.social_links_limit} • NFC: {subscription.nfc_cards_used}/{subscription.nfc_cards_included}
+                    {planBilgisi ? (
+                      <>
+                        Profiller: {planBilgisi.kullanim.profil}/{sinirYazi(planBilgisi.sinir.profil)}
+                        {' • '}Organizasyon: {planBilgisi.kullanim.organizasyon}/{sinirYazi(planBilgisi.sinir.organizasyon)}
+                        {' • '}Sosyal medya: {planBilgisi.kullanim.sosyal_medya}/{sinirYazi(planBilgisi.sinir.sosyal_medya)}
+                      </>
+                    ) : 'Plan bilgileri yükleniyor…'}
                   </p>
                 </div>
                 {subscription.plan === 'free' && (
@@ -241,6 +318,48 @@ export default function Dashboard({ session }) {
                   <p className="text-sm text-red-700 dark:text-red-300">Tüm kullanıcıları ve ödemeleri yönetin</p>
                 </div>
                 <button onClick={() => window.location.href = '/admin'} className="px-6 py-3 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all">Admin Paneline Git →</button>
+              </div>
+            </div>
+          )}
+
+          {davetler.length > 0 && (
+            <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-800 rounded-xl">
+              <h3 className="text-lg font-bold text-amber-900 dark:text-amber-100 mb-1">
+                ✉️ Organizasyon daveti{davetler.length > 1 ? ` (${davetler.length})` : ''}
+              </h3>
+              <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
+                Kabul ederseniz üyeliğiniz başlar ve kart hareketleriniz (görüntülenme,
+                QR, tıklama) o organizasyonun yöneticisine görünür. Reddederseniz hiçbir
+                veriniz paylaşılmaz.
+              </p>
+              <div className="space-y-2">
+                {davetler.map((d) => (
+                  <div key={d.member_id} className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-gray-800 rounded-lg p-3">
+                    <div>
+                      <div className="font-semibold text-gray-900 dark:text-gray-100">{d.organization_name}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {d.invited_by_name ? `${d.invited_by_name} davet etti` : 'Davet edildiniz'}
+                        {d.invited_at && ` · ${new Date(d.invited_at).toLocaleDateString('tr-TR')}`}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => daveteYanitVer(d, false)}
+                        disabled={davetIsleniyor === d.member_id}
+                        className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+                      >
+                        Reddet
+                      </button>
+                      <button
+                        onClick={() => daveteYanitVer(d, true)}
+                        disabled={davetIsleniyor === d.member_id}
+                        className="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 disabled:opacity-50"
+                      >
+                        {davetIsleniyor === d.member_id ? 'İşleniyor…' : 'Kabul Et'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -277,8 +396,7 @@ export default function Dashboard({ session }) {
                        {themeColor !== profile?.theme_color && (
                           <button onClick={async () => {
                             try {
-                              const { error } = await supabase.from('profiles').update({ theme_color: themeColor }).eq('user_id', session.user.id)
-                              if (error) throw error
+                              await profilAlaniKaydet({ theme_color: themeColor })
                               setProfile(prev => ({ ...prev, theme_color: themeColor }))
                               showToast('Tema rengi kaydedildi', 'success')
                             } catch (error) {
@@ -318,8 +436,7 @@ export default function Dashboard({ session }) {
                             confirmText: 'Evet, Kaldır',
                             onConfirm: async () => {
                               try {
-                                const { error } = await supabase.from('profiles').update({ background_image_url: null }).eq('user_id', session.user.id)
-                                if (error) throw error
+                                await profilAlaniKaydet({ background_image_url: null })
                                 setProfile(prev => ({ ...prev, background_image_url: null }))
                                 showToast('Arka plan resmi kaldırıldı', 'success')
                               } catch (error) {
@@ -337,8 +454,7 @@ export default function Dashboard({ session }) {
                       <ImageUpload currentImageUrl={profile?.background_image_url}
                         onUploadSuccess={async (url) => {
                           try {
-                            const { error } = await supabase.from('profiles').update({ background_image_url: url }).eq('user_id', session.user.id)
-                            if (error) throw error
+                            await profilAlaniKaydet({ background_image_url: url })
                             setProfile(prev => ({ ...prev, background_image_url: url }))
                             showToast('Arka plan resmi güncellendi', 'success')
                           } catch (error) {
@@ -376,14 +492,14 @@ export default function Dashboard({ session }) {
                         : <p className="text-gray-900 dark:text-gray-100 font-medium">{phone || '-'}</p>}
                     </div>
 
-                    {/* Email — görünürlük artık "Paylaşım Ayarları" bölümünden
+                    {/* Email — görünürlük artık "Profillerim" bölümünden
                         yönetiliyor. Eski buradaki anahtar yalnızca React
                         render'ında çalışıyordu; veri yine de gönderiliyordu. */}
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Email</label>
                       <p className="text-gray-900 dark:text-gray-100 font-medium">{session.user.email}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Kartınızda görünüp görünmeyeceğini aşağıdaki <strong>Paylaşım Ayarları</strong> bölümünden belirleyebilirsiniz.
+                        Kartınızda görünüp görünmeyeceğini aşağıdaki <strong>Profillerim</strong> bölümünden, her profil için ayrı ayrı belirleyebilirsiniz.
                       </p>
                     </div>
 
@@ -448,30 +564,30 @@ export default function Dashboard({ session }) {
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">QR Kod Rengi</label>
                           <div className="flex items-center gap-3">
-                            <input type="color" value={profile.qr_foreground_color || '#000000'} onChange={async (e) => { const color = e.target.value; try { const { error } = await supabase.from('profiles').update({ qr_foreground_color: color }).eq('user_id', session.user.id); if (error) throw error; setProfile(prev => ({ ...prev, qr_foreground_color: color })) } catch (error) { console.error(error) } }} className="w-16 h-10 rounded cursor-pointer border-2 border-gray-300" />
+                            <input type="color" value={profile.qr_foreground_color || '#000000'} onChange={async (e) => { const color = e.target.value; try { await profilAlaniKaydet({ qr_foreground_color: color }); setProfile(prev => ({ ...prev, qr_foreground_color: color })) } catch (error) { console.error(error) } }} className="w-16 h-10 rounded cursor-pointer border-2 border-gray-300" />
                             <span className="text-sm font-mono text-gray-600 dark:text-gray-400">{profile.qr_foreground_color || '#000000'}</span>
                           </div>
                         </div>
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">QR Arka Plan Rengi</label>
                           <div className="flex items-center gap-3">
-                            <input type="color" value={profile.qr_background_color || '#FFFFFF'} onChange={async (e) => { const color = e.target.value; try { const { error } = await supabase.from('profiles').update({ qr_background_color: color }).eq('user_id', session.user.id); if (error) throw error; setProfile(prev => ({ ...prev, qr_background_color: color })) } catch (error) { console.error(error) } }} className="w-16 h-10 rounded cursor-pointer border-2 border-gray-300" />
+                            <input type="color" value={profile.qr_background_color || '#FFFFFF'} onChange={async (e) => { const color = e.target.value; try { await profilAlaniKaydet({ qr_background_color: color }); setProfile(prev => ({ ...prev, qr_background_color: color })) } catch (error) { console.error(error) } }} className="w-16 h-10 rounded cursor-pointer border-2 border-gray-300" />
                             <span className="text-sm font-mono text-gray-600 dark:text-gray-400">{profile.qr_background_color || '#FFFFFF'}</span>
                           </div>
                         </div>
                         <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                           <label className="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" checked={profile.qr_logo_enabled || false} onChange={async (e) => { const enabled = e.target.checked; try { const { error } = await supabase.from('profiles').update({ qr_logo_enabled: enabled }).eq('user_id', session.user.id); if (error) throw error; setProfile(prev => ({ ...prev, qr_logo_enabled: enabled })) } catch (error) { console.error(error) } }} className="w-5 h-5 rounded border-gray-300" />
+                            <input type="checkbox" checked={profile.qr_logo_enabled || false} onChange={async (e) => { const enabled = e.target.checked; try { await profilAlaniKaydet({ qr_logo_enabled: enabled }); setProfile(prev => ({ ...prev, qr_logo_enabled: enabled })) } catch (error) { console.error(error) } }} className="w-5 h-5 rounded border-gray-300" />
                             <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">QR Kod ortasına profil fotoğrafı ekle</span>
                           </label>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-8">{subscription?.plan === 'free' ? '⚠️ Premium özellik - Profesyonel plana yükseltin' : '✅ Profil fotoğrafınız QR kodun ortasında gösterilecek'}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-8">{subscription?.plan === 'free' ? 'QR kodun ortasında profil fotoğrafınız görünür' : '✅ Profil fotoğrafınız QR kodun ortasında gösterilecek'}</p>
                         </div>
                       </div>
                     </div>
 
                     {/* Katalog */}
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">📁 Katalog & Dökümanlar</h3>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">📁 Katalog & Dokümanlar</h3>
                       <div className="space-y-3 mb-4">
                         {(profile.catalog_links || []).map((link, index) => (
                           <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -502,13 +618,16 @@ export default function Dashboard({ session }) {
                                   variant: 'danger',
                                   onConfirm: async () => {
                                     const newLinks = profile.catalog_links.filter((_, i) => i !== index)
-                                    const { error } = await supabase
-                                      .from('profiles')
-                                      .update({ catalog_links: newLinks })
-                                      .eq('user_id', session.user.id)
-                                    if (error) {
-                                      showToast('Hata: ' + error.message, 'error')
+                                    try {
+
+                                      await profilAlaniKaydet({ catalog_links: newLinks })
+
+                                    } catch (e) {
+
+                                      showToast('Hata: ' + e.message, 'error')
+
                                       return
+
                                     }
                                     setProfile(prev => ({ ...prev, catalog_links: newLinks }))
                                     showToast('Link silindi', 'success')
@@ -527,7 +646,7 @@ export default function Dashboard({ session }) {
                         onClick={() => setCatalogModal({ isOpen: true, link: null, index: null })}
                         className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
                       >
-                        + Döküman Ekle
+                        + Doküman Ekle
                       </button>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">💡 Google Drive, Dropbox veya kendi web sitenizden link ekleyin</p>
                     </div>
@@ -725,13 +844,16 @@ export default function Dashboard({ session }) {
                                     variant: 'danger',
                                     onConfirm: async () => {
                                       const newServices = profile.services.filter((_, i) => i !== index)
-                                      const { error } = await supabase
-                                        .from('profiles')
-                                        .update({ services: newServices })
-                                        .eq('user_id', session.user.id)
-                                      if (error) {
-                                        showToast('Hata: ' + error.message, 'error')
+                                      try {
+
+                                        await profilAlaniKaydet({ services: newServices })
+
+                                      } catch (e) {
+
+                                        showToast('Hata: ' + e.message, 'error')
+
                                         return
+
                                       }
                                       setProfile(prev => ({ ...prev, services: newServices }))
                                       showToast('Hizmet silindi', 'success')
@@ -776,10 +898,16 @@ export default function Dashboard({ session }) {
                             variant: 'danger',
                             confirmText: 'Evet, Kaldır',
                             onConfirm: async () => {
-                              const { error } = await supabase.from('profiles').update({ google_review_link: null, google_place_id: null }).eq('user_id', session.user.id)
-                              if (error) {
-                                showToast('Hata: ' + error.message, 'error')
+                              try {
+
+                                await profilAlaniKaydet({ google_review_link: null, google_place_id: null })
+
+                              } catch (e) {
+
+                                showToast('Hata: ' + e.message, 'error')
+
                                 return
+
                               }
                               setProfile(prev => ({ ...prev, google_review_link: null, google_place_id: null }))
                               showToast('Google yorum linki kaldırıldı', 'success')
@@ -792,14 +920,12 @@ export default function Dashboard({ session }) {
                           <button onClick={() => {
                             const link = prompt('Google İşletme yorum sayfası linkini yapıştırın:')
                             if (!link) return
-                            supabase.from('profiles').update({ google_review_link: link }).eq('user_id', session.user.id).then(({ error }) => {
-                              if (error) {
-                                showToast('Hata: ' + error.message, 'error')
-                                return
-                              }
-                              setProfile(prev => ({ ...prev, google_review_link: link }))
-                              showToast('Google yorum linki eklendi', 'success')
-                            })
+                            profilAlaniKaydet({ google_review_link: link })
+                              .then(() => {
+                                setProfile(prev => ({ ...prev, google_review_link: link }))
+                                showToast('Google yorum linki eklendi', 'success')
+                              })
+                              .catch((e) => showToast('Hata: ' + e.message, 'error'))
                           }} className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm">+ Google Yorum Linki Ekle</button>
                           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
                             <p className="text-xs text-blue-800 dark:text-blue-200">💡 <strong>Nasıl bulunur?</strong><br />1. Google'da işletmenizi arayın<br />2. "Yorum yaz" butonuna tıklayın<br />3. Açılan sayfanın linkini kopyalayın</p>
@@ -814,7 +940,7 @@ export default function Dashboard({ session }) {
                     {subscription?.plan === 'free' ? (
                       <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg p-6 text-white">
                         <h2 className="text-xl font-semibold mb-2">💳 NFC Kart</h2>
-                        <p className="text-purple-100 text-sm mb-4">Professional planla ücretsiz NFC kart kazanın!</p>
+                        <p className="text-purple-100 text-sm mb-4">Yıllık profesyonel abonelikte NFC kart pakete dahil</p>
                         <button onClick={() => { setSelectedPlan({ plan: 'professional', billingCycle: 'yearly' }); setShowPayment(true) }} className="w-full py-3 bg-white text-purple-600 rounded-xl font-semibold hover:shadow-xl transition-all">Planı Yükselt</button>
                       </div>
                     ) : (
@@ -829,8 +955,8 @@ export default function Dashboard({ session }) {
 
                 {!profile?.username && (
                   <div className="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-200 dark:border-yellow-800 rounded-2xl p-6">
-                    <h3 className="text-lg font-bold text-yellow-900 dark:text-yellow-300 mb-2">⚠️ Username Gerekli</h3>
-                    <p className="text-sm text-yellow-800 dark:text-yellow-400">QR kod ve NFC özelliklerini kullanmak için bir username oluşturulması gerekiyor.</p>
+                    <h3 className="text-lg font-bold text-yellow-900 dark:text-yellow-300 mb-2">⚠️ Kullanıcı adı gerekli</h3>
+                    <p className="text-sm text-yellow-800 dark:text-yellow-400">QR kod ve NFC özelliklerini kullanmak için bir kullanıcı adı belirlemeniz gerekiyor.</p>
                   </div>
                 )}
 
@@ -842,10 +968,18 @@ export default function Dashboard({ session }) {
                         {subscription?.plan === 'professional' ? '⭐ Profesyonel Plan' : subscription?.plan === 'stk' ? '🏢 STK Özel Plan' : subscription?.plan === 'business' ? '🚀 Kurumsal Plan' : '🆓 Başlangıç Planı'}
                       </p>
                       <div className="space-y-2 text-sm mt-3">
-                        <div className="flex items-center gap-2"><span>✓</span><span>{(subscription?.organizations_limit ?? 2) === 999 ? 'Sınırsız organizasyon' : `${subscription?.organizations_limit ?? 2} organizasyon`}</span></div>
-                        <div className="flex items-center gap-2"><span>✓</span><span>{(subscription?.social_links_limit ?? 3) === 999 ? 'Sınırsız sosyal medya' : `${subscription?.social_links_limit ?? 3} sosyal medya`}</span></div>
-                        <div className="flex items-center gap-2"><span>✓</span><span>{(subscription?.nfc_cards_included ?? 0) > 0 ? `${subscription.nfc_cards_included} NFC kart` : 'Temel QR kod'}</span></div>
+                        <div className="flex items-center gap-2"><span>✓</span><span>{sinirYazi(planBilgisi?.sinir?.profil ?? 2)} profil</span></div>
+                        <div className="flex items-center gap-2"><span>✓</span><span>{sinirYazi(planBilgisi?.sinir?.organizasyon ?? 2)} organizasyon</span></div>
+                        <div className="flex items-center gap-2"><span>✓</span><span>{sinirYazi(planBilgisi?.sinir?.sosyal_medya ?? 3)} sosyal medya</span></div>
+                        {(planBilgisi?.sinir?.nfc_yillik ?? 0) > 0 && (
+                          <div className="flex items-center gap-2"><span>✓</span><span>Yıllık abonelikte {planBilgisi.sinir.nfc_yillik} NFC kart</span></div>
+                        )}
                       </div>
+                      {planBilgisi?.expires_at && (
+                        <p className="text-xs text-blue-100 mt-3">
+                          Yenileme tarihi: {new Date(planBilgisi.expires_at).toLocaleDateString('tr-TR')}
+                        </p>
+                      )}
                       {(!subscription || subscription.plan === 'free') && (
                         <button onClick={() => { setSelectedPlan({ plan: 'professional', billingCycle: 'yearly' }); setShowPayment(true) }} className="w-full mt-4 py-3 bg-white text-blue-600 rounded-xl font-semibold hover:shadow-lg transition-all">Planı Yükselt</button>
                       )}
@@ -858,9 +992,17 @@ export default function Dashboard({ session }) {
         </div>
       </div>
 
-      {showPayment && selectedPlan && (
-        <PaymentModal plan={selectedPlan.plan} billingCycle={selectedPlan.billingCycle} profile={profile} onSuccess={() => { setShowPayment(false); window.location.reload() }} onClose={() => setShowPayment(false)} />
-      )}
+      {/* PaymentModal isOpen/selectedPlan bekliyor; panel plan/billingCycle
+          gönderdiği için pencere hiç açılmıyordu — yükseltme düğmelerinin
+          üçü de sessizce hiçbir şey yapmıyordu. */}
+      <PaymentModal
+        isOpen={showPayment && Boolean(selectedPlan)}
+        selectedPlan={selectedPlan?.plan}
+        initialPeriod={selectedPlan?.billingCycle}
+        currentSubscription={subscription}
+        isRenewal={Boolean(subscription && subscription.plan !== 'free')}
+        onClose={() => setShowPayment(false)}
+      />
       {/* Banka Hesabı Modal */}
       <BankAccountModal
         isOpen={bankModal.isOpen}
@@ -878,9 +1020,12 @@ export default function Dashboard({ session }) {
           }
           const { error } = await supabase
             .from('profile_payment')
-            .upsert({ profile_id: profile.id, bank_accounts: newAccounts, show_bank_accounts: true, updated_at: new Date().toISOString() }, { onConflict: 'profile_id' })
+            // show_bank_accounts BİLEREK yazılmıyor: kullanıcı görünürlüğü
+            // kapatmışsa hesap eklemek onu geri açmamalı (IBAN herkese açık
+            // karta düşerdi). Görünürlük yalnızca kendi anahtarından değişir.
+            .upsert({ profile_id: profile.id, bank_accounts: newAccounts, updated_at: new Date().toISOString() }, { onConflict: 'profile_id' })
           if (error) throw error
-          setProfile(prev => ({ ...prev, bank_accounts: newAccounts, show_bank_accounts: true }))
+          setProfile(prev => ({ ...prev, bank_accounts: newAccounts }))
         }}
       />
 
@@ -914,11 +1059,7 @@ export default function Dashboard({ session }) {
             // Yeni ekleme
             newServices = [...(profile.services || []), data]
           }
-          const { error } = await supabase
-            .from('profiles')
-            .update({ services: newServices })
-            .eq('user_id', session.user.id)
-          if (error) throw error
+          await profilAlaniKaydet({ services: newServices })
           setProfile(prev => ({ ...prev, services: newServices }))
         }}
       />
@@ -939,11 +1080,7 @@ export default function Dashboard({ session }) {
             // Yeni ekleme
             newLinks = [...(profile.catalog_links || []), data]
           }
-          const { error } = await supabase
-            .from('profiles')
-            .update({ catalog_links: newLinks })
-            .eq('user_id', session.user.id)
-          if (error) throw error
+          await profilAlaniKaydet({ catalog_links: newLinks })
           setProfile(prev => ({ ...prev, catalog_links: newLinks }))
         }}
       />

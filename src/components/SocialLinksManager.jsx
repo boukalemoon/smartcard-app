@@ -116,12 +116,17 @@ export default function SocialLinksManager({ profileId, subscriptionPlan }) {
     }
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('social_links')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .select('id');
 
       if (error) throw error;
+      if (!data || data.length === 0) {
+        alert('Bağlantı silinemedi: bu işlem için yetkiniz yok.');
+        return;
+      }
 
       loadLinks();
       alert('Sosyal medya hesabı silindi');
@@ -158,12 +163,17 @@ export default function SocialLinksManager({ profileId, subscriptionPlan }) {
     try {
       setLoading(true);
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('social_links')
         .update({ url: normalizedUrl })
-        .eq('id', id);
+        .eq('id', id)
+        .select('id');
 
       if (error) throw error;
+      if (!data || data.length === 0) {
+        alert('Bağlantı güncellenemedi: bu işlem için yetkiniz yok.');
+        return;
+      }
 
       setEditingId(null);
       setEditLink({ platform: '', url: '' });
@@ -262,7 +272,7 @@ export default function SocialLinksManager({ profileId, subscriptionPlan }) {
                 <button
                   className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:shadow-lg text-sm font-medium"
                 >
-                  Premium'a Yükselt
+                  Planı Yükselt
                 </button>
               </div>
             </div>

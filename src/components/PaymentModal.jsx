@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { X, CreditCard, Check } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 
-export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal = false, currentSubscription = null }) {
-  const [selectedPeriod, setSelectedPeriod] = useState('monthly')
+export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal = false, currentSubscription = null, initialPeriod = 'monthly' }) {
+  // Panelden "yıllık" diye açıldığında aylık gösterilmesin.
+  const [selectedPeriod, setSelectedPeriod] = useState(initialPeriod === 'yearly' ? 'yearly' : 'monthly')
   const [includeNFC, setIncludeNFC] = useState(false)
   const [loading, setLoading] = useState(false)
 

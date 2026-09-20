@@ -406,7 +406,7 @@ export default function PublicCard() {
             {/* Katalog */}
             {Array.isArray(fields.catalog_links) && fields.catalog_links.length > 0 && (
               <div className="pt-4 border-t border-gray-200">
-                <h3 className="font-semibold text-gray-800 mb-3">📁 Katalog & Dökümanlar</h3>
+                <h3 className="font-semibold text-gray-800 mb-3">📁 Katalog & Dokümanlar</h3>
                 <div className="grid gap-2">
                   {fields.catalog_links.map((link, index) => {
                     const href = safeUrl(link.url)
@@ -505,7 +505,9 @@ export default function PublicCard() {
 
         <div className="mt-6 text-center">
           <p className="text-gray-600 text-sm mb-2">Sen de dijital kartvizitini oluştur!</p>
-          <button onClick={() => navigate(`/signup?ref=${profile?.referral_code || profile?.id}`)}
+          {/* Davet kodu yoksa ?ref boş bırakılır: eskiden profil kimliği
+              yazılıyordu, sunucu onu tanımadığı için davet sessizce kayboluyordu. */}
+          <button onClick={() => navigate(profile?.referral_code ? `/signup?ref=${profile.referral_code}` : '/signup')}
             className="text-blue-600 hover:text-blue-700 font-medium">Ücretsiz Kaydol →</button>
           <p className="text-xs text-gray-500 mt-2">{profile?.name} tarafından davet edildiniz! 🎁</p>
         </div>

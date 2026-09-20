@@ -36,16 +36,10 @@ export default function ImageUpload({
       const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`
       const filePath = fileName
 
-      // Eski resmi sil (varsa)
-      if (currentImageUrl) {
-        const oldFileName = currentImageUrl.split('/').pop()
-        await supabase.storage
-          .from(bucket)
-          .remove([oldFileName])
-      }
-
-      // Yeni resmi yükle
-      const { data, error } = await supabase.storage
+      // ÖNCE yükle, SONRA eskisini sil.
+      // Eskiden tersiydi: yükleme başarısız olursa kullanıcı fotoğrafsız
+      // kalıyordu (silme sonucu da kontrol edilmiyordu).
+      const { error } = await supabase.storage
         .from(bucket)
         .upload(filePath, file, {
           cacheControl: '3600',
@@ -53,6 +47,13 @@ export default function ImageUpload({
         })
 
       if (error) throw error
+
+      if (currentImageUrl) {
+        const oldFileName = currentImageUrl.split('/').pop()
+        const { error: silmeHatasi } = await supabase.storage.from(bucket).remove([oldFileName])
+        // Eski dosya silinemezse yeni görsel yine de geçerlidir; yalnızca not düşülür.
+        if (silmeHatasi) console.warn('Eski görsel silinemedi:', silmeHatasi.message)
+      }
 
       // Public URL al
       const { data: { publicUrl } } = supabase.storage

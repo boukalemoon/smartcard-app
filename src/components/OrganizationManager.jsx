@@ -53,7 +53,6 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
 
   const plan = subscriptionPlan || 'free'
   const orgLimit = PLAN_ORG_LIMITS[plan] ?? 2
-  const isPremium = !['free', 'student'].includes(plan)
   const canAddMore = organizations.length < orgLimit
 
   useEffect(() => {
@@ -118,9 +117,10 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
   };
 
   const UYE_EKLEME_HATALARI = {
-    yetkisiz: 'Bu organizasyona üye eklemek için yönetici olmanız gerekiyor.',
-    kullanici_bulunamadi: '❌ Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı.\n\nKullanıcının önce QRtım hesabı oluşturması gerekiyor.',
-    zaten_uye: '⚠️ Bu kullanıcı zaten organizasyon üyesi.',
+    yetkisiz: 'Bu organizasyona davet göndermek için yönetici olmanız gerekiyor.',
+    kullanici_bulunamadi: '❌ Bu e-posta adresiyle doğrulanmış bir QRtım hesabı bulunamadı.\n\nKişinin önce hesap oluşturup e-postasını doğrulaması gerekiyor.',
+    zaten_uye: '⚠️ Bu kişi zaten organizasyon üyesi.',
+    davet_zaten_gonderildi: '⏳ Bu kişiye davet zaten gönderilmiş, yanıtı bekleniyor.',
     cok_fazla_deneme: 'Çok fazla deneme yaptınız. Lütfen bir saat sonra tekrar deneyin.',
   };
 
@@ -142,7 +142,8 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
       }
 
       const ad = data.ad || inviteEmail.trim();
-      alert(`✅ ${ad} organizasyona eklendi. Toplam üye: ${data.uye_sayisi}`);
+      // Üyelik artık kişinin onayıyla başlıyor; "eklendi" demek yanlış olurdu.
+      alert(`✉️ ${ad} kişisine davet gönderildi.\n\nKişi kendi panelinden kabul ettiğinde üye olacak.`);
 
       setInviteEmail('');
       loadMembers(selectedOrg.id);

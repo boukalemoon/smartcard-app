@@ -98,7 +98,7 @@ export default function ReferralDashboard({ profile }) {
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-6 text-white">
         <h2 className="text-2xl font-bold mb-2">🎁 Referral Programı</h2>
         <p className="text-blue-100">
-          Arkadaşlarını davet et, her abonelik için %10 kazanç elde et!
+          Arkadaşlarını QRtım'a davet et, davetlerini buradan takip et.
         </p>
       </div>
 
@@ -183,7 +183,9 @@ export default function ReferralDashboard({ profile }) {
             {/* Kullanım istatistiği */}
             <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-gray-700">
               <span>📊 Kullanım: <strong>{referralCode.usage_count || 0}</strong></span>
-              <span>💰 Kazanç: <strong>₺{(referralCode.total_earnings || 0).toLocaleString('tr-TR')}</strong></span>
+              {/* 'total_earnings' kolonu hiçbir zaman güncellenmiyordu: gerçek
+                  hakediş olsa bile ₺0 gösteriyordu. Doğru toplam yukarıdaki
+                  kartta davetlerden hesaplanıyor. */}
             </div>
           </div>
         ) : (
@@ -252,7 +254,7 @@ export default function ReferralDashboard({ profile }) {
         </h4>
         <ul className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
           <li>• Referral kodunuzu veya linkinizi arkadaşlarınızla paylaşın</li>
-          <li>• Kodunuzla kayıt olup abonelik satın aldıklarında %10 kazanç elde edersiniz</li>
+          <li>• Kodunuzla kayıt olup abonelik satın aldıklarında hakediş kazanırsınız (tutarlar fiyat güncellemesiyle birlikte duyurulacak)</li>
           <li>• Aylık abonelikler için aylık, yıllık abonelikler için yıllık kazanç alırsınız</li>
         </ul>
       </div>

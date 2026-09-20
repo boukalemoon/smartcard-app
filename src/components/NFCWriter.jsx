@@ -52,7 +52,7 @@ export default function NFCWriter({ username }) {
           },
           {
             recordType: "text",
-            data: `Qartim - ${username}`
+            data: `QRtım - ${username}`
           }
         ]
       });
