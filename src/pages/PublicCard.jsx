@@ -1,4 +1,5 @@
 ﻿import AvatarFlipCard from '../components/AvatarFlipCard'
+import ContactExchange from '../components/ContactExchange'
 import { trackCardEvent, kaynagiCoz } from '../utils/analyticsHelpers'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
@@ -499,6 +500,15 @@ export default function PublicCard() {
               >
                 🔗 Linki Kopyala
               </button>
+
+              {/* Karşılıklı kartvizit değişimi: kartı gören kişi de kendini
+                  tanıtabilsin. Kağıt kartvizitte doğal olan şey dijitalde
+                  tek yönlü kalıyordu. */}
+              <ContactExchange
+                hedef={hedef}
+                kartSahibi={profile.name}
+                temaRengi={themeColor}
+              />
             </div>
           </div>
         </div>
