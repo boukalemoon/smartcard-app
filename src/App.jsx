@@ -6,6 +6,7 @@ import { DashboardModeProvider } from './contexts/DashboardModeContext'
 import NFCCardsPage from './pages/NFCCardsPage'
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { ozelAlanAdiMi } from './lib/ozelAlanAdi'
 import { supabase } from './lib/supabaseClient'
 import PublicApplicationPage from './pages/PublicApplicationPage'
 import PublicMemberDirectoryPage from './pages/PublicMemberDirectoryPage'
@@ -62,6 +63,16 @@ function App() {
       <ThemeProvider>
         <DashboardModeProvider>
           <Router>
+            {/* ÖZEL ALAN ADI: kişinin kendi adresinde YALNIZCA kart açılır.
+                Panel, giriş ve yönetim tek adreste (QRtım) kalır — oturum
+                tarayıcıda adrese göre ayrıldığı için, kişi kendi alan adında
+                giriş yapsa "giriş yaptım ama panelim boş" durumuna düşerdi.
+                Hangi kartın açılacağını sunucu HOST'tan çözer. */}
+            {ozelAlanAdiMi() ? (
+              <Routes>
+                <Route path="*" element={<PublicCard />} />
+              </Routes>
+            ) : (
             <Routes>
               {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
@@ -99,6 +110,7 @@ function App() {
 
 <Route path="/iletisim" element={<Iletisim />} />
           </Routes>
+            )}
         </Router>
       </DashboardModeProvider>
     </ThemeProvider>

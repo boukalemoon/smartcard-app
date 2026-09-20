@@ -1,6 +1,7 @@
 ﻿import AvatarFlipCard from '../components/AvatarFlipCard'
 import ContactExchange from '../components/ContactExchange'
 import VerifiedBadges from '../components/VerifiedBadges'
+import { ozelAlanAdiMi, suAnkiHost } from '../lib/ozelAlanAdi'
 import { trackCardEvent, kaynagiCoz } from '../utils/analyticsHelpers'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
@@ -52,9 +53,18 @@ export default function PublicCard() {
   const [duraklatildi, setDuraklatildi] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
+  // Kart kişinin kendi alan adında da açılabiliyor; o durumda adres
+  // parametresi yok, kartı HOST belirler.
+  const ozelAlan = ozelAlanAdiMi()
   // Ziyaretçi karta nereden geldi: QR mı, NFC kart mı, paylaşılan bağlantı mı?
   // QR ve NFC adresine ?k=qr / ?k=nfc basılır; işaret yoksa doğrudan sayılır.
-  const hedef = { username: username || null, code: code || null, source: kaynagiCoz(location.search, Boolean(code)) }
+  // Özel alan adında kullanıcı adı karttan sonra öğrenilir (aşağıda).
+  const [cozulenKullanici, setCozulenKullanici] = useState(null)
+  const hedef = {
+    username: username || cozulenKullanici || null,
+    code: code || null,
+    source: kaynagiCoz(location.search, Boolean(code)),
+  }
   const { showToast } = useToast()
   const [profile, setProfile] = useState(null)
   // Alan bazlı gizlilik: yalnızca görünürlüğü 'public' olan alanlar sunucudan
@@ -81,7 +91,7 @@ export default function PublicCard() {
   }
 
   useEffect(() => { document.documentElement.classList.remove('dark') }, [])
-  useEffect(() => { if (username || code) loadProfile() }, [username, code])
+  useEffect(() => { if (username || code || ozelAlan) loadProfile() }, [username, code, ozelAlan])
 
   const loadProfile = async () => {
     try {
@@ -91,9 +101,11 @@ export default function PublicCard() {
       // sınırı ve ödeme onayı kontrolü sunucuda uygulanır; istemci artık
       // profiles/social_links/members/organizations tablolarına dokunmuyor.
       // Persona bağlantısı kodla çözülür; profil ADIYLA başka profile ulaşılamaz.
-      const { data, error: rpcError } = code
-        ? await supabase.rpc('get_public_card_by_code', { p_code: code })
-        : await supabase.rpc('get_public_card', { p_username: username })
+      const { data, error: rpcError } = ozelAlan
+        ? await supabase.rpc('resolve_custom_domain', { p_host: suAnkiHost() })
+        : code
+          ? await supabase.rpc('get_public_card_by_code', { p_code: code })
+          : await supabase.rpc('get_public_card', { p_username: username })
       if (rpcError) throw rpcError
       if (!data) { setError('Profil bulunamadı'); return }
       if (data.paused) { setDuraklatildi(true); return }
@@ -104,11 +116,14 @@ export default function PublicCard() {
       setOrganizations(data.organizations || [])
       setDogrulamalar(data.dogrulamalar || [])
       setPaymentInfo(data.payment || null)
+      if (ozelAlan && data.username) setCozulenKullanici(data.username)
 
       // Görüntülenme, sayaç ve hız sınırı TEK çağrıda, sunucuda. Eskiden
       // olay istemciden tabloya yazılıyor (sahte veri yazılabiliyordu),
       // sayaç ise ayrı bir RPC ile artıyordu; ikisi birbirini tutmuyordu.
-      trackCardEvent('profile_view', hedef)
+      trackCardEvent('profile_view', ozelAlan
+        ? { ...hedef, username: data.username || null }
+        : hedef)
     } catch (err) {
       console.error('Profil yükleme hatası:', err)
       setError('Profil bulunamadı')
