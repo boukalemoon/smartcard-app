@@ -111,6 +111,25 @@ Deno.serve(async (req: Request) => {
       .eq("user_id", tok.user_id)
       .maybeSingle();
 
+    // EKOSİSTEM KİMLİĞİ (20.09.2026).
+    //
+    // Partner uygulamalar hesabı E-POSTAYLA eşleştiriyordu. E-posta
+    // değişebilir, devredilebilir ve kişiyi kalıcı olarak tanımlamaz; QRtım
+    // dijital kimlik olacaksa eşleştirme DEĞİŞMEYEN bir kimliğe dayanmalı.
+    // qrtim_uid her QRtım hesabı için bir kez üretilir ve hiç değişmez.
+    const { data: qid } = await admin
+      .from("qrtim_user_ids")
+      .select("qrtim_uid")
+      .eq("user_id", tok.user_id)
+      .maybeSingle();
+
+    // Bağlantı kaydı: bu kimliğin hangi uygulamalara bağlandığı görünür olsun.
+    // (link_secret burada DÖNDÜRÜLMEZ; Arku sinyal yazmıyor — en az yetki.)
+    await admin
+      .from("partner_user_links")
+      .upsert({ user_id: tok.user_id, partner: "arku" },
+              { onConflict: "user_id,partner", ignoreDuplicates: true });
+
     // Döndürülen e-posta, DOĞRULANMIŞ OLANIN AYNISI olmalı. profiles.email
     // kullanıcı tarafından değiştirilebildiği için ondan okunursa "şunu
     // doğruladım, bunu gönderdim" durumu oluşur ve denetim anlamsızlaşır.
@@ -122,6 +141,9 @@ Deno.serve(async (req: Request) => {
     return json({
       valid: true,
       user: {
+        // Eşleştirme ANAHTARI: kalıcı ekosistem kimliği.
+        qrtim_uid: qid?.qrtim_uid ?? null,
+        // Geriye uyumluluk: auth kullanıcı kimliği (eski alan).
         qrtim_id: tok.user_id,
         email,
         email_verified: true,              // yukarıda denetlendi; aksi halde 403
