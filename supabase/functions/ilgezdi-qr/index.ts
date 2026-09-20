@@ -24,6 +24,12 @@
 // GEÇİŞ DÖNEMİ: client_secret göndermeyen eski İlgezdi sürümleri çalışmaya
 // devam eder (o oturumlarda sır özeti boştur). İlgezdi yeni sürüme geçince
 // ILGEZDI_QR_STRICT=true yapılır ve sırsız oturumlar reddedilir.
+//
+// Geçiş dönemi telafisi (20.09.2026): sırsız oturumlar, QR kodu ÜRETEN
+// istemcinin ağına bağlanır (creator_ip_hash). QR'ı fotoğraflayan ya da
+// ekranda gören biri başka bir ağdan yoklarsa oturumu göremez. Bu, sırrın
+// yerini tutmaz — aynı ağdaki birine karşı korumaz — ama İlgezdi sürümü
+// çıkana kadarki açık pencereyi daraltır.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -157,6 +163,9 @@ Deno.serve(async (req: Request) => {
       .insert({
         status: "pending",
         client_secret_hash: client_secret ? await sha256Hex(client_secret) : null,
+        // Sırsız oturumda tek bağ budur; sırlı oturumda gerekmez (ağ değişse
+        // bile çalışsın diye yazılmaz).
+        creator_ip_hash: client_secret ? null : await sha256Hex(ip),
         requester_label: cihazEtiketi(body.device_label, req),
       })
       .select("session_token, expires_at")
@@ -234,7 +243,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: row, error } = await admin
       .from("ilgezdi_qr_sessions")
-      .select("status, user_id, expires_at, client_secret_hash")
+      .select("status, user_id, expires_at, client_secret_hash, creator_ip_hash")
       .eq("session_token", session_token)
       .maybeSingle();
 
@@ -250,6 +259,11 @@ Deno.serve(async (req: Request) => {
       }
     } else if (STRICT) {
       return json({ error: "client_secret_required" }, 400);
+    } else if (row.creator_ip_hash) {
+      // Eski istemci: yoklama yalnızca QR'ı üreten ağdan kabul edilir.
+      if (!esit(await sha256Hex(ip), row.creator_ip_hash)) {
+        return json({ status: "not_found" }, 404);
+      }
     }
 
     if (row.status === "pending" && new Date(row.expires_at) < new Date()) {
