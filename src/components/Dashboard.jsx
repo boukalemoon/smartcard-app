@@ -935,7 +935,7 @@ export default function Dashboard({ session }) {
                     </div>
 
                     <PersonaShare profile={profile} fallbackName={session.user.email} />
-                    <NFCWriter username={profile.username} />
+                    <NFCWriter username={profile.username} cardCode={profile.card_code} />
 
                     {subscription?.plan === 'free' ? (
                       <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg p-6 text-white">

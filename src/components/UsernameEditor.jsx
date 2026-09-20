@@ -110,7 +110,11 @@ export default function UsernameEditor({ currentUsername, profileId, onUpdate })
         return;
       }
 
-      alert('Kullanıcı adınız güncellendi.');
+      alert(
+        `Kullanıcı adınız güncellendi.
+
+Basılı QR ve NFC kartlarınız çalışmaya devam eder; eski adresiniz de yeni profilinize yönlenir.`
+      );
       setEditing(false);
       if (onUpdate) onUpdate(username);
     } catch (err) {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Star, Pause } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
-import { cardUrl, personaUrl } from '../lib/siteUrl'
+import { cardUrl, personaUrl, kartKoduUrl } from '../lib/siteUrl'
 import QRCodeDisplay from './QRCodeDisplay'
 
 // QR paylaşımı — ÖNCE profil seçilir, SONRA QR üretilir.
@@ -26,7 +26,12 @@ export default function PersonaShare({ profile, fallbackName }) {
   }, [profile?.id])
 
   const secili = personas.find(p => p.id === seciliId)
-  const url = !secili || secili.is_primary ? cardUrl(profile.username) : personaUrl(secili.share_code)
+  // Ana profilin QR'ı KALICI kart koduna bakar: kullanıcı adı değişse de
+  // basılmış kartlar çalışmaya devam eder. Kod yoksa (çok eski kayıt)
+  // kullanıcı adına düşülür.
+  const url = !secili || secili.is_primary
+    ? (profile.card_code ? kartKoduUrl(profile.card_code) : cardUrl(profile.username))
+    : personaUrl(secili.share_code)
 
   return (
     <div className="space-y-3">

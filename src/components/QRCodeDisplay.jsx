@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import { Download, Share2 } from 'lucide-react';
+import { Download, Share2, FileImage } from 'lucide-react';
 import { cardUrl, kaynakliAdres } from '../lib/siteUrl';
 
 export default function QRCodeDisplay({ 
@@ -14,7 +14,9 @@ export default function QRCodeDisplay({
   profileImage = null             // ← YENİ!
  }) {
   const canvasRef = useRef(null);
-  const [qrDataUrl, setQrDataUrl] = useState('');
+  // Baskı boyutu. Ekranda 300 px yeter ama matbaaya giden dosya büyük olmalı:
+  // 1000 px kartvizit, 2000 px afiş/tabela için.
+  const [indirmeBoyutu, setIndirmeBoyutu] = useState(1000);
   // Basılan QR kod bu adresi kalıcı olarak taşır; tarayıcının o anda
   // hangi adreste olduğundan bağımsız olmalı. Bkz. lib/siteUrl.js
   const profileUrl = url || cardUrl(username);
@@ -53,20 +55,6 @@ export default function QRCodeDisplay({
     if (qrLogoEnabled && profileImage) {
       await addLogoToQR(canvas, profileImage);
     }
-
-
-
-      // Also get data URL for download
-      const dataUrl = await QRCode.toDataURL(qrUrl, {
-        width: 600,
-        margin: 2,
-        errorCorrectionLevel: hataDuzeltme,
-        color: {
-          dark: qrForegroundColor,   // ← ÖZELLEŞ!
-          light: qrBackgroundColor   // ← ÖZELLEŞ!
-      }
-      });
-      setQrDataUrl(dataUrl);
     } catch (error) {
       console.error('QR kod oluşturma hatası:', error);
     }
@@ -105,12 +93,48 @@ const addLogoToQR = (canvas, logoUrl) => {
   });
 }; 
 
-  const downloadQRCode = () => {
-    if (qrDataUrl) {
+  // BASKI NOTU: indirilen dosyada kenar boşluğu (quiet zone) 4 modül
+  // bırakılır. Ekran önizlemesinde 2 yeterli, ama baskıda kodun etrafında
+  // yeterli beyaz alan kalmazsa okuyucular kodu bulamaz.
+  const BASKI_KENAR_PAYI = 4;
+
+  const downloadQRCode = async () => {
+    try {
+      const dataUrl = await QRCode.toDataURL(qrUrl, {
+        width: indirmeBoyutu,
+        margin: BASKI_KENAR_PAYI,
+        errorCorrectionLevel: hataDuzeltme,
+        color: { dark: qrForegroundColor, light: qrBackgroundColor },
+      });
       const link = document.createElement('a');
-      link.download = `${fileLabel || username}-qr-code.png`;
-      link.href = qrDataUrl;
+      link.download = `${fileLabel || username}-qr-${indirmeBoyutu}.png`;
+      link.href = dataUrl;
       link.click();
+    } catch (error) {
+      console.error('QR indirilemedi:', error);
+      alert('QR kod indirilemedi.');
+    }
+  };
+
+  // Vektör çıktı: matbaada istenen boyutta büyütülür, hiç bozulmaz.
+  // (Logolu kodda logo SVG'ye gömülmez; basımcıya ayrıca verilmelidir.)
+  const downloadSVG = async () => {
+    try {
+      const svg = await QRCode.toString(qrUrl, {
+        type: 'svg',
+        margin: BASKI_KENAR_PAYI,
+        errorCorrectionLevel: hataDuzeltme,
+        color: { dark: qrForegroundColor, light: qrBackgroundColor },
+      });
+      const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `${fileLabel || username}-qr.svg`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error('SVG indirilemedi:', error);
+      alert('SVG indirilemedi.');
     }
   };
 
@@ -170,6 +194,33 @@ const addLogoToQR = (canvas, logoUrl) => {
           </div>
         </div>
 
+        {/* Baskı boyutu */}
+        <div className="w-full">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            İndirme boyutu
+          </label>
+          <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
+            {[
+              { deger: 600, etiket: 'Ekran', not: 'Sosyal medya, e-posta imzası' },
+              { deger: 1000, etiket: 'Kartvizit', not: 'Kartvizit, etiket, broşür' },
+              { deger: 2000, etiket: 'Afiş', not: 'Tabela, afiş, vitrin' },
+            ].map((o) => (
+              <button
+                key={o.deger}
+                onClick={() => setIndirmeBoyutu(o.deger)}
+                title={o.not}
+                className={`flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                  indirmeBoyutu === o.deger
+                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow'
+                    : 'text-gray-500 dark:text-gray-400'
+                }`}
+              >
+                {o.etiket}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Action Buttons */}
         <div className="flex gap-3 w-full">
           <button
@@ -177,7 +228,15 @@ const addLogoToQR = (canvas, logoUrl) => {
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Download size={18} />
-            QR İndir
+            PNG İndir
+          </button>
+          <button
+            onClick={downloadSVG}
+            title="Matbaa için vektör dosya: istenen boyutta büyütülür, bozulmaz"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            <FileImage size={18} />
+            SVG (Baskı)
           </button>
           <button
             onClick={shareCard}
@@ -194,10 +253,10 @@ const addLogoToQR = (canvas, logoUrl) => {
             Nasıl Kullanılır?
           </h3>
           <ul className="text-sm text-blue-800 dark:text-blue-400 space-y-1">
-            <li>• QR kodu indirip baskı yaptırabilirsiniz</li>
-            <li>• Dijital imzanızda kullanabilirsiniz</li>
-            <li>• NFC etiketine yazabilirsiniz</li>
-            <li>• Link ile doğrudan paylaşabilirsiniz</li>
+            <li>• Matbaa için <strong>SVG</strong> verin; küçültüp büyütmek kodu bozmaz</li>
+            <li>• Kodun etrafındaki beyaz boşluğu kapatmayın, okunmaz hale gelir</li>
+            <li>• Kartvizitte kenarı en az 2 cm olsun; küçük baskıda okunma düşer</li>
+            <li>• Bu kod kalıcıdır: kullanıcı adınızı değiştirseniz de çalışır</li>
           </ul>
         </div>
       </div>

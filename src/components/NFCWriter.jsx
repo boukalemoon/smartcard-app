@@ -1,15 +1,26 @@
 import { useState, useEffect } from 'react';
 import { Nfc, AlertCircle, CheckCircle, Smartphone } from 'lucide-react';
-import { cardUrl, kaynakliAdres } from '../lib/siteUrl';
+import { cardUrl, kartKoduUrl, kaynakliAdres } from '../lib/siteUrl';
 
-export default function NFCWriter({ username }) {
+export default function NFCWriter({ username, cardCode }) {
   const [isNFCSupported, setIsNFCSupported] = useState(false);
   const [isWriting, setIsWriting] = useState(false);
   const [status, setStatus] = useState('');
   const [statusType, setStatusType] = useState('info'); // info, success, error
+  // Kart kilitleme: yazdıktan sonra etiket SALT OKUNUR yapılır.
+  //
+  // NEDEN: Kilitlenmemiş bir NFC kartı eline geçiren herkes üzerine kendi
+  // adresini yazabilir; kartınızı okutan kişi sizin sandığı yerde başkasının
+  // sayfasını açar. Kilit GERİ ALINAMAZ, bu yüzden seçenek olarak duruyor
+  // ama varsayılan açık.
+  const [kilitle, setKilitle] = useState(true);
 
   // NFC karta yazılan adres sonradan düzeltilemez. Bkz. lib/siteUrl.js
-  const profileUrl = cardUrl(username);
+  //
+  // KALICI KOD: karta kullanıcı adı yazılırsa, kullanıcı adını değiştiren
+  // herkesin kartı ölür. Kart kodu kullanıcı adından bağımsızdır ve kart
+  // kaybolursa yenilenebilir.
+  const profileUrl = cardCode ? kartKoduUrl(cardCode) : cardUrl(username);
   // Karta YAZILAN adres kendini tanıtır: böylece kart okutularak gelen
   // ziyaretçi, bağlantıya tıklayarak gelenden ayrılır. Ekranda gösterilen
   // adres sade kalır.
@@ -26,7 +37,7 @@ export default function NFCWriter({ username }) {
       setStatusType('success');
     } else {
       setIsNFCSupported(false);
-      setStatus('NFC özelliği sadece Android Chrome\'da desteklenmektedir');
+      setStatus('Bu cihazda NFC yazma yok: kart yazmak için Android + Chrome gerekir. iPhone kartı okuyabilir ama yazamaz.');
       setStatusType('info');
     }
   };
@@ -57,7 +68,19 @@ export default function NFCWriter({ username }) {
         ]
       });
 
-      setStatus('✅ NFC etikete başarıyla yazıldı!');
+      if (kilitle) {
+        setStatus('Yazıldı, kart kilitleniyor — kartı çekmeyin...');
+        try {
+          await ndef.makeReadOnly();
+          setStatus('✅ Karta yazıldı ve kilitlendi. Artık üzerine yazılamaz.');
+        } catch (kilitHatasi) {
+          // Bazı etiketler kilitlemeyi desteklemez; yazma yine de geçerli.
+          console.warn('Kart kilitlenemedi:', kilitHatasi);
+          setStatus('✅ Karta yazıldı. Ancak bu etiket kilitlenemedi: başkası üzerine yazabilir.');
+        }
+      } else {
+        setStatus('✅ NFC etikete yazıldı (kilitlenmedi).');
+      }
       setStatusType('success');
       
       setTimeout(() => {
@@ -172,6 +195,25 @@ export default function NFCWriter({ username }) {
           <li>Yazma işlemi tamamlanana kadar bekleyin</li>
         </ol>
       </div>
+
+      {/* Kilit seçeneği */}
+      <label className="flex items-start gap-3 mb-4 p-3 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40">
+        <input
+          type="checkbox"
+          checked={kilitle}
+          onChange={(e) => setKilitle(e.target.checked)}
+          className="mt-1 w-4 h-4"
+        />
+        <span>
+          <span className="block text-sm font-medium text-gray-900 dark:text-gray-100">
+            Yazdıktan sonra kartı kilitle (önerilir)
+          </span>
+          <span className="block text-xs text-gray-500 dark:text-gray-400">
+            Kilitlenmeyen kartı eline geçiren biri üzerine kendi adresini yazabilir.
+            <strong> Kilit geri alınamaz</strong>; kart bir daha yazılamaz.
+          </span>
+        </span>
+      </label>
 
       {/* Action Buttons */}
       <div className="space-y-3">

@@ -73,6 +73,19 @@ export function personaUrl(shareCode) {
 }
 
 /**
+ * BASILI kartın (QR / NFC) kalıcı adresi.
+ *
+ * NEDEN KULLANICI ADI DEĞİL: kullanıcı adı değiştirilebiliyor ve değiştiği
+ * anda basılmış bütün kartlar ölüyordu. Kart kodu kalıcıdır, kullanıcı adından
+ * bağımsızdır ve "o an hangi profil ana profilse onu göster" diye çözülür —
+ * yani basılan kart sonradan başka bir profile yönlendirilebilir.
+ * Kart kaybolursa kod yenilenir ve eski baskılar bilerek geçersiz olur.
+ */
+export function kartKoduUrl(cardCode) {
+  return `${SITE_URL}/k/${cardCode ?? ''}`
+}
+
+/**
  * Adrese geliş kaynağı işaretini ekler: QR koda basılan ve NFC karta yazılan
  * adres kendini tanıtsın diye.
  *
