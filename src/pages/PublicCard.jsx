@@ -1,5 +1,6 @@
 ﻿import AvatarFlipCard from '../components/AvatarFlipCard'
 import ContactExchange from '../components/ContactExchange'
+import AppointmentBooking from '../components/AppointmentBooking'
 import VerifiedBadges from '../components/VerifiedBadges'
 import { ozelAlanAdiMi, suAnkiHost } from '../lib/ozelAlanAdi'
 import { trackCardEvent, kaynagiCoz } from '../utils/analyticsHelpers'
@@ -548,6 +549,10 @@ export default function PublicCard() {
               >
                 🔗 Linki Kopyala
               </button>
+
+              {/* Randevu: kart sahibi açtıysa görünür, kapalıysa bölüm hiç
+                  çizilmez (kapalı bir özelliği göstermek beklenti yaratır). */}
+              <AppointmentBooking hedef={hedef} temaRengi={themeColor} />
 
               {/* Karşılıklı kartvizit değişimi: kartı gören kişi de kendini
                   tanıtabilsin. Kağıt kartvizitte doğal olan şey dijitalde

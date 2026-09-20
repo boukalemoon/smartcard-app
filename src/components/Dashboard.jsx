@@ -26,6 +26,7 @@ import PersonaManager from './PersonaManager'
 import CardContacts from './CardContacts'
 import VerificationManager from './VerificationManager'
 import CustomDomainManager from './CustomDomainManager'
+import AppointmentManager from './AppointmentManager'
 import LinkPerformance from './LinkPerformance'
 import PersonaShare from './PersonaShare'
 import ActivityLog from './ActivityLog'
@@ -595,6 +596,7 @@ export default function Dashboard({ session }) {
                 {profile?.id && <PersonaManager username={profile.username} />}
                 {profile?.id && <VerificationManager />}
                 {profile?.id && <CustomDomainManager />}
+                {profile?.id && <AppointmentManager />}
                 {profile?.id && <CardContacts />}
                 {profile?.user_id && <QrtimIdCard userId={profile.user_id} />}
                 {profile && <SocialLinksManager profileId={profile.id} />}
