@@ -97,13 +97,22 @@ Deno.serve(async (req: Request) => {
         p_durum: "hata",
         p_saglayici: { kod: ekle.veri?.error?.code ?? "bilinmeyen" },
       });
-      // Başka bir projede kullanılıyorsa kullanıcı bunu bilmeli.
-      return json({
-        ok: false,
-        hata: ekle.veri?.error?.code === "domain_already_in_use"
-          ? "adres_baska_projede"
-          : "saglayici_reddetti",
-      }, 400);
+      // Hatayı tek torbaya doldurmuyoruz: kullanıcı ya da yönetici ne
+      // yapması gerektiğini ancak sebebi bilirse anlar.
+      //   403        → jetonun bu takıma yetkisi yok (en sık: kişisel
+      //                kapsamlı jeton, proje ise takımda) ya da süresi dolmuş.
+      //   404        → proje/takım kimliği yanlış.
+      //   in_use     → adres başka bir projede.
+      const kod = ekle.veri?.error?.code ?? "";
+      const hata = ekle.durum === 401 || ekle.durum === 403
+        ? "saglayici_yetkisi_yok"
+        : ekle.durum === 404
+          ? "saglayici_proje_bulunamadi"
+          : kod === "domain_already_in_use"
+            ? "adres_baska_projede"
+            : "saglayici_reddetti";
+
+      return json({ ok: false, hata }, 400);
     }
 
     // 2) DNS yerine oturmuş mu?

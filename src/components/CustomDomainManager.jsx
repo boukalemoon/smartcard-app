@@ -21,6 +21,8 @@ const HATALAR = {
   kayit_yok: 'Kayıt bulunamadı.',
   dns_bekleniyor: 'Adres eklendi, DNS kaydınız henüz görünmüyor. Yayılması biraz sürebilir; birazdan tekrar deneyin.',
   saglayici_ayari_eksik: 'Bu özellik için yönetici ayarı (barındırma sağlayıcı anahtarı) henüz tanımlanmamış.',
+  saglayici_yetkisi_yok: 'Barındırma sağlayıcısı yetkiyi reddetti. Yönetici anahtarının süresi dolmuş ya da doğru takım kapsamında oluşturulmamış olabilir.',
+  saglayici_proje_bulunamadi: 'Barındırma sağlayıcısında proje bulunamadı; yönetici ayarındaki proje kimliği yanlış olabilir.',
   saglayici_reddetti: 'Adres barındırma sağlayıcısına eklenemedi.',
   islem_tamamlanamadi: 'İşlem tamamlanamadı. Lütfen tekrar deneyin.',
 }
