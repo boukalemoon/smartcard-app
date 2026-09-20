@@ -5,13 +5,15 @@ const ThemeContext = createContext();
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
     // LocalStorage'dan tema tercihini al
-    const savedTheme = localStorage.getItem('Qartim-theme');
+    // Marka yazımı QRtım olarak düzeltildi. Eski anahtar da okunur ki
+    // kullanıcıların daha önce seçtiği tema sıfırlanmasın.
+    const savedTheme = localStorage.getItem('qrtim-theme') || localStorage.getItem('Qartim-theme');
     return savedTheme || 'light';
   });
 
   useEffect(() => {
     // Tema değiştiğinde localStorage'a kaydet ve HTML'e class ekle
-    localStorage.setItem('Qartim-theme', theme);
+    localStorage.setItem('qrtim-theme', theme);
     
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');

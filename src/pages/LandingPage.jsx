@@ -159,7 +159,7 @@ export default function LandingPage() {
   <a href="/" aria-label="Anasayfa">
     <img 
       src="/qrtım-logo.png?v=2"
-      alt="Qartim Logo" 
+      alt="QRtım" 
       className="h-16 w-auto cursor-pointer"
     />
   </a>
