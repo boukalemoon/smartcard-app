@@ -10,6 +10,48 @@ Anlatı ve faz planı Obsidian'da: `01 - Aktif Projeler/QRtım/`
 
 ---
 
+## [1.12.0] — 2026-09-21
+
+Kendi alan adında yayın ve karttan randevu. İkisi de Linktree
+karşılaştırmasından alındı; ikisinde de bizim bir adım fazlamız var.
+
+### Eklendi — kendi alan adınız
+
+- Kart kişinin kendi adresinde açılabiliyor: `kart.ornek.com.tr`.
+- **Farkımız:** Linktree'de bu ücretli pakette ve tek yaptıkları DNS
+  yönlendirmesi. Bizde adresi bağlayabilmek için o alan adının **sahibi**
+  olduğunuzu daha önce kanıtlamış olmanız gerekiyor. Özel alan adı, rozet
+  sisteminin üstüne oturuyor.
+- Özel adreste uygulamanın geri kalanı açılmıyor, yalnızca kart. Oturum
+  tarayıcıda adrese göre ayrıldığı için, kişi kendi alan adında giriş
+  yapsaydı "giriş yaptım ama panelim boş" durumuna düşerdi.
+- Sahiplik kanıtı kaldırılırsa yayın duruyor; kanıtsız yayın yapmıyoruz.
+- Güvenlik sertifikası otomatik kuruluyor.
+
+### Eklendi — randevu
+
+- Kart sahibi çalışma saatlerini, randevu süresini, kaç gün ileriye ve en
+  erken kaç saat sonrasına randevu alınabileceğini belirliyor. Randevular
+  otomatik onaylanabiliyor ya da onaya düşüyor.
+- **Farkımız:** Linktree'de bu ancak dışarıdan bir takvim aracı gömülerek
+  oluyor. Bizde kartın kendi parçası ve aynı ölçüm hattında — randevunun QR
+  okutandan mı NFC karttan mı geldiği görünüyor.
+- Aynı saate iki randevu veritabanı seviyesinde engelleniyor; iki kişi aynı
+  anda tıklarsa biri "bu saati az önce başkası aldı" cevabını alıyor.
+- Ziyaretçi randevu tablosunu göremiyor, yalnızca boş saatleri öğreniyor.
+  Kimin ne zaman randevusu olduğu kimseyi ilgilendirmez.
+- Saatler Türkiye saatiyle gösteriliyor ve bu kartta yazılı.
+
+### Bilinen sorunlar
+
+- Özel alan adı için barındırma sağlayıcı anahtarı henüz tanımlı değil;
+  o tanımlanana kadar "Bağla" düğmesi dürüstçe "yönetici ayarı eksik" diyor.
+- Randevu hatırlatma/bildirim e-postası yok (e-posta gönderimi henüz yok).
+- Paketler satın alınamıyor; ödeme ve POS başvurusu en sonda.
+- Hakediş ödeme akışı yok.
+
+---
+
 ## [1.11.0] — 2026-09-21
 
 Doğrulanmış kimlik ve bağlantı yöneticisi. QRtım'ın "dijital kimlik"
