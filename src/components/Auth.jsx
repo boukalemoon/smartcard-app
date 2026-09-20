@@ -121,7 +121,10 @@ export default function Auth({ initialMode = 'signup' }) {
       if (saved && isSafeCallback(saved)) setArkuCallback(saved)
     }
 
-    const savedRef = localStorage.getItem('qartim_referral_code')
+    // Eski ad altında saklanmış kod hâlâ okunur: marka adı değişti diye
+    // elinde davet kodu olan kişinin kodu düşmesin.
+    const savedRef = localStorage.getItem('qrtim_referral_code')
+      || localStorage.getItem('qartim_referral_code')
     if (savedRef && !ref) {
       setReferralCode(savedRef)
       if (initialMode === 'signup') setMode('signup')
@@ -159,7 +162,7 @@ export default function Auth({ initialMode = 'signup' }) {
 
   useEffect(() => {
     if (referralCode) {
-      localStorage.setItem('qartim_referral_code', referralCode)
+      localStorage.setItem('qrtim_referral_code', referralCode)
     }
   }, [referralCode])
 
@@ -202,6 +205,7 @@ export default function Auth({ initialMode = 'signup' }) {
           'Kayıt alındı. E-posta adresinize gönderdiğimiz doğrulama bağlantısına tıklayın (gelmediyse spam klasörünü kontrol edin).',
           'success'
         )
+        localStorage.removeItem('qrtim_referral_code')
         localStorage.removeItem('qartim_referral_code')
         navigate('/login')
 
