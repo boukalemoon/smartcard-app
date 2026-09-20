@@ -10,6 +10,95 @@ Anlatı ve faz planı Obsidian'da: `01 - Aktif Projeler/QRtım/`
 
 ---
 
+## [1.10.0] — 2026-09-20
+
+Basılı kartın ömür boyu çalışması, karşılıklı kartvizit değişimi ve panel
+verisinin doğruluğu. Bu tur boyunca ölçüt şuydu: **panel, bilmediğimiz bir
+şeyi biliyormuş gibi göstermesin.**
+
+### Eklendi — kalıcı kart kodu
+
+- Basılı QR ve NFC kartlar artık **kalıcı bir koda** bakıyor. Önceden adres
+  kullanıcı adını taşıyordu: kişi kullanıcı adını değiştirdiğinde elindeki
+  bütün basılı kartlar ölü bağlantıya dönüyordu. Kod hesaba bağlı, kullanıcı
+  adından bağımsız. Eski kullanıcı adları da geçmişten çözülüyor, böylece
+  daha önce basılmış kartlar da çalışmaya devam ediyor.
+- Kod kişinin isteğiyle yenilenebiliyor (kart kaybedildiğinde): eski kart o
+  anda geçersiz olur.
+- QR çıktısı baskıya uygun hâle getirildi: SVG olarak indirilebiliyor,
+  boyut seçilebiliyor ve etrafında zorunlu sessiz alan (kenar payı) var —
+  kenar payı olmadan basılan kod birçok okuyucuda okunmuyordu.
+- NFC kartı yazarken **kalıcı kilit** seçeneği eklendi: kilitlenen kartın
+  içeriği bir daha değiştirilemez, böylece kart birinin eline geçtiğinde
+  başka adrese yönlendirilemez.
+
+### Eklendi — kişi defteri (karşılıklı kartvizit değişimi)
+
+- Kartı okutan kişi kendi bilgisini bırakabiliyor; kart sahibi bunları
+  panelinde görüyor, dışa aktarabiliyor ve silebiliyor. Kağıt kartvizitteki
+  karşılıklı değişimin dijital hâli; önceden paylaşım tek yönlüydü.
+- Bilgi QRtım'a değil **kart sahibine** veriliyor; form bunu açıkça yazıyor
+  ve onay kutusu işaretlenmeden gönderilemiyor. Kimlik numarası gibi alanlar
+  bilerek istenmiyor. Sel ve taciz için hız sınırı var.
+
+### Eklendi — davet ve onay
+
+- Yönetici artık kimseyi onayını almadan kuruma ekleyemiyor. Ekleme bir
+  **davet** oluşturuyor; kişi panelinden kabul edene kadar üye sayılmıyor,
+  kurumun verisini göremiyor. (1.9.0'da bilinen sorun olarak yazılmıştı.)
+
+### Düzeltildi — panel veri doğruluğu
+
+- **Analitik sunucuda toplanıyor.** Panel olay kayıtlarını tarayıcıya çekip
+  sayıyordu; bin kayıttan sonra bütün kutular sessizce eksik gösterecekti.
+- **Dönem seçimi çalışıyor.** Kişisel panelde tarih filtresi hiç
+  uygulanmıyordu: "bu ay" seçmek sayıları değiştirmiyordu.
+- **"Doğrudan giriş" yalnızca ölçülmüş girişi sayıyor.** Kaynağı hiç
+  işaretlenmemiş eski kayıtlar da doğrudan sayılıyordu; panel aynı kayıtları
+  hem "doğrudan ziyaret" hem "kaynağı ölçülmemiş" diye gösteriyordu.
+- **Sayaçlar aynı sayıyı söylüyor.** Panel ile profil listesi aynı kart için
+  farklı görüntülenme sayısı veriyordu.
+- **Plan sınırları tek kaynaktan.** Sosyal medya sınırı arayüzde sabitti ve
+  yalnızca ücretsiz plana bakıyordu; artık sunucu ile aynı tablodan okunuyor.
+  Profil sınırı panelde görünüyor, sınıra çarpınca öğrenilmiyor.
+- **NFC kart tasarımcısı olmayan bir kolonu okuyordu:** "daha önce sipariş
+  verdi mi" sorusu hep hayır çıkıyor, her adet ücretsiz görünüyordu.
+- **Yönetici panelindeki aylık gelir** koda gömülü fiyat listesinden
+  hesaplanıyor ve faturalama dönemini yok sayıyordu (yıllık aboneyi aylık
+  fiyattan sayıyordu). Artık fiyat tablosundan, döneme göre.
+- Kişisel paneldeki sessiz kayıtlar kapatıldı: kayıt engellendiğinde arayüz
+  "kaydedildi" diyordu. (1.9.0'da bilinen sorun olarak yazılmıştı.)
+
+### Güvenlik
+
+- **Davet kaçırma kapatıldı.** Profil e-postası istemciden yazılabiliyordu;
+  bir kullanıcı kendi profiline başkasının e-postasını yazıp o kişiye gelen
+  kurum davetini üstlenebiliyordu. Kimlik artık yalnızca doğrulanmış
+  e-postadan, hesap kayıtlarından çözülüyor.
+- **Sosyal medya sınırı sunucuda hiç çalışmıyordu:** koruma her çağrıda
+  "sistem kullanıcısı" sanıp erken dönüyordu. Testte yakalandı.
+- Partner uygulamalarının (Tınga, İlgezdi, Arku) yazma ve okuma yetkileri
+  daraltıldı; eşleştirme kalıcı kimlik numarasıyla yapılıyor, e-postayla
+  değil.
+- Tetikleyici fonksiyonları API yüzeyinden kaldırıldı.
+
+### Değiştirildi
+
+- Marka adı her yerde **QRtım**. Tarayıcıda saklanan davet kodu yeni adla
+  tutuluyor, eski ad okunmaya devam ediyor (kimsenin kodu düşmesin).
+- NFC sipariş düğmesi artık dürüstçe devre dışı ve sebebi yazıyor; önceden
+  "Sipariş Ver" diyor, basınca uyarı veriyordu.
+
+### Bilinen sorunlar
+
+- Paketler satın alınamıyor; ödeme sağlayıcı (PayNkolay) entegrasyonu ve POS
+  başvuru akışı bilinçli olarak en sona bırakıldı.
+- Hakediş ödeme akışı yok; aylık hesaplama işi zamanlanmış görevde değil.
+- Kuruma başvuru yapana bildirim e-postası gönderilmiyor.
+- NFC kart siparişi ödemeye bağlı olduğu için hâlâ kapalı.
+
+---
+
 ## [1.9.0] — 2026-09-18
 
 Kurumsal ve STK panellerinin çalışır hâle getirilmesi. Panel analizi 24 bulgu
