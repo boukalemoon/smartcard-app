@@ -10,6 +10,70 @@ Anlatı ve faz planı Obsidian'da: `01 - Aktif Projeler/QRtım/`
 
 ---
 
+## [1.11.0] — 2026-09-21
+
+Doğrulanmış kimlik ve bağlantı yöneticisi. QRtım'ın "dijital kimlik"
+iddiasının kartta karşılığı yoktu: kartı gören kişinin "bu gerçekten o mu"
+sorusuna cevap veren hiçbir şey yoktu.
+
+### Eklendi — doğrulama rozetleri
+
+- **Alan adı doğrulaması.** Kişi alan adını girer, DNS'e yazacağı TXT
+  değerini alır, "Doğrula"ya basar. Kontrolü sunucu yapar; sonucu istemci
+  yazamaz. İki bağımsız DNS sunucusu (Cloudflare ve Google) birden kaydı
+  görmeden doğrulama geçmez — yanlış reddetmek, yanlış onaylamaktan iyidir.
+- **Kurum rozeti.** Kurumun alan adı doğrulanmışsa ve üyelik kabul edilmişse
+  kartta görünür. Kurum kaydını herkes açabildiği için üyelik tek başına
+  kanıt sayılmaz.
+- **Rozet genel bir "onaylı hesap" tiki değildir.** Her rozet neyin
+  doğrulandığını söyler ve tıklanınca kanıtı açılır: ne, nasıl, ne zaman.
+  Kutunun altında rozetin sınırı da yazar — QRtım kişinin kimliğine kefil
+  olmaz, yalnızca kontrol ettiği şeyi gösterir.
+- Doğrulama süresiz değil: alan adı el değiştirebilir. Süresi geçen rozet
+  kartta görünmez, panelde "yeniden doğrulanmalı" der.
+- E-posta bilerek rozet değil: kayıt olan herkeste var, herkeste olan bir
+  işaret hiçbir şeyi ayırt etmez. Panelde durum satırı olarak görünür.
+- Telefon ve resmi kimlik doğrulaması henüz kapalı (dış sağlayıcı
+  gerekiyor). Panelde neden kapalı olduğu yazıyor.
+
+### Eklendi — bağlantı yöneticisi
+
+- Bağlantılara **başlık** verilebiliyor: artık "facebook" değil, "Cumartesi
+  indirimi".
+- **Öne çıkarma**: öne çıkan bağlantı kartta ikon kalabalığında kaybolmuyor,
+  başlığıyla ve tam genişlikte en üstte duruyor.
+- **Yayın süresi**: bitiş tarihi verilen bağlantı o günün sonunda kartta
+  görünmeyi bırakıyor, silinmiyor. Silmeden gizleme anahtarı da var.
+- **"Hangi bağlantı çalışıyor" raporu**, kaynak kırılımıyla: tıklama QR
+  okutandan mı, NFC'den mi geldi. Tıklamalar başından beri hangi bağlantıya
+  ait olduğu bilgisiyle kaydediliyordu; panel yalnızca toplamı gösteriyordu.
+
+### Güvenlik
+
+- **Kart, kabul edilmemiş daveti üyelik gibi gösteriyordu.** Davet akışı
+  üyeliği onaya bağlamıştı ama kart güncellenmemişti: bir kurum yöneticisi
+  bir e-posta yazarak o kişinin herkese açık kartında kendi kurumunu
+  gösterebilirdi — kişi daveti hiç görmeden. Kimse bekleyen davette
+  olmadığı için kullanılmamış; ilk davetle gerçek olacaktı.
+- Doğrulama sonucunu yalnızca sunucu yazabiliyor; istemcinin kendi kaydını
+  "doğrulandı" yapma denemesi veritabanı seviyesinde reddediliyor.
+
+### Düzeltildi
+
+- Bağlantı satırındaki düzenle/sil düğmeleri yalnızca fareyle üzerine
+  gelince görünüyordu; dokunmatik ekranda hover olmadığı için telefonda
+  hiç görünmüyorlardı.
+
+### Bilinen sorunlar
+
+- Paketler satın alınamıyor; ödeme (PayNkolay) ve POS başvurusu bilinçli
+  olarak en sona bırakıldı.
+- Hakediş ödeme akışı yok; aylık hesaplama zamanlanmış görevde değil.
+- Kuruma başvurana bildirim e-postası gönderilmiyor.
+- Özel alan adı ve cüzdan kartı (Apple/Google) henüz yok.
+
+---
+
 ## [1.10.0] — 2026-09-20
 
 Basılı kartın ömür boyu çalışması, karşılıklı kartvizit değişimi ve panel
