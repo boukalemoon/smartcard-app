@@ -544,11 +544,25 @@ export default function Dashboard({ session }) {
                   onFilterChange={(filter) => setAnalizAralik(filtreyiAraligaCevir(filter))}
                 />
                 <div className="grid md:grid-cols-4 gap-4">
+                  {/* Tüm zamanlar sorulduğunda kartın GERÇEK sayacı gösterilir.
+                      Ayrıntılı olay kaydı sayaçtan sonra başladığı için olayları
+                      saymak daha küçük bir sayı verir; profil listesindeki sayı
+                      ile panelin farklı konuşmaması gerekiyor. Fark varsa ne
+                      kadarının ayrıntılı ölçüldüğünü açıkça yazıyoruz. */}
                   <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-blue-500">
                     <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">
                       Görüntülenme {analizAralik.from ? '(seçili dönem)' : '(tüm zamanlar)'}
                     </div>
-                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{analytics?.toplam_goruntulenme || 0}</div>
+                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                      {analizAralik.from
+                        ? (analytics?.toplam_goruntulenme || 0)
+                        : Math.max(analytics?.omur_boyu_goruntulenme || 0, analytics?.toplam_goruntulenme || 0)}
+                    </div>
+                    {!analizAralik.from && (analytics?.omur_boyu_goruntulenme || 0) > (analytics?.toplam_goruntulenme || 0) && (
+                      <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                        {analytics.toplam_goruntulenme} tanesi ayrıntılı ölçülüyor; öncesi yalnızca sayaçta
+                      </div>
+                    )}
                   </div>
                   {/* QR ve NFC ayrımı, koda ve karta yazılan adresteki kaynak
                       işaretinden gelir. Bu işaretten ÖNCE basılmış kartlarda
