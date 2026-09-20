@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { CalendarClock, Check, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarClock, Check, ChevronLeft, ChevronRight, CalendarPlus } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
+import { randevuIcsIndir } from '../utils/takvim'
 
 // KARTTAN RANDEVU
 //
@@ -42,7 +43,7 @@ function isoGun(d) {
   }).format(d)
 }
 
-export default function AppointmentBooking({ hedef, temaRengi }) {
+export default function AppointmentBooking({ hedef, temaRengi, kartSahibi }) {
   const [gun, setGun] = useState(() => gunEkle(new Date(), 1))
   const [veri, setVeri] = useState(null)
   const [yukleniyor, setYukleniyor] = useState(true)
@@ -120,6 +121,27 @@ export default function AppointmentBooking({ hedef, temaRengi }) {
           {sonuc.durum !== 'onaylandi' && (
             <p className="text-xs text-green-700 mt-1">Onaylandığında size dönülecek.</p>
           )}
+
+          {/* Kişinin bizde hesabı yok; takvimine abone olamayız. Tek seferlik
+              dosya her takvim uygulamasında açılır ve hatırlatmayı KENDİ
+              takvimi yapar — bizim e-posta göndermemize gerek kalmaz. */}
+          <button
+            type="button"
+            onClick={() => randevuIcsIndir({
+              id: sonuc.id,
+              baslar: sonuc.baslar_at,
+              biter: sonuc.biter_at,
+              kartSahibi,
+              aciklama: form.aciklama || null,
+            })}
+            className="mt-3 inline-flex items-center gap-1.5 px-3 py-2 bg-white border-2 border-green-300 text-green-800 rounded-lg text-sm font-semibold hover:bg-green-100"
+          >
+            <CalendarPlus size={16} />
+            Takvimime ekle
+          </button>
+          <p className="text-[11px] text-green-700 mt-1">
+            Google, Outlook, Apple ve kurumsal takvimlerin hepsinde açılır.
+          </p>
         </div>
       </div>
     )

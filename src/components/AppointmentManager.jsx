@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { CalendarClock, Check, X, Clock, Mail, Phone, QrCode, Nfc } from 'lucide-react'
+import { CalendarClock, Check, X, Clock, Mail, Phone, QrCode, Nfc, Copy, RefreshCw } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
+import { SITE_URL } from '../lib/siteUrl'
 
 // RANDEVU YÖNETİMİ
 //
@@ -26,6 +27,8 @@ export default function AppointmentManager() {
   const [ayar, setAyar] = useState(null)
   const [randevular, setRandevular] = useState([])
   const [kaydediliyor, setKaydediliyor] = useState(false)
+  const [takvimAnahtari, setTakvimAnahtari] = useState(null)
+  const [kopyalandi, setKopyalandi] = useState(false)
   const [mesaj, setMesaj] = useState(null)
 
   const yenile = async () => {
@@ -40,14 +43,16 @@ export default function AppointmentManager() {
   useEffect(() => {
     let iptal = false
     ;(async () => {
-      const [a, r] = await Promise.all([
+      const [a, r, t] = await Promise.all([
         supabase.rpc('my_appointment_settings'),
         supabase.rpc('my_appointments', { p_gecmis: false }),
+        supabase.rpc('my_calendar_key'),
       ])
       if (iptal) return
       if (a.error) console.error('Randevu ayarları alınamadı:', a.error)
       setAyar(a.data?.ok ? a.data : null)
       setRandevular(r.data || [])
+      setTakvimAnahtari(t.data?.anahtar || null)
     })()
     return () => { iptal = true }
   }, [])
@@ -82,10 +87,36 @@ export default function AppointmentManager() {
       // Sunucu temizlenmiş hâli döner; ekran gerçekte kaydedileni göstersin.
       setAyar((o) => ({ ...o, gun_saatleri: data.gun_saatleri }))
       setMesaj({ tur: 'basari', metin: 'Randevu ayarları kaydedildi.' })
+      // Ayar satırı ilk kez bu kayıtta oluşmuş olabilir; takvim anahtarı da
+      // o anda doğar.
+      if (!takvimAnahtari) {
+        const { data: t } = await supabase.rpc('my_calendar_key')
+        setTakvimAnahtari(t?.anahtar || null)
+      }
     } catch (err) {
       setMesaj({ tur: 'hata', metin: 'Hata: ' + err.message })
     } finally {
       setKaydediliyor(false)
+    }
+  }
+
+  const takvimAdresi = takvimAnahtari ? `${SITE_URL}/api/takvim.ics?anahtar=${takvimAnahtari}` : null
+
+  const anahtarYenile = async () => {
+    if (!confirm('Takvim adresi yenilensin mi? Eski adres çalışmayı bırakır; takvim uygulamanızdaki aboneliği yeni adresle kurmanız gerekir.')) return
+    const { data, error } = await supabase.rpc('rotate_calendar_key')
+    if (error || !data?.ok) { alert('Yenilenemedi.'); return }
+    setTakvimAnahtari(data.anahtar)
+    setMesaj({ tur: 'basari', metin: 'Takvim adresi yenilendi. Aboneliğinizi yeni adresle kurun.' })
+  }
+
+  const adresiKopyala = async () => {
+    try {
+      await navigator.clipboard.writeText(takvimAdresi)
+      setKopyalandi(true)
+      setTimeout(() => setKopyalandi(false), 1500)
+    } catch {
+      setMesaj({ tur: 'hata', metin: 'Kopyalanamadı; adresi elle seçip kopyalayın.' })
     }
   }
 
@@ -199,6 +230,48 @@ export default function AppointmentManager() {
             className="px-4 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-lg text-sm font-semibold disabled:opacity-50">
             {kaydediliyor ? 'Kaydediliyor…' : 'Ayarları kaydet'}
           </button>
+
+          {/* KENDİ TAKVİMİNİZ
+              Herkesin sağlayıcısı farklı (Gmail, Hotmail, kurumsal). Her biri
+              için ayrı entegrasyon yazmak yerine takvim standardını (ICS)
+              kullanıyoruz: hepsi destekliyor, kimsenin hesabını bağlaması
+              gerekmiyor. */}
+          {takvimAdresi && (
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                Randevularınızı kendi takviminizde görün
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                Aşağıdaki adresi takvim uygulamanıza <strong>abonelik</strong> olarak
+                ekleyin; randevularınız kendiliğinden düşer. Google Takvim
+                (Diğer takvimler → URL'den), Outlook/Hotmail (Takvim ekle →
+                İnternetten abone ol), Apple Takvim (Dosya → Yeni Takvim
+                Aboneliği) ve kurumsal Exchange destekliyor.
+              </p>
+              <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                <code className="text-xs text-gray-800 dark:text-gray-200 break-all flex-1">{takvimAdresi}</code>
+                <button onClick={adresiKopyala} title="Kopyala"
+                  className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 shrink-0">
+                  {kopyalandi ? <Check size={15} className="text-green-600" /> : <Copy size={15} />}
+                </button>
+                <button onClick={anahtarYenile} title="Adresi yenile"
+                  className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 shrink-0">
+                  <RefreshCw size={15} />
+                </button>
+              </div>
+              {/* İki şeyi baştan söylüyoruz ki kullanıcı "bozuk" sanmasın. */}
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
+                Bu adres bir anahtardır: adresi bilen randevularınızı görebilir.
+                Paylaşmayın; yanlışlıkla paylaştıysanız yenileme düğmesiyle
+                değiştirin, eski adres çalışmayı bırakır.
+              </p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                Takvim uygulamaları abone oldukları adresleri kendi aralıklarıyla
+                tazeler; yeni randevu takviminize birkaç saat sonra düşebilir.
+                Anında görmek için bu panel var.
+              </p>
+            </div>
+          )}
         </div>
       )}
 

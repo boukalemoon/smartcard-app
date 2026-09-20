@@ -552,7 +552,7 @@ export default function PublicCard() {
 
               {/* Randevu: kart sahibi açtıysa görünür, kapalıysa bölüm hiç
                   çizilmez (kapalı bir özelliği göstermek beklenti yaratır). */}
-              <AppointmentBooking hedef={hedef} temaRengi={themeColor} />
+              <AppointmentBooking hedef={hedef} temaRengi={themeColor} kartSahibi={profile.name} />
 
               {/* Karşılıklı kartvizit değişimi: kartı gören kişi de kendini
                   tanıtabilsin. Kağıt kartvizitte doğal olan şey dijitalde
