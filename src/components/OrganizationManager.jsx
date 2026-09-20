@@ -6,19 +6,9 @@ import {
   ChevronLeft, UserPlus, UserMinus
 } from 'lucide-react';
 
-// Plan bazlı organizasyon limitleri
-// NOT: Bu harita yalnızca arayüz ipucu içindir; gerçek sınır sunucuda
-// (create_organization) uygulanır. 'corporate' eksikti — fiyat listesinde
-// var ama burada tanımsız olduğu için `?? 2` ile en üst plana ödeyen
-// kullanıcı 2 organizasyonla sınırlanıyordu.
-const PLAN_ORG_LIMITS = {
-  free: 2,
-  student: 1,
-  professional: 999, // sınırsız
-  stk: 999,
-  business: 999,
-  corporate: 999
-}
+// Organizasyon sınırı artık kod içinde SABİT DEĞİL: plan_features tablosundan
+// (my_plan_limits) okunur. Eski harita sunucudaki kuralla çelişiyordu ve
+// öğrenci planına ücretsizden az hak veriyordu.
 
 // TOPLU İNDİRİM VAADİ KALDIRILDI (18.09.2026)
 // Ekran "10 üyeye ulaştınız, %20 indirim aktif edildi, bir sonraki ödemede
@@ -27,7 +17,7 @@ const PLAN_ORG_LIMITS = {
 // hesabına hiç girmiyordu. Verilmeyen indirimi vaat etmek yerine metin
 // kaldırıldı; fiyat/paket revizyonunda gerçekten uygulanırsa geri gelir.
 
-export default function OrganizationManager({ profileId, subscriptionPlan }) {
+export default function OrganizationManager({ profileId }) {
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -51,12 +41,18 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
     phone: ''
   });
 
-  const plan = subscriptionPlan || 'free'
-  const orgLimit = PLAN_ORG_LIMITS[plan] ?? 2
-  const canAddMore = organizations.length < orgLimit
+  const [planBilgisi, setPlanBilgisi] = useState(null)
+  const orgLimit = planBilgisi?.sinir?.organizasyon ?? 2
+  // Sunucu YÖNETİCİLİK sayar (başkasının kurumuna üye olmak hakkı tüketmez).
+  const yonettigim = organizations.filter(o => o.role === 'admin').length
+  const canAddMore = yonettigim < orgLimit
 
   useEffect(() => {
     loadOrganizations();
+    supabase.rpc('my_plan_limits').then(({ data, error }) => {
+      if (error) { console.error('Plan sınırları alınamadı:', error); return }
+      if (data?.ok) setPlanBilgisi(data)
+    });
   }, []);
 
   const loadOrganizations = async () => {
@@ -464,12 +460,10 @@ export default function OrganizationManager({ profileId, subscriptionPlan }) {
             <Crown className="text-yellow-600 dark:text-yellow-400 mt-1" size={24} />
             <div className="flex-1">
               <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1">
-                {plan === 'student' ? 'Öğrenci Planı Limiti' : 'Plan Limiti Doldu'}
+                Plan limiti doldu
               </h3>
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
-                {plan === 'student'
-                  ? 'Öğrenci planında yalnızca 1 organizasyon oluşturabilirsiniz. Daha fazlası için Profesyonel plana geçin.'
-                  : 'Daha fazla organizasyon için planınızı yükseltin.'}
+                {`Planınızda ${orgLimit} organizasyon yönetebilirsiniz. Daha fazlası için planınızı yükseltin.`}
               </p>
               <button
                 onClick={() => setShowUpgrade(false)}

@@ -550,7 +550,7 @@ export default function Dashboard({ session }) {
                 {profile?.id && <PersonaManager username={profile.username} />}
                 {profile?.user_id && <QrtimIdCard userId={profile.user_id} />}
                 {profile && <SocialLinksManager profileId={profile.id} subscriptionPlan={subscription?.plan || 'free'} />}
-                {profile && <OrganizationManager profileId={profile.id} subscriptionPlan={subscription?.plan || 'free'} />}
+                {profile && <OrganizationManager profileId={profile.id} />}
                 {profile && <ReferralDashboard profile={profile} />}
                 {profile && <ActivityLog />}
               </div>
