@@ -25,6 +25,7 @@ import QrtimIdCard from './QrtimIdCard'
 import PersonaManager from './PersonaManager'
 import CardContacts from './CardContacts'
 import VerificationManager from './VerificationManager'
+import LinkPerformance from './LinkPerformance'
 import PersonaShare from './PersonaShare'
 import ActivityLog from './ActivityLog'
 import { validateProfile } from '../utils/inputValidation'
@@ -588,6 +589,7 @@ export default function Dashboard({ session }) {
                   </div>
                 </div>
 
+                {profile?.id && <LinkPerformance aralik={analizAralik} />}
                 {profile?.id && <UsernameEditor currentUsername={profile.username} profileId={profile.id} onUpdate={(newUsername) => setProfile({ ...profile, username: newUsername })} />}
                 {profile?.id && <PersonaManager username={profile.username} />}
                 {profile?.id && <VerificationManager />}

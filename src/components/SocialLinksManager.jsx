@@ -147,7 +147,15 @@ export default function SocialLinksManager({ profileId }) {
 
   const startEdit = (link) => {
     setEditingId(link.id);
-    setEditLink({ platform: link.platform, url: link.url });
+    setEditLink({
+      platform: link.platform,
+      url: link.url,
+      etiket: link.etiket || '',
+      one_cikan: !!link.one_cikan,
+      aktif: link.aktif !== false,
+      // <input type="date"> yalnızca YYYY-MM-DD kabul eder.
+      yayin_bitis: link.yayin_bitis ? link.yayin_bitis.slice(0, 10) : '',
+    });
   };
 
   const cancelEdit = () => {
@@ -175,7 +183,17 @@ export default function SocialLinksManager({ profileId }) {
 
       const { data, error } = await supabase
         .from('social_links')
-        .update({ url: normalizedUrl })
+        .update({
+          url: normalizedUrl,
+          etiket: editLink.etiket?.trim() ? editLink.etiket.trim() : null,
+          one_cikan: !!editLink.one_cikan,
+          aktif: editLink.aktif !== false,
+          // Bitiş günü DAHİL olsun: kullanıcı "31 Aralık" derken 31'i de
+          // kapsadığını varsayar. Günün sonuna kadar açık kalır.
+          yayin_bitis: editLink.yayin_bitis
+            ? new Date(`${editLink.yayin_bitis}T23:59:59`).toISOString()
+            : null,
+        })
         .eq('id', id)
         .select('id');
 
@@ -391,6 +409,49 @@ export default function SocialLinksManager({ profileId }) {
                         />
                       </div>
                     </div>
+
+                    {/* Başlık, öne çıkarma ve yayın süresi. Kampanya
+                        bağlantısını silmeden bitirebilmek için. */}
+                    <input
+                      type="text"
+                      maxLength={60}
+                      value={editLink.etiket || ''}
+                      onChange={(e) => setEditLink({ ...editLink, etiket: e.target.value })}
+                      placeholder={`Başlık (boş bırakılırsa "${platformInfo.name}" yazar)`}
+                      className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:border-blue-500 dark:focus:border-blue-400 outline-none text-sm"
+                    />
+
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                        <input
+                          type="checkbox"
+                          checked={!!editLink.one_cikan}
+                          onChange={(e) => setEditLink({ ...editLink, one_cikan: e.target.checked })}
+                        />
+                        Öne çıkar (kartta başlığıyla, en üstte)
+                      </label>
+                      <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                        <input
+                          type="checkbox"
+                          checked={editLink.aktif !== false}
+                          onChange={(e) => setEditLink({ ...editLink, aktif: e.target.checked })}
+                        />
+                        Kartta görünsün
+                      </label>
+                    </div>
+
+                    <label className="block text-sm text-gray-700 dark:text-gray-300">
+                      <span className="block mb-1">Yayından kalkma tarihi (isteğe bağlı)</span>
+                      <input
+                        type="date"
+                        value={editLink.yayin_bitis || ''}
+                        onChange={(e) => setEditLink({ ...editLink, yayin_bitis: e.target.value })}
+                        className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg outline-none text-sm"
+                      />
+                      <span className="block text-xs text-gray-500 mt-1">
+                        O günün sonunda kartta görünmeyi bırakır; bağlantı silinmez.
+                      </span>
+                    </label>
                     <div className="flex gap-2">
                       <button
                         onClick={() => updateLink(link.id)}
@@ -416,7 +477,29 @@ export default function SocialLinksManager({ profileId }) {
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 dark:text-gray-100">{platformInfo.name}</p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100 flex flex-wrap items-center gap-1.5">
+                        {link.etiket || platformInfo.name}
+                        {link.one_cikan && (
+                          <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                            öne çıkan
+                          </span>
+                        )}
+                        {link.aktif === false && (
+                          <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-700">
+                            kartta gizli
+                          </span>
+                        )}
+                        {link.yayin_bitis && new Date(link.yayin_bitis) <= new Date() && (
+                          <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">
+                            süresi doldu
+                          </span>
+                        )}
+                        {link.yayin_bitis && new Date(link.yayin_bitis) > new Date() && (
+                          <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                            {new Date(link.yayin_bitis).toLocaleDateString('tr-TR')} tarihine kadar
+                          </span>
+                        )}
+                      </p>
                       <a
                         href={link.url}
                         target="_blank"
@@ -428,7 +511,7 @@ export default function SocialLinksManager({ profileId }) {
                       </a>
                     </div>
 
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => startEdit(link)}
                         className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"

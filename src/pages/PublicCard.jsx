@@ -256,15 +256,39 @@ export default function PublicCard() {
             {socialLinks.length > 0 && (
               <div className="pt-4 border-t border-gray-200">
                 <h3 className="font-semibold text-gray-800 mb-3">🔗 Bağlantılar</h3>
+
+                {/* Öne çıkarılan bağlantı ikon kalabalığında kaybolmasın diye
+                    başlığıyla birlikte tam genişlikte gösterilir. Esnaf için
+                    "önce şu kampanyaya bak" demenin tek yolu buydu. */}
+                {socialLinks.filter((l) => l.one_cikan).length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {socialLinks.filter((l) => l.one_cikan).map((link) => {
+                      const config = PLATFORM_CONFIG[link.platform] || { icon: Globe, color: '#6B7280', label: link.platform }
+                      const Icon = config.icon
+                      const href = safeUrl(link.url)
+                      if (!href) return null
+                      return (
+                        <a key={link.id} href={href} target="_blank" rel="noopener noreferrer"
+                          onClick={() => trackCardEvent('link_click', { ...hedef, meta: { link_id: link.id, label: link.etiket || config.label, platform: link.platform } })}
+                          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-white font-semibold hover:opacity-90 transition-opacity"
+                          style={{ backgroundColor: config.color }}>
+                          <Icon size={18} className="shrink-0" />
+                          <span className="truncate">{link.etiket || config.label}</span>
+                        </a>
+                      )
+                    })}
+                  </div>
+                )}
+
                 <div className="flex flex-wrap gap-2">
-                  {socialLinks.map((link) => {
+                  {socialLinks.filter((l) => !l.one_cikan).map((link) => {
                     const config = PLATFORM_CONFIG[link.platform] || { icon: Globe, color: '#6B7280', label: link.platform }
                     const Icon = config.icon
                     const href = safeUrl(link.url)
                     if (!href) return null
                     return (
-                      <a key={link.id} href={href} target="_blank" rel="noopener noreferrer" title={config.label}
-                        onClick={() => trackCardEvent('link_click', { ...hedef, meta: { label: config.label, platform: link.platform } })}
+                      <a key={link.id} href={href} target="_blank" rel="noopener noreferrer" title={link.etiket || config.label}
+                        onClick={() => trackCardEvent('link_click', { ...hedef, meta: { link_id: link.id, label: link.etiket || config.label, platform: link.platform } })}
                         className="w-10 h-10 rounded-lg flex items-center justify-center text-white hover:opacity-80 transition-opacity"
                         style={{ backgroundColor: config.color }}>
                         <Icon size={18} />
