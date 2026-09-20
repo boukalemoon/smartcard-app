@@ -6,11 +6,12 @@ import ServiceModal from './ServiceModal'
 import CatalogLinkModal from './CatalogLinkModal'
 import ImageUpload from './ImageUpload'
 import PublicCardPreview from './PublicCardPreview'
-import { getAnalyticsSummary } from '../utils/analyticsHelpers'
+import { filtreyiAraligaCevir } from '../utils/analyticsHelpers'
+import AnalyticsFilter from './AnalyticsFilter'
 import ReferralDashboard from './ReferralDashboard'
 import OrganizationManager from './OrganizationManager'
 import CorporateDashboard from './CorporateDashboard'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import PaymentModal from './PaymentModal'
 import { supabase } from '../lib/supabaseClient'
 import { useSubscription } from '../hooks/useSubscription'
@@ -46,6 +47,8 @@ export default function Dashboard({ session }) {
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [analytics, setAnalytics] = useState(null)
+  // Dönem seçimi: eskiden panel HER ZAMAN tüm zamanları gösteriyordu.
+  const [analizAralik, setAnalizAralik] = useState({ from: null, to: null })
   const [orgCount, setOrgCount] = useState(0)
   // Plan sınırları TEK kaynaktan (my_plan_limits): eskiden aynı sayı üç ayrı
   // yerde farklı yazıyordu ve kullanıcıya yanlış gösteriliyordu.
@@ -117,8 +120,6 @@ export default function Dashboard({ session }) {
         setBio(data.bio || '')
         const { data: linksData } = await supabase.from('social_links').select('*').eq('profile_id', data.id).order('display_order')
         if (linksData) setSocialLinks(linksData)
-        const analyticsData = await getAnalyticsSummary(data.id)
-        setAnalytics(analyticsData)
       }
     } catch (error) {
       console.error('Error loading profile:', error)
@@ -145,6 +146,19 @@ export default function Dashboard({ session }) {
     }
     return true
   }
+
+  // Analiz SUNUCUDA toplanır: istemcide sayarken 1000 olaydan sonrası
+  // sessizce eksik görünüyordu; tarih filtresi de uygulanmıyordu.
+  const analiziYukle = useCallback(async () => {
+    const { data, error } = await supabase.rpc('my_card_analytics', {
+      p_from: analizAralik.from,
+      p_to: analizAralik.to,
+    })
+    if (error) { console.error('Analiz alınamadı:', error); return }
+    if (data?.ok) setAnalytics(data)
+  }, [analizAralik])
+
+  useEffect(() => { if (profile?.id) analiziYukle() }, [profile?.id, analiziYukle])
 
   const planSinirlariniYukle = async () => {
     const { data, error } = await supabase.rpc('my_plan_limits')
@@ -525,25 +539,37 @@ export default function Dashboard({ session }) {
                 </div>
 
                 {/* İstatistikler */}
+                <AnalyticsFilter
+                  isPremium
+                  onFilterChange={(filter) => setAnalizAralik(filtreyiAraligaCevir(filter))}
+                />
                 <div className="grid md:grid-cols-4 gap-4">
                   <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-blue-500">
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Profil Görüntülenme</div>
-                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{analytics?.profile_views || 0}</div>
+                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                      Görüntülenme {analizAralik.from ? '(seçili dönem)' : '(tüm zamanlar)'}
+                    </div>
+                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{analytics?.toplam_goruntulenme || 0}</div>
                   </div>
-                  {/* QR ve NFC ile gelenler artık gerçekten ölçülüyor: koda ve
-                      karta yazılan adres kaynağını taşıyor. Daha önce basılmış
-                      kartlarda işaret yok, onlar "doğrudan" sayılır. */}
+                  {/* QR ve NFC ayrımı, koda ve karta yazılan adresteki kaynak
+                      işaretinden gelir. Bu işaretten ÖNCE basılmış kartlarda
+                      işaret yok; onları "ölçülmedi" diye göstermek, sıfır
+                      göstermekten dürüst. */}
                   <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-green-500">
                     <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">QR / NFC ile Gelen</div>
-                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{(analytics?.qr_views || 0) + (analytics?.nfc_views || 0)}</div>
+                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{(analytics?.qr || 0) + (analytics?.nfc || 0)}</div>
+                    {(analytics?.qr || 0) + (analytics?.nfc || 0) === 0 && (analytics?.kaynaksiz || 0) > 0 && (
+                      <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                        {analytics.kaynaksiz} görüntülenmenin kaynağı ölçülmemiş (eski kartlar)
+                      </div>
+                    )}
                   </div>
                   <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-purple-500">
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">vCard İndirme</div>
-                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{analytics?.vcard_downloads || 0}</div>
+                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Rehbere Kaydetme</div>
+                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{analytics?.rehbere_kaydetme || 0}</div>
                   </div>
                   <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-yellow-500">
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Link Tıklama</div>
-                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{analytics?.link_clicks || 0}</div>
+                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Bağlantı Tıklama</div>
+                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{analytics?.baglanti_tiklama || 0}</div>
                   </div>
                 </div>
 
@@ -551,7 +577,7 @@ export default function Dashboard({ session }) {
                 {profile?.id && <PersonaManager username={profile.username} />}
                 {profile?.id && <CardContacts />}
                 {profile?.user_id && <QrtimIdCard userId={profile.user_id} />}
-                {profile && <SocialLinksManager profileId={profile.id} subscriptionPlan={subscription?.plan || 'free'} />}
+                {profile && <SocialLinksManager profileId={profile.id} />}
                 {profile && <OrganizationManager profileId={profile.id} />}
                 {profile && <ReferralDashboard profile={profile} />}
                 {profile && <ActivityLog />}

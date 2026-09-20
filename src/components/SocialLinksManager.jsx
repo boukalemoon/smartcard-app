@@ -30,9 +30,11 @@ const SOCIAL_PLATFORMS = [
   { id: 'katalog_link', name: 'Ürün Kataloğu', icon: Globe, placeholder: 'https://katalog.yoursite.com', color: 'bg-gray-600' },
 ];
 
-const FREE_PLAN_LIMIT = 3;
+// Sınır artık kod içinde SABİT DEĞİL: plan_features tablosundan
+// (my_plan_limits) okunur ve sunucu da aynı sınırı uygular
+// (social_links_limit_trg). Önceden yalnızca arayüzde vardı, yani aşılabilirdi.
 
-export default function SocialLinksManager({ profileId, subscriptionPlan }) {
+export default function SocialLinksManager({ profileId }) {
   const [links, setLinks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -41,12 +43,20 @@ export default function SocialLinksManager({ profileId, subscriptionPlan }) {
   const [editLink, setEditLink] = useState({ platform: '', url: '' });
   const [showUpgrade, setShowUpgrade] = useState(false);
 
-  const isPremium = subscriptionPlan !== 'free';
-  const canAddMore = isPremium || links.length < FREE_PLAN_LIMIT;
+  const [sinir, setSinir] = useState(null); // plan_features'tan
+  const sinirsiz = sinir !== null && sinir >= 999;
+  const canAddMore = sinir === null ? true : links.length < sinir;
 
   useEffect(() => {
     if (profileId) loadLinks();
   }, [profileId]);
+
+  useEffect(() => {
+    supabase.rpc('my_plan_limits').then(({ data, error }) => {
+      if (error) { console.error('Plan sınırı alınamadı:', error); return }
+      if (data?.ok) setSinir(data.sinir.sosyal_medya)
+    })
+  }, []);
 
   const loadLinks = async () => {
     try {
@@ -220,14 +230,14 @@ export default function SocialLinksManager({ profileId, subscriptionPlan }) {
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Sosyal Medya Hesapları</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {isPremium ? (
+            {sinirsiz ? (
               <span className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
                 <Crown size={14} />
                 Sınırsız hesap ekleyebilirsiniz
               </span>
             ) : (
               <span>
-                {links.length}/{FREE_PLAN_LIMIT} hesap kullanıldı (Ücretsiz Plan)
+                {links.length}/{sinir ?? '—'} hesap kullanıldı
               </span>
             )}
           </p>
@@ -269,11 +279,8 @@ export default function SocialLinksManager({ profileId, subscriptionPlan }) {
                 >
                   Kapat
                 </button>
-                <button
-                  className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:shadow-lg text-sm font-medium"
-                >
-                  Planı Yükselt
-                </button>
+                {/* Buradaki düğmenin hiçbir işlevi yoktu (onClick yok).
+                    Yükseltme paneldeki "Planı Yükselt" düğmelerinden yapılır. */}
               </div>
             </div>
           </div>
@@ -446,10 +453,10 @@ export default function SocialLinksManager({ profileId, subscriptionPlan }) {
       )}
 
       {/* Limit Warning for Free Users */}
-      {!isPremium && links.length > 0 && links.length < FREE_PLAN_LIMIT && (
+      {!sinirsiz && sinir !== null && links.length > 0 && links.length < sinir && (
         <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
           <p className="text-sm text-blue-800 dark:text-blue-300">
-            💡 {FREE_PLAN_LIMIT - links.length} sosyal medya hesabı daha ekleyebilirsiniz (Ücretsiz Plan)
+            💡 {sinir - links.length} sosyal medya hesabı daha ekleyebilirsiniz
           </p>
         </div>
       )}

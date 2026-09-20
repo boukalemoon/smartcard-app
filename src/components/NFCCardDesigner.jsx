@@ -25,8 +25,13 @@ export default function NFCCardDesigner({ profile, subscription }) {
   }
 
   // Fiyat hesaplama
+  //
+  // DÜZELTME: burada `nfc_cards_ordered` okunuyordu — böyle bir kolon YOK.
+  // undefined > 0 her zaman false olduğu için "daha önce sipariş verdi mi"
+  // sorusu hep "hayır" çıkıyor, her adet ÜCRETSİZ görünüyordu.
+  // Doğru kolon: nfc_cards_used.
   const hasFreeCardIncluded = (subscription?.nfc_cards_included || 0) > 0
-  const hasOrderedBefore = (subscription?.nfc_cards_ordered || 0) > 0
+  const hasOrderedBefore = (subscription?.nfc_cards_used || 0) > 0
   
   const getCardPrice = () => {
     if (hasFreeCardIncluded && !hasOrderedBefore) {
@@ -552,7 +557,7 @@ export default function NFCCardDesigner({ profile, subscription }) {
 
         {/* Toplam Fiyat */}
         <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-          {hasFreeCardIncluded && subscription?.nfc_cards_ordered === 0 && (
+          {hasFreeCardIncluded && !hasOrderedBefore && (
             <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
               <p className="text-sm text-green-800 dark:text-green-300 font-semibold">
                 🎉 İlk kartınız ücretsiz! (Aboneliğinize dahil)
@@ -577,12 +582,19 @@ export default function NFCCardDesigner({ profile, subscription }) {
             </div>
           </div>
           
+          {/* Sipariş akışı ödeme entegrasyonuna bağlı; hazır olmayan bir
+              düğmeyi "Sipariş Ver" diye göstermek yerine durum açıkça yazılıyor. */}
           <button
-            onClick={() => alert('Sipariş özelliği yakında!')}
-            className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold hover:shadow-lg transition-all"
+            disabled
+            title="Kart siparişi ödeme altyapısı tamamlanınca açılacak"
+            className="w-full py-3 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-xl font-bold cursor-not-allowed"
           >
-            {totalPrice === 0 ? 'Ücretsiz Kart Talep Et' : 'Sipariş Ver'}
+            Sipariş yakında
           </button>
+          <p className="mt-2 text-xs text-center text-gray-500 dark:text-gray-400">
+            Tasarımınızı şimdi hazırlayabilirsiniz; sipariş alma açıldığında
+            buradan devam edeceksiniz.
+          </p>
         </div>
       </div>
     </div>

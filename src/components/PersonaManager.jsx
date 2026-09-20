@@ -56,12 +56,18 @@ export default function PersonaManager({ username }) {
   const [seciliId, setSeciliId] = useState(null)
   const [editor, setEditor] = useState(null)
   const [yukleniyor, setYukleniyor] = useState(true)
+  // Sınır ancak hata verince öğreniliyordu; kullanıcı kaç hakkı kaldığını
+  // baştan görsün.
+  const [planSinir, setPlanSinir] = useState(null)
   const [mesgul, setMesgul] = useState(null)
   const [yeniAcik, setYeniAcik] = useState(false)
   const [yeni, setYeni] = useState({ kind: 'is', name: '', copyFrom: '' })
   const [duzenlenen, setDuzenlenen] = useState(null) // { key, value }
 
   const listeYukle = useCallback(async (secilecek) => {
+    supabase.rpc('my_plan_limits').then(({ data: plan }) => {
+      if (plan?.ok) setPlanSinir(plan.sinir.profil)
+    })
     const { data, error } = await supabase.rpc('persona_list')
     if (error) { showToast('Profiller yüklenemedi', 'error'); return }
     setPersonas(data || [])
@@ -225,6 +231,11 @@ export default function PersonaManager({ username }) {
       <div className="flex items-start justify-between gap-4 mb-1">
         <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
           <Layers size={18} className="text-indigo-500" /> Profillerim
+          {planSinir !== null && (
+            <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
+              {personas.length}/{planSinir >= 999 ? '∞' : planSinir}
+            </span>
+          )}
         </h3>
         <button
           onClick={() => setYeniAcik(v => !v)}

@@ -31,10 +31,24 @@ export default function AdminCRM() {
       setReferrals(referralsData || [])
 
       const activeSubsCount = subsData?.filter(s => s.status === 'active' && s.plan !== 'free').length || 0
-      const totalRevenue = subsData?.filter(s => s.status === 'active' && s.plan !== 'free').reduce((sum, s) => {
-        const prices = { student: 99, professional: 249, stk: 449, business: 899 }
-        return sum + (prices[s.plan] || 0)
-      }, 0) || 0
+
+      // Gelir GERÇEK fiyat tablosundan hesaplanır.
+      //
+      // Eskiden burada koda gömülü bir fiyat haritası vardı ve faturalama
+      // dönemi yok sayılıyordu: yıllık abone de aylık fiyattan sayılıyor,
+      // fiyat güncellendiğinde panel eski rakamı göstermeye devam ediyordu.
+      const { data: fiyatlar } = await supabase
+        .from('plan_prices')
+        .select('plan, period, with_nfc, amount_kurus')
+        .eq('is_active', true)
+        .eq('with_nfc', false)
+
+      const fiyatBul = (plan, period) =>
+        (fiyatlar || []).find(f => f.plan === plan && f.period === (period || 'monthly'))?.amount_kurus ?? 0
+
+      const totalRevenue = (subsData || [])
+        .filter(s => s.status === 'active' && s.plan !== 'free')
+        .reduce((sum, s) => sum + fiyatBul(s.plan, s.billing_cycle) / 100, 0)
       const pendingComm = commissionsData?.filter(c => c.status === 'pending' || c.status === 'approved').reduce((sum, c) => sum + parseFloat(c.amount || 0), 0) || 0
 
       setStats({ totalUsers: usersData?.length || 0, activeSubscriptions: activeSubsCount, totalRevenue, pendingCommissions: pendingComm })
@@ -216,7 +230,7 @@ Silinirse bu organizasyonlar yöneticisiz kalır. Yine de silinsin mi?`)) {
         {[
           { label: 'Toplam Kullanıcı', value: stats.totalUsers, icon: Users, color: 'blue' },
           { label: 'Aktif Abonelik', value: stats.activeSubscriptions, icon: CreditCard, color: 'green' },
-          { label: 'Aylık Gelir', value: `₺${stats.totalRevenue.toLocaleString()}`, icon: TrendingUp, color: 'purple' },
+          { label: 'Aktif Abonelik Tutarı', value: `₺${stats.totalRevenue.toLocaleString('tr-TR')}`, icon: TrendingUp, color: 'purple' },
           { label: 'Bekleyen Komisyon', value: `₺${stats.pendingCommissions.toFixed(0)}`, icon: DollarSign, color: 'yellow' },
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-${color}-500`}>
