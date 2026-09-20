@@ -1,5 +1,6 @@
 ﻿import AvatarFlipCard from '../components/AvatarFlipCard'
 import ContactExchange from '../components/ContactExchange'
+import VerifiedBadges from '../components/VerifiedBadges'
 import { trackCardEvent, kaynagiCoz } from '../utils/analyticsHelpers'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
@@ -61,6 +62,8 @@ export default function PublicCard() {
   const [fields, setFields] = useState({})
   const [socialLinks, setSocialLinks] = useState([])
   const [organizations, setOrganizations] = useState([])
+  // Doğrulamalar sunucuda üretilir; istemci rozet uyduramaz.
+  const [dogrulamalar, setDogrulamalar] = useState([])
   const [expandedOrg, setExpandedOrg] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -99,6 +102,7 @@ export default function PublicCard() {
       setFields(data.fields || {})
       setSocialLinks(data.social_links || [])
       setOrganizations(data.organizations || [])
+      setDogrulamalar(data.dogrulamalar || [])
       setPaymentInfo(data.payment || null)
 
       // Görüntülenme, sayaç ve hız sınırı TEK çağrıda, sunucuda. Eskiden
@@ -200,6 +204,11 @@ export default function PublicCard() {
               {fields.company && <p className="text-blue-200">{fields.company}</p>}
               {fields.department && <p className="text-blue-200 text-sm">{fields.department}</p>}
               {fields.city && <p className="text-blue-200 text-sm flex items-center justify-center gap-1"><MapPin size={14} />{fields.city}</p>}
+              {dogrulamalar.length > 0 && (
+                <div className="mt-3">
+                  <VerifiedBadges dogrulamalar={dogrulamalar} temaRengi={themeColor} />
+                </div>
+              )}
             </div>
           </div>
 
