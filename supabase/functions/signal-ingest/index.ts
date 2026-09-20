@@ -103,7 +103,8 @@ Deno.serve(async (req: Request) => {
       .eq("link_secret", linkSecret);
 
     return json({ ok: true, yazilan: rows.length });
-  } catch (e) {
-    return json({ ok: false, error: String(e) }, 500);
+  } catch (_e) {
+    // İç hata ayrıntısı dışarı verilmez.
+    return json({ ok: false, error: "Beklenmeyen hata" }, 500);
   }
 });
