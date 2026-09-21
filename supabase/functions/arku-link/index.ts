@@ -27,13 +27,13 @@ function json(body: unknown, status = 200): Response {
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") {
-    return json({ valid: false, error: "Yalnızca POST desteklenir" }, 405);
+    return json({ valid: false, code: "method_not_allowed", error: "Yalnızca POST desteklenir" }, 405);
   }
 
   try {
     const { token } = await req.json().catch(() => ({ token: null }));
     if (!token || typeof token !== "string") {
-      return json({ valid: false, error: "Token gerekli" }, 400);
+      return json({ valid: false, code: "token_missing", error: "Token gerekli" }, 400);
     }
 
     const admin = createClient(
@@ -48,12 +48,12 @@ Deno.serve(async (req: Request) => {
       .eq("token", token)
       .maybeSingle();
 
-    if (tokErr) return json({ valid: false, error: "Doğrulama hatası" }, 500);
-    if (!tok) return json({ valid: false, error: "Geçersiz token" }, 401);
-    if (tok.partner !== "arku") return json({ valid: false, error: "Geçersiz token" }, 401);
-    if (tok.used_at) return json({ valid: false, error: "Token zaten kullanıldı" }, 401);
+    if (tokErr) return json({ valid: false, code: "lookup_failed", error: "Doğrulama hatası" }, 500);
+    if (!tok) return json({ valid: false, code: "token_invalid", error: "Geçersiz token" }, 401);
+    if (tok.partner !== "arku") return json({ valid: false, code: "token_invalid", error: "Geçersiz token" }, 401);
+    if (tok.used_at) return json({ valid: false, code: "token_already_used", error: "Token zaten kullanıldı" }, 401);
     if (new Date(tok.expires_at).getTime() < Date.now()) {
-      return json({ valid: false, error: "Token süresi doldu" }, 401);
+      return json({ valid: false, code: "token_expired", error: "Token süresi doldu" }, 401);
     }
 
     // E-posta doğrulaması — jetonu YAKMADAN ÖNCE denetlenir, aksi halde
@@ -89,8 +89,8 @@ Deno.serve(async (req: Request) => {
       .gt("expires_at", simdi)
       .select("user_id")
       .maybeSingle();
-    if (yakErr) return json({ valid: false, error: "Doğrulama hatası" }, 500);
-    if (!yakilan) return json({ valid: false, error: "Token zaten kullanıldı" }, 401);
+    if (yakErr) return json({ valid: false, code: "lookup_failed", error: "Doğrulama hatası" }, 500);
+    if (!yakilan) return json({ valid: false, code: "token_already_used", error: "Token zaten kullanıldı" }, 401);
 
     await admin.rpc("log_event", {
       p_action: "partner.token_redeemed",
@@ -124,11 +124,29 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     // Bağlantı kaydı: bu kimliğin hangi uygulamalara bağlandığı görünür olsun.
-    // (link_secret burada DÖNDÜRÜLMEZ; Arku sinyal yazmıyor — en az yetki.)
+    //
+    // link_secret ARTIK DÖNDÜRÜLÜYOR (22.09.2026). Önceki karar "Arku sinyal
+    // yazmıyor, en az yetki" gerekçesiyle bunu saklıyordu. İhtiyaç değişti:
+    // Arku'nun planı GİRİŞTEN BAĞIMSIZ tazelemesi gerekiyor, çünkü plan
+    // yalnızca bağlama anında yazıldığı için aboneliği biten kullanıcı
+    // Arku'da ücretli kademede süresiz kalıyordu. Tazeleme kullanıcı ortada
+    // yokken çalışmalı, yani oturuma dayanamaz; partnerin elinde kullanıcı
+    // başına bir kimlik olması gerekiyor.
+    //
+    // Kullanıcı başına sır, paylaşılan bir ana anahtardan İYİDİR: sızarsa
+    // yalnızca o kullanıcıyı etkiler. Sırla yapılabilecek tek şey
+    // partner-plan ucundan o kullanıcının PLANINI okumak.
     await admin
       .from("partner_user_links")
       .upsert({ user_id: tok.user_id, partner: "arku" },
               { onConflict: "user_id,partner", ignoreDuplicates: true });
+
+    const { data: bag } = await admin
+      .from("partner_user_links")
+      .select("link_secret")
+      .eq("user_id", tok.user_id)
+      .eq("partner", "arku")
+      .maybeSingle();
 
     // Döndürülen e-posta, DOĞRULANMIŞ OLANIN AYNISI olmalı. profiles.email
     // kullanıcı tarafından değiştirilebildiği için ondan okunursa "şunu
@@ -153,11 +171,18 @@ Deno.serve(async (req: Request) => {
         photo_url: prof?.photo_url ?? null,
         title: prof?.title ?? null,
         company: prof?.company ?? null,
+        // Bağlama anındaki plan. Bu değer ZAMANLA ESKİR; partner buna
+        // dayanarak süresiz yetki vermemeli, aşağıdaki sırla periyodik
+        // tazelemeli.
         plan: prof?.subscription_plan ?? "free",
       },
+      // Plan tazeleme kimliği. Partner bunu saklar ve partner-plan ucuna
+      // {partner, qrtim_uid, link_secret} ile sorar. Kullanıcı başına;
+      // yalnızca o kullanıcının planını okur.
+      link_secret: bag?.link_secret ?? null,
     });
   } catch (_e) {
     // İç hata ayrıntısı dışarı verilmez.
-    return json({ valid: false, error: "Beklenmeyen hata" }, 500);
+    return json({ valid: false, code: "unexpected_error", error: "Beklenmeyen hata" }, 500);
   }
 });
