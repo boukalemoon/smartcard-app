@@ -107,7 +107,10 @@ Deno.serve(async (req: Request) => {
 
     const { data: prof } = await admin
       .from("profiles")
-      .select("user_id, email, name, phone, username, photo_url, title, company, subscription_plan")
+      // subscription_plan artık okunmuyor: plan ortak hesaplama noktasından
+      // geliyor (aşağıda). Denormalize kopyayı burada da okumak, ayrışma
+      // riskini geri getirirdi.
+      .select("user_id, email, name, phone, username, photo_url, title, company")
       .eq("user_id", tok.user_id)
       .maybeSingle();
 
@@ -148,6 +151,17 @@ Deno.serve(async (req: Request) => {
       .eq("partner", "arku")
       .maybeSingle();
 
+    // PLAN: profiles.subscription_plan'dan DEĞİL, ortak hesaplama noktasından.
+    //
+    // Önceden burada denormalize kopya okunuyordu, partner-plan ise asıl
+    // kaynaktan (subscriptions) hesaplıyordu. Bugün ikisi tutuyor (34/34
+    // ölçüldü) ama aynı şeyi hesaplayan iki kod yolu er geç ayrışır. Ayrıştığı
+    // gün partner bağlanma anında bir plan, ilk tazelemede başka bir plan
+    // görür ve kullanıcının kademesi sebepsiz oynar.
+    const { data: planBilgisi } = await admin.rpc("effective_plan_for_user", {
+      p_user_id: tok.user_id,
+    });
+
     // Döndürülen e-posta, DOĞRULANMIŞ OLANIN AYNISI olmalı. profiles.email
     // kullanıcı tarafından değiştirilebildiği için ondan okunursa "şunu
     // doğruladım, bunu gönderdim" durumu oluşur ve denetim anlamsızlaşır.
@@ -174,7 +188,11 @@ Deno.serve(async (req: Request) => {
         // Bağlama anındaki plan. Bu değer ZAMANLA ESKİR; partner buna
         // dayanarak süresiz yetki vermemeli, aşağıdaki sırla periyodik
         // tazelemeli.
-        plan: prof?.subscription_plan ?? "free",
+        plan: planBilgisi?.plan ?? "free",
+        // Ücretli/ücretsiz kararının dayanağı BU, plan ADI değil. partner-plan
+        // ile birebir aynı kaynaktan geliyor, dolayısıyla bağlanma anı ile ilk
+        // tazeleme arasında kademe oynamaz. Tanımsız plan adı false döner.
+        paid: planBilgisi?.ucretli === true,
       },
       // Plan tazeleme kimliği. Partner bunu saklar ve partner-plan ucuna
       // {partner, qrtim_uid, link_secret} ile sorar. Kullanıcı başına;
