@@ -65,14 +65,23 @@ Deno.serve(async (req: Request) => {
 
     if (!data?.ok) {
       // Makine tarafından okunabilir kod; partner doğru davranışı seçebilsin.
-      // "Kimlik yok" ile "sır yanlış" veritabanında zaten aynı cevaba
-      // indirgeniyor, burada da ayrılmıyor.
-      const kod = data?.hata === "cok_fazla_deneme"
-        ? "rate_limited"
-        : data?.hata === "gecersiz_istek"
-          ? "invalid_request"
-          : "unauthorized";
-      return json({ ok: false, code: kod }, kod === "rate_limited" ? 429 : 401);
+      //
+      // link_revoked (410) ile unauthorized (401) BİLEREK ayrı:
+      //   • link_revoked → bağlantı gerçekten koptu (hesap silindi ya da
+      //     bağlantı kaldırıldı). Partner yetkiyi HEMEN düşürmeli.
+      //   • unauthorized → sunulan sır hiç geçerli olmamış. Bu partnerin
+      //     kendi kayıt bozulması da olabilir; buna dayanarak kullanıcıyı
+      //     düşürmek yanlış olur.
+      // Ayrım kimlik numaralandırmaya kapı açmıyor: "iptal edildi" cevabını
+      // ancak bir zamanlar GEÇERLİ olmuş bir sır sunan alabiliyor.
+      const eslestir: Record<string, { kod: string; http: number }> = {
+        cok_fazla_deneme: { kod: "rate_limited", http: 429 },
+        gecersiz_istek: { kod: "invalid_request", http: 400 },
+        baglanti_iptal: { kod: "link_revoked", http: 410 },
+      };
+      const secim = eslestir[String(data?.hata ?? "")] ??
+        { kod: "unauthorized", http: 401 };
+      return json({ ok: false, code: secim.kod }, secim.http);
     }
 
     return json({
