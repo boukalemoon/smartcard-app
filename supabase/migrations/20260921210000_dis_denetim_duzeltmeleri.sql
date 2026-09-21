@@ -571,3 +571,28 @@ from anon, authenticated;
 --   E: süresi geçmiş kanıtla yeni adres talebi reddedildi
 --   F: iptal edilen adres yeniden bağlanabiliyor (kalıcı kilitlenme yok)
 -- ---------------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------------
+-- 9) Alan adı doğrulama yoklamasına hız sınırı
+-- ---------------------------------------------------------------------------
+-- Tek koruma "deneme_sayisi >= 50" idi; bu değer istekten ÖNCE okunuyor,
+-- sayaç ise sonradan artıyordu; eşzamanlı istekler hepsi aynı değeri görür.
+-- Her istek 4 dış DNS sorgusu üretiyor. Cloudflare ya da Google bizi
+-- kısıtlarsa BAŞKA kullanıcıların doğrulamaları da bozulur — yani tek kişi
+-- paylaşılan bir kaynağı yakabiliyordu. Sınır KİŞİ başına.
+create or replace function public.verification_attempt_allowed(p_id uuid)
+returns boolean language plpgsql security definer set search_path = '' as $fn$
+declare v_sahip uuid;
+begin
+  if coalesce(auth.role(), '') <> 'service_role' then return false; end if;
+
+  select coalesce(v.profile_id, v.organization_id) into v_sahip
+    from public.identity_verifications v where v.id = p_id;
+  if v_sahip is null then return false; end if;
+
+  return public.check_rate_limit('dogrulama-yoklama:' || v_sahip::text, 20, 3600);
+end;
+$fn$;
+
+revoke all on function public.verification_attempt_allowed(uuid) from public, anon, authenticated;
+grant execute on function public.verification_attempt_allowed(uuid) to service_role;

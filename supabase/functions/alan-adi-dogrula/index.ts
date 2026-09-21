@@ -114,6 +114,24 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, hata: "deneme_siniri" }, 429);
     }
 
+    const admin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      { auth: { persistSession: false } },
+    );
+
+    // HIZ SINIRI — DNS sorgularından ÖNCE.
+    //
+    // Tek koruma "deneme_sayisi >= 50" idi; o değer istekten önce okunuyor,
+    // sayaç ise sonradan artıyor, yani eşzamanlı istekler hepsi aynı değeri
+    // görüyordu. Her istek 4 dış DNS sorgusu üretiyor: Cloudflare ya da
+    // Google bizi kısıtlarsa BAŞKA kullanıcıların doğrulamaları da bozulur.
+    // Paylaşılan kaynağı tek kişinin yakmasını burada engelliyoruz.
+    const { data: izin } = await admin.rpc("verification_attempt_allowed", { p_id: id });
+    if (izin !== true) {
+      return json({ ok: false, hata: "cok_fazla_deneme" }, 429);
+    }
+
     const sonuclar = await Promise.all(
       COZUMLEYICILER.map(async (c) => ({
         ad: c.ad,
@@ -127,12 +145,6 @@ Deno.serve(async (req: Request) => {
     const hepsiOnayladi = onaylayan.length === COZUMLEYICILER.length;
     // Hiç TXT kaydı görülmediyse "kayıt yok", bazıları gördüyse "yayılıyor".
     const hicKayitYok = sonuclar.every((s) => s.kayitlar.length === 0);
-
-    const admin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      { auth: { persistSession: false } },
-    );
 
     // Kanıt olarak yalnızca hangi çözümleyicinin ne dediğini saklıyoruz;
     // alan adının bütün TXT kayıtlarını saklamak gereksiz veri toplamak olur.
