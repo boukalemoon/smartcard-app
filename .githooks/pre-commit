@@ -1,0 +1,4 @@
+#!/bin/sh
+# QRtim commit oncesi kapisi. Devre disi birakmak icin: git commit --no-verify
+# (ama o zaman neyi atladigini commit mesajina yaz.)
+exec node scripts/kontrol.mjs

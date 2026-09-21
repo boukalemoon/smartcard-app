@@ -82,7 +82,9 @@ revoke insert, update, delete on public.appointments from anon, authenticated;
 comment on table public.appointments is
   'Karttan alinan randevular. Ziyaretci tabloyu okuyamaz; yalnizca bos saatleri gorur.';
 
--- Fonksiyonlar (tam gövdeleri Supabase göç geçmişinde 'randevu_rpc' ve
+-- Fonksiyonlar. Tam gövdeler depoda:
+--   20260921210000_dis_denetim_duzeltmeleri.sql (slots, book, settings_save)
+--   20260922080000_eksik_fonksiyon_govdeleri.sql (panel tarafı) --
 -- 'randevu_panel_rpc'):
 --   appointment_slots(code, username, gun)  — ziyaretçi; yalnızca BOŞ saatler.
 --   book_appointment(...)                   — ziyaretçi; hız sınırlı. Saatin

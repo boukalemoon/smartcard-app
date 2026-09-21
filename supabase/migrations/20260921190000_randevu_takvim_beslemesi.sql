@@ -43,7 +43,9 @@ create unique index if not exists appointment_settings_takvim_anahtari_key
 comment on column public.appointment_settings.takvim_anahtari is
   'Takvim abonelik adresindeki gizli anahtar. Adresi bilen randevulari gorur; sizarsa yenilenir.';
 
--- Fonksiyonlar (tam gövdeleri Supabase göç geçmişinde 'randevu_takvim_beslemesi'):
+-- Fonksiyonlar. Tam gövdeler depoda:
+--   20260921210000_dis_denetim_duzeltmeleri.sql (calendar_feed)
+--   20260922080000_eksik_fonksiyon_govdeleri.sql (my_calendar_key, rotate)
 --   appointment_calendar_feed(anahtar) — oturumsuz; biçim denetimi + hız
 --       sınırı. İPTAL edilen randevular da döner: ICS'te silme STATUS:CANCELLED
 --       ile olur, göndermezsek abonenin takviminde silinmiş randevu asılı

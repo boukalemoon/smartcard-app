@@ -42,7 +42,9 @@ create policy "sahibi ozel alan adlarini gorur" on public.custom_domains
 
 revoke insert, update, delete on public.custom_domains from anon, authenticated;
 
--- Fonksiyonlar (tam gövdeleri Supabase göç geçmişinde 'ozel_alan_adi'):
+-- Fonksiyonlar. Tam gövdeler depoda:
+--   20260921210000_dis_denetim_duzeltmeleri.sql (claim, resolve)
+--   20260922080000_eksik_fonksiyon_govdeleri.sql (mark, remove, list)
 --   custom_domain_claim(host, persona)  — adres talebi; adres doğrulanmış alan
 --       adının kendisi ya da ALTI olmak zorunda. Başkasının bağladığı adreste
 --       hangi hesap olduğunu SÖYLEMEZ.
