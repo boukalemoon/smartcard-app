@@ -83,8 +83,14 @@ Deno.serve(async (req: Request) => {
 
     // 1) Adresi projeye ekle. Zaten eklenmişse hata değil.
     const ekle = await vercel(`/v10/projects/${PROJE}/domains`, jeton, { name: kayit.host });
-    const zatenVar = ekle.durum === 409 ||
-      ekle.veri?.error?.code === "domain_already_in_use_by_this_project";
+    // 409'u TEK BAŞINA "zaten bizde" saymak, aşağıdaki hata dalını ölü koda
+    // çeviriyordu: sağlayıcı "adres başka projede" durumunu da 409 ile
+    // döndürüyor. Sonuç olarak kullanıcı sonsuza kadar "DNS bekleniyor"
+    // görüp kendi DNS'ini boşuna kurcalıyordu — tam da bu mesajı ayrıştırmak
+    // için yapılan düzeltmenin kaçırdığı durum.
+    const zatenVar =
+      ekle.veri?.error?.code === "domain_already_in_use_by_this_project" ||
+      (ekle.durum === 409 && !ekle.veri?.error?.code);
 
     if (ekle.durum >= 400 && !zatenVar) {
       const admin = createClient(

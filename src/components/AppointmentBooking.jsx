@@ -47,6 +47,9 @@ export default function AppointmentBooking({ hedef, temaRengi, kartSahibi }) {
   const [gun, setGun] = useState(() => gunEkle(new Date(), 1))
   const [veri, setVeri] = useState(null)
   const [yukleniyor, setYukleniyor] = useState(true)
+  // Randevu açık mı: bir kez öğrenilir. Gün değişirken bölümün tamamen
+  // kaybolup geri gelmesini (yanıp sönme) engelliyor.
+  const [acikMi, setAcikMi] = useState(null)
   const [secili, setSecili] = useState(null)
   const [form, setForm] = useState({ ad: '', eposta: '', telefon: '', aciklama: '' })
   const [gonderiliyor, setGonderiliyor] = useState(false)
@@ -55,6 +58,14 @@ export default function AppointmentBooking({ hedef, temaRengi, kartSahibi }) {
 
   useEffect(() => {
     let iptal = false
+    // Gün değişince ÖNCE ekranı boşalt. Yoksa başlık yeni günü yazarken saat
+    // ızgarası hâlâ eski günün zaman damgalarını gösterir; ziyaretçi
+    // "Çarşamba 14:00" sanıp bastığı düğmeyle SALI'ya randevu alır. Sunucu da
+    // bunu yakalayamaz: saatin hangi güne ait olduğunu zaman damgasından
+    // çıkarır ve o gün gerçekten boştur.
+    setYukleniyor(true)
+    setVeri(null)
+    setSecili(null)
     ;(async () => {
       const { data } = await supabase.rpc('appointment_slots', {
         p_code: hedef.code || null,
@@ -63,7 +74,7 @@ export default function AppointmentBooking({ hedef, temaRengi, kartSahibi }) {
       })
       if (iptal) return
       setVeri(data || null)
-      setSecili(null)
+      setAcikMi(Boolean(data?.ok))
       setYukleniyor(false)
     })()
     return () => { iptal = true }
@@ -102,8 +113,9 @@ export default function AppointmentBooking({ hedef, temaRengi, kartSahibi }) {
     }
   }
 
-  // Randevu kapalıysa bölüm hiç görünmez.
-  if (yukleniyor || !veri?.ok) return null
+  // Randevu kapalıysa bölüm hiç görünmez. İlk yükleme bitene kadar da
+  // çizmiyoruz; sonrasında çerçeve sabit kalır, yalnızca saatler tazelenir.
+  if (acikMi !== true) return null
 
   if (sonuc) {
     return (
@@ -127,13 +139,18 @@ export default function AppointmentBooking({ hedef, temaRengi, kartSahibi }) {
               takvimi yapar — bizim e-posta göndermemize gerek kalmaz. */}
           <button
             type="button"
-            onClick={() => randevuIcsIndir({
-              id: sonuc.id,
-              baslar: sonuc.baslar_at,
-              biter: sonuc.biter_at,
-              kartSahibi,
-              aciklama: form.aciklama || null,
-            })}
+            onClick={() => {
+              const oldu = randevuIcsIndir({
+                id: sonuc.id,
+                baslar: sonuc.baslar_at,
+                biter: sonuc.biter_at,
+                kartSahibi,
+                aciklama: form.aciklama || null,
+              })
+              // Sessizce hiçbir şey olmasın istemiyoruz: dosya üretilemezse
+              // kullanıcı bunu bilmeli.
+              if (!oldu) setHata('Takvim dosyası oluşturulamadı.')
+            }}
             className="mt-3 inline-flex items-center gap-1.5 px-3 py-2 bg-white border-2 border-green-300 text-green-800 rounded-lg text-sm font-semibold hover:bg-green-100"
           >
             <CalendarPlus size={16} />
@@ -147,7 +164,7 @@ export default function AppointmentBooking({ hedef, temaRengi, kartSahibi }) {
     )
   }
 
-  const slotlar = veri.slotlar || []
+  const slotlar = veri?.slotlar || []
   const bugun = isoGun(new Date())
   const geriGidilebilir = isoGun(gun) > isoGun(gunEkle(new Date(), 1))
 
@@ -157,7 +174,7 @@ export default function AppointmentBooking({ hedef, temaRengi, kartSahibi }) {
         <CalendarClock size={18} style={{ color: temaRengi || '#3B82F6' }} />
         Randevu Al
       </h3>
-      {veri.aciklama && <p className="text-xs text-gray-500 mb-3">{veri.aciklama}</p>}
+      {veri?.aciklama && <p className="text-xs text-gray-500 mb-3">{veri.aciklama}</p>}
 
       <div className="flex items-center justify-between mb-3">
         <button
@@ -183,7 +200,9 @@ export default function AppointmentBooking({ hedef, temaRengi, kartSahibi }) {
         </button>
       </div>
 
-      {slotlar.length === 0 ? (
+      {yukleniyor ? (
+        <p className="text-sm text-gray-400 text-center py-3">Saatler alınıyor…</p>
+      ) : slotlar.length === 0 ? (
         <p className="text-sm text-gray-500 text-center py-3">
           Bu gün için uygun saat yok. İleri günlere bakabilirsiniz.
         </p>
@@ -207,7 +226,7 @@ export default function AppointmentBooking({ hedef, temaRengi, kartSahibi }) {
             ))}
           </div>
           <p className="text-[11px] text-gray-400 mb-3">
-            Saatler Türkiye saatiyle · her randevu {veri.slot_dakika} dakika
+            Saatler Türkiye saatiyle · her randevu {veri?.slot_dakika} dakika
           </p>
         </>
       )}

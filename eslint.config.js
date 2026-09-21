@@ -26,4 +26,24 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  {
+    // api/ altı tarayıcıda değil SUNUCUDA çalışıyor (Vercel işlevleri).
+    // Tarayıcı global'leriyle denetlenince process ve Buffer "tanımsız"
+    // görünüyordu; dosya baştan beri lint dışında kalmıştı.
+    files: ['api/**/*.js'],
+    languageOptions: {
+      globals: globals.node,
+      sourceType: 'module',
+    },
+  },
+  {
+    // ICS üretimi kontrol karakterlerini BİLEREK hedefliyor: takvim
+    // standardı bunları yasaklıyor ve temizlenmezlerse yalın CR sahte
+    // takvim satırı enjekte etmeye yarıyor. Kuralın uyarmak istediği
+    // "yanlışlıkla kontrol karakteri" durumu bu değil.
+    files: ['api/takvim.ics.js', 'src/utils/takvim.js'],
+    rules: {
+      'no-control-regex': 'off',
+    },
+  },
 ])

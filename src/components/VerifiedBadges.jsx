@@ -10,6 +10,25 @@ import { BadgeCheck, Globe, Building2, X } from 'lucide-react'
 // Bizi Linktree'den ayıran nokta burası: orada doğrulama görünmez, burada
 // denetlenebilir.
 
+// Alan adı KUYRUKTAN kimliklenir: sahipliği belirleyen kısım sondaki kayıtlı
+// alan adıdır. Uzun adı sağdan kesmek (CSS `truncate`) tam tersini yapar:
+// "ziraatbankasi.com.tr.dogrulama.saldirgan.com" ekranda
+// "ziraatbankasi.com.tr…" diye görünür. Saldırgan bu alt alan adını gerçekten
+// kurabildiği ve TXT kaydını yazabildiği için doğrulama DÜRÜSTÇE geçer —
+// yalan, doğrulamada değil GÖSTERİMDE olur. Bu yüzden baştan kesiyoruz.
+function alanAdiGoster(metin, sinir = 26) {
+  const s = String(metin ?? '')
+  return s.length <= sinir ? s : '…' + s.slice(-sinir)
+}
+
+// Kurum adı serbest metindir, doğrulanmış olan alan adıdır. Adı tek başına
+// göstermek "Ziraat Bankası" adıyla kurum açıp kendi alan adını doğrulayan
+// birine hazır rozet vermek olurdu. Ad ile DAYANAĞI birlikte görünür.
+function kurumAdiGoster(metin, sinir = 22) {
+  const s = String(metin ?? '')
+  return s.length <= sinir ? s : s.slice(0, sinir - 1) + '…'
+}
+
 function tarih(t) {
   if (!t) return null
   return new Date(t).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -25,24 +44,27 @@ function rozetBilgisi(d) {
   if (d.tur === 'alan_adi') {
     return {
       simge: Globe,
-      baslik: d.konu,
-      kisa: 'alan adı doğrulandı',
+      baslik: alanAdiGoster(d.konu),
+      dayanak: null,
       uzun: `${d.konu} alan adının sahipliği doğrulandı.`,
     }
   }
   if (d.tur === 'kurum') {
     return {
       simge: Building2,
-      baslik: d.konu,
-      kisa: d.rol === 'admin' ? 'kurum yöneticisi' : 'kurum üyesi',
+      baslik: kurumAdiGoster(d.konu),
+      // Rozette adın yanında DAYANAĞI da duruyor: ad bir iddia, alan adı kanıt.
+      dayanak: d.kurum_alan_adi ? alanAdiGoster(d.kurum_alan_adi, 20) : null,
       uzun: `${d.konu} kurumunda ${d.rol === 'admin' ? 'yönetici' : 'üye'}. Kurumun alan adı (${d.kurum_alan_adi}) doğrulanmış durumda.`,
     }
   }
-  return { simge: BadgeCheck, baslik: d.konu, kisa: 'doğrulandı', uzun: `${d.konu} doğrulandı.` }
+  return { simge: BadgeCheck, baslik: kurumAdiGoster(d.konu), dayanak: null, uzun: `${d.konu} doğrulandı.` }
 }
 
 export default function VerifiedBadges({ dogrulamalar, temaRengi }) {
-  const [acik, setAcik] = useState(false)
+  // Hangi rozete basıldığı belli olsun: üç rozetli kartta kutu açılınca
+  // ziyaretçi hangisini sorduğunu ayırt edemiyordu.
+  const [acik, setAcik] = useState(null)
   if (!dogrulamalar || dogrulamalar.length === 0) return null
 
   const renk = temaRengi || '#3B82F6'
@@ -56,22 +78,23 @@ export default function VerifiedBadges({ dogrulamalar, temaRengi }) {
           return (
             <button
               key={`${d.tur}-${d.konu}-${i}`}
-              onClick={() => setAcik(true)}
+              onClick={() => setAcik(i)}
               title="Doğrulama ayrıntısı"
               className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white text-xs font-medium hover:bg-white/30 transition-colors"
             >
-              <Simge size={13} />
-              <span className="max-w-[160px] truncate">{b.baslik}</span>
+              <Simge size={13} className="shrink-0" />
+              <span>{b.baslik}</span>
+              {b.dayanak && <span className="opacity-75">· {b.dayanak}</span>}
               <BadgeCheck size={13} className="shrink-0" />
             </button>
           )
         })}
       </div>
 
-      {acik && (
+      {acik !== null && (
         <div
           className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4"
-          onClick={() => setAcik(false)}
+          onClick={() => setAcik(null)}
         >
           <div
             className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[85vh] overflow-y-auto text-left"
@@ -82,7 +105,7 @@ export default function VerifiedBadges({ dogrulamalar, temaRengi }) {
                 <BadgeCheck size={18} style={{ color: renk }} />
                 Neler doğrulandı
               </h3>
-              <button onClick={() => setAcik(false)} className="p-1 text-gray-400 hover:text-gray-600">
+              <button onClick={() => setAcik(null)} className="p-1 text-gray-400 hover:text-gray-600">
                 <X size={20} />
               </button>
             </div>
@@ -92,10 +115,12 @@ export default function VerifiedBadges({ dogrulamalar, temaRengi }) {
                 const b = rozetBilgisi(d)
                 const Simge = b.simge
                 return (
-                  <div key={`ayrinti-${i}`} className="flex gap-3 p-3 rounded-xl border border-gray-200">
+                  <div key={`ayrinti-${i}`} className={`flex gap-3 p-3 rounded-xl border ${acik === i ? 'border-gray-400 bg-gray-50' : 'border-gray-200'}`}>
                     <Simge size={18} className="shrink-0 mt-0.5" style={{ color: renk }} />
                     <div className="min-w-0">
-                      <div className="font-semibold text-gray-900 break-words">{b.baslik}</div>
+                      {/* Kutuda TAM değer: kısaltma yalnızca çipte, burada
+                          ziyaretçi adresin tamamını görmeli. */}
+                      <div className="font-semibold text-gray-900 break-all">{d.konu}</div>
                       <p className="text-sm text-gray-600 mt-0.5">{b.uzun}</p>
                       <p className="text-xs text-gray-500 mt-1.5">
                         {YONTEM_ACIKLAMA[d.yontem] || 'Doğrulandı.'}

@@ -17,13 +17,23 @@
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL
 const SUPABASE_ANON = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
 
-// RFC 5545: ters bölü, noktalı virgül, virgül ve satır sonu kaçırılır.
+// RFC 5545: TEXT değeri kontrol karakteri İÇEREMEZ; ters bölü, noktalı
+// virgül, virgül ve satır sonu kaçırılır.
+//
+// Yalın CR bazı takvim uygulamalarında SATIR SONU sayılır. Randevu formuna
+// sahte ICS satırları yazan KİMLİKSİZ biri, kart sahibinin takvimine uydurma
+// kayıt ve alarm düşürebilir; katı davranan bir uygulamada ise dosyanın
+// TAMAMI reddedilir ve kişinin bütün takvim aboneliği bozulur. Denendi:
+// temizlik öncesi sahte bir ACTION:DISPLAY satırı gerçekten ayrı satır
+// olarak üretiliyordu. Sunucu (book_appointment) aynı temizliği kayıt anında
+// da yapıyor; tek savunmaya bağlı kalmıyoruz.
 function kacir(metin) {
   return String(metin ?? '')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
     .replace(/\\/g, '\\\\')
     .replace(/;/g, '\\;')
     .replace(/,/g, '\\,')
-    .replace(/\r?\n/g, '\\n')
+    .replace(/\r\n|\r|\n/g, '\\n')
 }
 
 // RFC 5545: satırlar 75 oktetten uzun olamaz; uzun satır katlanır.
@@ -51,17 +61,31 @@ function katla(satir) {
 }
 
 function zaman(iso) {
-  return new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+  const d = new Date(iso)
+  // Geçersiz tarihte toISOString istisna fırlatır ve besleme 500 verirdi.
+  if (Number.isNaN(d.getTime())) return null
+  return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
 }
 
-const DURUM_ICS = {
+// Object.create(null): düz nesnede "constructor" gibi bir değer, prototip
+// zincirinden fonksiyon kaynağı döndürüp dosyaya basardı. Bugün veritabanı
+// kısıtları buna izin vermiyor ama kısıt gevşerse sessiz bir açığa dönüşür.
+const DURUM_ICS = Object.assign(Object.create(null), {
   onaylandi: 'CONFIRMED',
   bekliyor: 'TENTATIVE',
   iptal: 'CANCELLED',
   tamamlandi: 'CONFIRMED',
-}
+})
 
-const KAYNAK_ADI = { qr: 'QR kod', nfc: 'NFC kart', link: 'Bağlantı', direct: 'Doğrudan' }
+// SEQUENCE yalnızca ARTMALI: küçülen sıra numaralı güncellemeyi birçok takvim
+// yok sayar. Önceki hâlde onaylanan randevu 1, sonra tamamlanınca 0'a düşüyordu.
+const SIRA = Object.assign(Object.create(null), {
+  bekliyor: 0, onaylandi: 1, tamamlandi: 2, iptal: 3,
+})
+
+const KAYNAK_ADI = Object.assign(Object.create(null), {
+  qr: 'QR kod', nfc: 'NFC kart', link: 'Bağlantı', direct: 'Doğrudan',
+})
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -95,6 +119,7 @@ export default async function handler(req, res) {
   // Geçersiz anahtarda da 404: geçerli bir anahtarın var olup olmadığını
   // farklı cevaplarla sızdırmayız.
   if (!veri?.ok) {
+    res.setHeader('Cache-Control', 'no-store')
     res.status(404).end()
     return
   }
@@ -121,19 +146,23 @@ export default async function handler(req, res) {
       r.durum === 'bekliyor' ? 'Bu randevu henüz onaylanmadı.' : null,
     ].filter(Boolean).join('\n')
 
+    const bas = zaman(r.baslar_at)
+    const bit = zaman(r.biter_at)
+    // Tarihi çözülemeyen TEK kayıt yüzünden bütün beslemeyi düşürmeyiz.
+    if (!bas || !bit) continue
+
     satirlar.push(
       'BEGIN:VEVENT',
       // Sabit kimlik: aynı randevu her tazelemede aynı olay olarak tanınsın,
       // yoksa her tazelemede kopya oluşurdu.
-      `UID:${r.id}@qrtim`,
-      `DTSTAMP:${zaman(r.created_at || r.baslar_at)}`,
-      `DTSTART:${zaman(r.baslar_at)}`,
-      `DTEND:${zaman(r.biter_at)}`,
+      `UID:${kacir(r.id)}@qrtim`,
+      `DTSTAMP:${zaman(r.created_at) || bas}`,
+      `DTSTART:${bas}`,
+      `DTEND:${bit}`,
       katla(`SUMMARY:${kacir(r.ad)}${r.durum === 'bekliyor' ? ' (onay bekliyor)' : ''}`),
       katla(`DESCRIPTION:${kacir(aciklama)}`),
       `STATUS:${DURUM_ICS[r.durum] || 'TENTATIVE'}`,
-      // Sıra numarası: iptal/onay değişikliğinin takvimde güncellenmesi için.
-      `SEQUENCE:${r.durum === 'iptal' ? 2 : r.durum === 'onaylandi' ? 1 : 0}`,
+      `SEQUENCE:${SIRA[r.durum] ?? 0}`,
       'END:VEVENT',
     )
   }
