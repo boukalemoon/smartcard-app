@@ -228,10 +228,10 @@ Silinirse bu organizasyonlar yöneticisiz kalır. Yine de silinsin mi?`)) {
       {/* Stats */}
       <div className="grid md:grid-cols-4 gap-4">
         {[
-          {/* TAILWIND TUZAĞI: sınıf adı çalışma anında birleştirilirse
-              (border-${color}-500 gibi) Tailwind onu kaynakta göremez ve o
-              sınıfı HİÇ üretmez — renk çıkmaz. Bu kutuların renkleri bu
-              yüzden bugüne kadar görünmüyordu. Sınıflar tam metin yazılmalı. */}
+          // TAILWIND TUZAĞI: sınıf adı çalışma anında birleştirilirse
+          // (border-<renk>-500 gibi) Tailwind onu kaynakta göremez ve o
+          // sınıfı HİÇ üretmez — renk çıkmaz. Bu kutuların renkleri bu
+          // yüzden bugüne kadar görünmüyordu. Sınıflar tam metin yazılmalı.
           { label: 'Toplam Kullanıcı', value: stats.totalUsers, icon: Users, kenar: 'border-blue-500', simge: 'text-blue-600' },
           { label: 'Aktif Abonelik', value: stats.activeSubscriptions, icon: CreditCard, kenar: 'border-green-500', simge: 'text-green-600' },
           { label: 'Aktif Abonelik Tutarı', value: `₺${stats.totalRevenue.toLocaleString('tr-TR')}`, icon: TrendingUp, kenar: 'border-purple-500', simge: 'text-purple-600' },
