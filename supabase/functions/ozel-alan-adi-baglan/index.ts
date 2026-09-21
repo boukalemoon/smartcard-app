@@ -123,6 +123,18 @@ Deno.serve(async (req: Request) => {
 
     // 2) DNS yerine oturmuş mu?
     const durum = await vercel(`/v9/projects/${PROJE}/domains/${encodeURIComponent(kayit.host)}`, jeton);
+
+    // SORAMADIYSAK "henüz doğrulanmadı" DEMEYİZ.
+    //
+    // durum.veri?.verified === true ifadesi, sorgu hiç başarılı olmasa bile
+    // false üretir: "soramadım"ı "doğrulanmamış" cevabına çevirir. Yönü
+    // güvenli (yanlışlıkla "bağlandı" demiyoruz) ama mesajı yanlış: DNS'i
+    // zaten doğru olan kullanıcıya "DNS bekleniyor" der ve doğru kaydı
+    // kurcalamaya gönderir. 409 dalında da aynı tuzağa düşmüştük.
+    if (durum.durum >= 400) {
+      return json({ ok: false, hata: "saglayici_durum_okunamadi" }, 502);
+    }
+
     const dogrulandi = durum.veri?.verified === true;
 
     const admin = createClient(
