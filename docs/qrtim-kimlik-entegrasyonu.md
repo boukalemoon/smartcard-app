@@ -115,6 +115,31 @@ yazılabiliyorsa ücretsiz kullanıcı kendini yükseltir.
 | Kullanıcı tablosuna `upsert` yapıp hatayı yutmak | Aynı kimlik başka hesaba bağlıysa yanlış hesapla oturum açılır | Hata kontrol edilir, oturum açılmaz |
 | Partner anahtarını istemci paketine koymak | Anahtar herkese açık olur, uç herkese açılır | Anahtar yalnız sunucu ortamında |
 | Sırrı QR koduna/bağlantıya gömmek | Kodu gören oturumu çalar | Sır istemcide kalır, taşınmaz |
+| Eşleştirme anahtarıyla oturum açmak | Eşleştirdiğiniz hesapla oturum açtığınız hesap farklı olabilir | Aşağıdaki iki kurala bakın |
+
+### 5a. Eşleştirme anahtarı ≠ oturum açma anahtarı
+
+`qrtim_uid` kiminle eşleştiğinizi söyler; oturumu **o hesabın kendi
+kimliğiyle** açın. Oturum açma çağrısının döndürdüğü kullanıcı kimliğini,
+eşleştirdiğiniz kimlikle **karşılaştırın**. İkisi tutmuyorsa oturum açmayın.
+
+Neden: araya giren bir e-posta değişikliği ya da hesap devri, eşleştirme ile
+oturum arasında sessizce başka bir hesaba kayma yaratabilir. Karşılaştırma bu
+kaymayı yakalar. (Arku bu kuralı uyguladı.)
+
+### 5b. Tek seferlik taşıma adımının kuralları
+
+Eski hesapları `qrtim_uid`'e taşırken e-postayla arama yapmak zorunda
+kalabilirsiniz. O arama:
+
+- **yalnızca `auth.users` üzerinde** yapılır, uygulama tablolarında değil;
+- **yalnızca `email_confirmed_at` dolu** kayıtlarda eşleşir;
+- eşleşen kayda `qrtim_uid` yazılır ve **bir daha e-postayla aranmaz**.
+
+Neden: doğrulanmamış bir e-posta kimlik değildir. Taşıma adımı, tam da
+e-postayla eşleştirmenin tehlikeli olduğu yerde e-posta kullandığı için
+kurallarının yazılı olması gerekir. Taşımadan sonraki her giriş `qrtim_uid`
+ile eşleşmelidir; ilk giriş `email-backfill`, ikincisi `uid` demelidir.
 
 ## 6. Kayıt ve şeffaflık
 
