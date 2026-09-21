@@ -87,6 +87,16 @@ Deno.serve(async (req: Request) => {
     return json({
       ok: true,
       plan: data.plan,
+      // YETKİ KARARININ DAYANAĞI BU ALAN, plan ADI değil.
+      //
+      // Partner plan adına bakıp "bilinmeyen ad = ücretli" sayıyordu; yani
+      // QRtım'de bir gün ücretsiz bir deneme planı çıksa partner onu sessizce
+      // ücretli sayıp bedava lisans dağıtırdı. Bilgi artık bizde üretiliyor ve
+      // cevapla birlikte gidiyor: yeni plan eklendiğinde partnerin kod
+      // değiştirmesi ya da bizim haber vermemiz gerekmiyor.
+      //
+      // Tanımsız bir plan adı geldiğinde false döner — güvenli taraf.
+      paid: data.ucretli === true,
       expires_at: data.expires_at,
       max_sync_devices: data.max_sync_devices,
       password_sync: data.password_sync,
