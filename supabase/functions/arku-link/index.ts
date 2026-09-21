@@ -162,6 +162,33 @@ Deno.serve(async (req: Request) => {
       p_user_id: tok.user_id,
     });
 
+    // HESAPLANAMADIYSA ALAN HİÇ GÖNDERİLMEZ — false GÖNDERİLMEZ.
+    //
+    // "paid: false" bir CEVAPTIR ("bu plan ücretli değil"). Hesap
+    // başarısızsa elimizde cevap YOKTUR ve ikisini aynı şeye çevirmek,
+    // ödeme yapan bir müşteriyi bizim kendi arızamız yüzünden ücretsize
+    // düşürmek demektir. Partner "alan yoksa dokunma" kuralını uyguluyor;
+    // biz false gönderirsek o koruma hiç devreye girmez.
+    //
+    // Plan hesabı yalnızca profil satırı bulunamazsa null döner — bu bir
+    // veri tutarsızlığıdır, sessiz geçilmemeli.
+    const planHesaplandi = planBilgisi != null;
+    if (!planHesaplandi) {
+      await admin.rpc("log_event", {
+        p_action: "partner.plan_unavailable",
+        p_actor_user_id: null,
+        p_app_key: "arku",
+        p_resource_type: "subscription",
+        p_resource_id: tok.user_id,
+        p_result: "failure",
+        p_severity: "warning",
+        p_visibility: "internal",
+        p_meta: { sebep: "profil_bulunamadi" },
+        p_actor_kind: "service",
+        p_subject: tok.user_id,
+      });
+    }
+
     // Döndürülen e-posta, DOĞRULANMIŞ OLANIN AYNISI olmalı. profiles.email
     // kullanıcı tarafından değiştirilebildiği için ondan okunursa "şunu
     // doğruladım, bunu gönderdim" durumu oluşur ve denetim anlamsızlaşır.
@@ -185,14 +212,22 @@ Deno.serve(async (req: Request) => {
         photo_url: prof?.photo_url ?? null,
         title: prof?.title ?? null,
         company: prof?.company ?? null,
-        // Bağlama anındaki plan. Bu değer ZAMANLA ESKİR; partner buna
-        // dayanarak süresiz yetki vermemeli, aşağıdaki sırla periyodik
-        // tazelemeli.
-        plan: planBilgisi?.plan ?? "free",
-        // Ücretli/ücretsiz kararının dayanağı BU, plan ADI değil. partner-plan
-        // ile birebir aynı kaynaktan geliyor, dolayısıyla bağlanma anı ile ilk
-        // tazeleme arasında kademe oynamaz. Tanımsız plan adı false döner.
-        paid: planBilgisi?.ucretli === true,
+        // plan ve paid yalnızca HESAPLANABİLDİYSE gönderilir; hesaplanamadıysa
+        // alanlar HİÇ YOKTUR. Partner "alan yoksa aboneliğe dokunma" kuralını
+        // uyguluyor — biz uydurma bir değer göndersek o koruma çalışmazdı.
+        ...(planHesaplandi
+          ? {
+            // Bağlama anındaki plan. Bu değer ZAMANLA ESKİR; partner buna
+            // dayanarak süresiz yetki vermemeli, aşağıdaki sırla periyodik
+            // tazelemeli.
+            plan: planBilgisi.plan,
+            // Ücretli/ücretsiz kararının dayanağı BU, plan ADI değil.
+            // partner-plan ile birebir aynı kaynaktan geliyor, dolayısıyla
+            // bağlanma anı ile ilk tazeleme arasında kademe oynamaz.
+            // Tanımsız bir plan ADI burada false döner — o bir cevaptır.
+            paid: planBilgisi.ucretli === true,
+          }
+          : {}),
       },
       // Plan tazeleme kimliği. Partner bunu saklar ve partner-plan ucuna
       // {partner, qrtim_uid, link_secret} ile sorar. Kullanıcı başına;
