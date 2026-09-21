@@ -32,7 +32,9 @@ import PersonaShare from './PersonaShare'
 import ActivityLog from './ActivityLog'
 import { validateProfile } from '../utils/inputValidation'
 import { checkProfileUpdateRateLimit } from '../utils/rateLimiting'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import DashboardNav from './DashboardNav'
+import { gecerliBolum } from '../lib/dashboardBolumler'
 
 // plan_features'ta 999 "sınırsız" anlamına gelir; kullanıcıya sayı olarak
 // göstermek yerine kelimeyle yazılır.
@@ -42,6 +44,18 @@ function sinirYazi(deger) {
 
 export default function Dashboard({ session }) {
   const navigate = useNavigate()
+  // Bölüm adreste tutuluyor: sayfa yenilenince yerinde kalır, geri tuşu
+  // çalışır ve bir bölümün bağlantısı paylaşılabilir.
+  const [aramaParam, setAramaParam] = useSearchParams()
+  const bolum = gecerliBolum(aramaParam.get('bolum'))
+  const bolumDegistir = (yeni) => {
+    setAramaParam({ bolum: yeni }, { replace: true })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+  // Her bölümün yan sütunu yok. İki sütunlu ızgarayı koşulsuz bırakmak,
+  // yan sütunu olmayan bölümlerde ekranın üçte birini boş bırakıyordu.
+  // Sınıf adları tam metin: Tailwind çalışma anında birleştirilen adı görmez.
+  const sagSutunVar = ['kartim', 'paylasim', 'hesap'].includes(bolum)
   const { showToast } = useToast()
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -386,8 +400,11 @@ export default function Dashboard({ session }) {
           {isCorporate ? (
             <CorporateDashboard profile={profile} />
           ) : (
-            <div className="grid lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
+            <>
+            <DashboardNav aktif={bolum} onChange={bolumDegistir} />
+            <div className={sagSutunVar ? 'grid lg:grid-cols-3 gap-6' : 'space-y-6'}>
+              <div className={sagSutunVar ? 'lg:col-span-2 space-y-6' : 'space-y-6'}>
+                {bolum === 'kartim' && (
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Profil Bilgileri</h2>
@@ -542,6 +559,9 @@ export default function Dashboard({ session }) {
                   </div>
                 </div>
 
+                )}
+
+                {bolum === 'olcum' && (<>
                 {/* İstatistikler */}
                 <AnalyticsFilter
                   isPremium
@@ -592,49 +612,24 @@ export default function Dashboard({ session }) {
                 </div>
 
                 {profile?.id && <LinkPerformance aralik={analizAralik} />}
-                {profile?.id && <UsernameEditor currentUsername={profile.username} profileId={profile.id} onUpdate={(newUsername) => setProfile({ ...profile, username: newUsername })} />}
-                {profile?.id && <PersonaManager username={profile.username} />}
-                {profile?.id && <VerificationManager />}
-                {profile?.id && <CustomDomainManager />}
-                {profile?.id && <AppointmentManager />}
-                {profile?.id && <CardContacts />}
-                {profile?.user_id && <QrtimIdCard userId={profile.user_id} />}
-                {profile && <SocialLinksManager profileId={profile.id} />}
-                {profile && <OrganizationManager profileId={profile.id} />}
-                {profile && <ReferralDashboard profile={profile} />}
                 {profile && <ActivityLog />}
+                </>)}
+                {bolum === 'kartim' && profile?.id && <UsernameEditor currentUsername={profile.username} profileId={profile.id} onUpdate={(newUsername) => setProfile({ ...profile, username: newUsername })} />}
+                {bolum === 'kartim' && profile?.id && <PersonaManager username={profile.username} />}
+                {bolum === 'kimlik' && profile?.id && <VerificationManager />}
+                {bolum === 'paylasim' && profile?.id && <CustomDomainManager />}
+                {bolum === 'gelenler' && profile?.id && <AppointmentManager />}
+                {bolum === 'gelenler' && profile?.id && <CardContacts />}
+                {bolum === 'kimlik' && profile?.user_id && <QrtimIdCard userId={profile.user_id} />}
+                {bolum === 'kartim' && profile && <SocialLinksManager profileId={profile.id} />}
+                {bolum === 'kimlik' && profile && <OrganizationManager profileId={profile.id} />}
+                {bolum === 'hesap' && profile && <ReferralDashboard profile={profile} />}
               </div>
 
               <div className="space-y-6">
                 {profile?.username && (
                   <>
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">🎨 QR Kod Özelleştirme</h3>
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">QR Kod Rengi</label>
-                          <div className="flex items-center gap-3">
-                            <input type="color" value={profile.qr_foreground_color || '#000000'} onChange={async (e) => { const color = e.target.value; try { await profilAlaniKaydet({ qr_foreground_color: color }); setProfile(prev => ({ ...prev, qr_foreground_color: color })) } catch (error) { console.error(error) } }} className="w-16 h-10 rounded cursor-pointer border-2 border-gray-300" />
-                            <span className="text-sm font-mono text-gray-600 dark:text-gray-400">{profile.qr_foreground_color || '#000000'}</span>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">QR Arka Plan Rengi</label>
-                          <div className="flex items-center gap-3">
-                            <input type="color" value={profile.qr_background_color || '#FFFFFF'} onChange={async (e) => { const color = e.target.value; try { await profilAlaniKaydet({ qr_background_color: color }); setProfile(prev => ({ ...prev, qr_background_color: color })) } catch (error) { console.error(error) } }} className="w-16 h-10 rounded cursor-pointer border-2 border-gray-300" />
-                            <span className="text-sm font-mono text-gray-600 dark:text-gray-400">{profile.qr_background_color || '#FFFFFF'}</span>
-                          </div>
-                        </div>
-                        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" checked={profile.qr_logo_enabled || false} onChange={async (e) => { const enabled = e.target.checked; try { await profilAlaniKaydet({ qr_logo_enabled: enabled }); setProfile(prev => ({ ...prev, qr_logo_enabled: enabled })) } catch (error) { console.error(error) } }} className="w-5 h-5 rounded border-gray-300" />
-                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">QR Kod ortasına profil fotoğrafı ekle</span>
-                          </label>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-8">{subscription?.plan === 'free' ? 'QR kodun ortasında profil fotoğrafınız görünür' : '✅ Profil fotoğrafınız QR kodun ortasında gösterilecek'}</p>
-                        </div>
-                      </div>
-                    </div>
-
+                    {bolum === 'kartim' && (<>
                     {/* Katalog */}
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
                       <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">📁 Katalog & Dokümanlar</h3>
@@ -984,6 +979,36 @@ export default function Dashboard({ session }) {
                       )}
                     </div>
 
+                    </>)}
+
+                    {bolum === 'paylasim' && (<>
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">🎨 QR Kod Özelleştirme</h3>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">QR Kod Rengi</label>
+                          <div className="flex items-center gap-3">
+                            <input type="color" value={profile.qr_foreground_color || '#000000'} onChange={async (e) => { const color = e.target.value; try { await profilAlaniKaydet({ qr_foreground_color: color }); setProfile(prev => ({ ...prev, qr_foreground_color: color })) } catch (error) { console.error(error) } }} className="w-16 h-10 rounded cursor-pointer border-2 border-gray-300" />
+                            <span className="text-sm font-mono text-gray-600 dark:text-gray-400">{profile.qr_foreground_color || '#000000'}</span>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">QR Arka Plan Rengi</label>
+                          <div className="flex items-center gap-3">
+                            <input type="color" value={profile.qr_background_color || '#FFFFFF'} onChange={async (e) => { const color = e.target.value; try { await profilAlaniKaydet({ qr_background_color: color }); setProfile(prev => ({ ...prev, qr_background_color: color })) } catch (error) { console.error(error) } }} className="w-16 h-10 rounded cursor-pointer border-2 border-gray-300" />
+                            <span className="text-sm font-mono text-gray-600 dark:text-gray-400">{profile.qr_background_color || '#FFFFFF'}</span>
+                          </div>
+                        </div>
+                        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" checked={profile.qr_logo_enabled || false} onChange={async (e) => { const enabled = e.target.checked; try { await profilAlaniKaydet({ qr_logo_enabled: enabled }); setProfile(prev => ({ ...prev, qr_logo_enabled: enabled })) } catch (error) { console.error(error) } }} className="w-5 h-5 rounded border-gray-300" />
+                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">QR Kod ortasına profil fotoğrafı ekle</span>
+                          </label>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-8">{subscription?.plan === 'free' ? 'QR kodun ortasında profil fotoğrafınız görünür' : '✅ Profil fotoğrafınız QR kodun ortasında gösterilecek'}</p>
+                        </div>
+                      </div>
+                    </div>
+
                     <PersonaShare profile={profile} fallbackName={session.user.email} />
                     <NFCWriter username={profile.username} cardCode={profile.card_code} />
 
@@ -1000,6 +1025,7 @@ export default function Dashboard({ session }) {
                         <button onClick={() => window.location.href = '/nfc-designer'} className="w-full py-3 bg-white text-purple-600 rounded-xl font-semibold hover:shadow-xl transition-all">Kart Tasarla</button>
                       </div>
                     )}
+                    </>)}
                   </>
                 )}
 
@@ -1010,6 +1036,7 @@ export default function Dashboard({ session }) {
                   </div>
                 )}
 
+                {bolum === 'hesap' && (
                 <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg p-6 text-white">
                   <h3 className="text-xl font-bold mb-2">Abonelik</h3>
                   {subLoading ? <p className="text-blue-100 text-sm">Yükleniyor...</p> : (
@@ -1036,8 +1063,10 @@ export default function Dashboard({ session }) {
                     </>
                   )}
                 </div>
+                )}
               </div>
             </div>
+            </>
           )}
         </div>
       </div>
