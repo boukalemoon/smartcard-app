@@ -19,11 +19,23 @@ dolandırıcılığına açıktı. Bu değişiklik ikisini de ShieldAuth ile kap
 Arayüz yalnızca kolaylık: kurallar veritabanında ve Edge Function'larda. Doğrulama kaydı Supabase
 **oturumuna** (`session_id`) bağlıdır; çalınan başka bir oturum bu kaydı kullanamaz.
 
+`is_admin()` yalnızca "yönetici RPC'leri" değil, **12 tablonun RLS politikası** (`commission_rates`,
+`commissions`, `custom_domains`, `identity_verifications`, `organizational_commissions`,
+`organizations`, `payment_requests`, `profiles`, `referral_codes`, `referrals`, `subscriptions`,
+`transactions`) ve `admin_delete_user` / `admin_set_plan` / `admin_set_role` /
+`guard_profile_privileged_columns` tarafından okunuyor. Doğrulama bayatladığında bunların hepsi
+aynı anda kapanır — yönetici için beklenen davranış bu, ama sorun ararken bakılacak yer burası.
+
 Kodlar yalnızca **doğrulanmış e-postaya** gider. `profiles.phone` doğrulanmadığı için SMS/WhatsApp kapalı.
 
 ## Yayın sırası
 
-1. **Migration:** `supabase/migrations/20260929090000_shieldauth_mfa.sql`
+Sıra, **her adımın tek başına güvenli olacağı** şekilde bölündü: 1–3 arası hiçbir şey zorunlu
+değil, kural yalnızca 4. adımda yürürlüğe giriyor. Yarıda kalırsa kimse kilitlenmez.
+
+1. **Migration (etkisiz):** `supabase/migrations/20260929090000_shieldauth_mfa.sql`
+   Tabloları, kontrol fonksiyonlarını ve `is_admin()`'i kurar. TOTP kurmuş kimse olmadığı için
+   `is_admin()` sonucu eskisiyle birebir aynı kalır; ödeme tetikleyicisi henüz bağlı değil.
 2. **Edge Function ve secret'lar:**
    ```bash
    supabase secrets set SHIELDAUTH_API_KEY=sa_... SHIELDAUTH_APP_ID=qartim \
@@ -33,9 +45,12 @@ Kodlar yalnızca **doğrulanmış e-postaya** gider. `profiles.phone` doğrulanm
    supabase functions deploy partner-issue-token ilgezdi-qr
    ```
    API anahtarı ShieldAuth panelinden (Uygulamalar) alınır; tarayıcıya hiç gitmez.
+   `SHIELDAUTH_ALLOWED_ORIGINS` alan adı listesidir: **qrtim.com.tr'ye geçerken bu da güncellenmeli**,
+   yoksa doğrulama penceresi yeni alan adında açılmaz.
 3. **Web uygulaması** (Vercel)
+4. **Kuralı aç:** `supabase/migrations/20260929091000_shieldauth_odeme_tetikleyici.sql`
+   Yalnızca tetikleyiciyi bağlar. Dosyanın başındaki kontrol sorgusunu önce çalıştırın.
 
-1 uygulanıp 2 yayınlanmazsa IBAN değişikliği "doğrulama gerekli" hatası verir ama kişi doğrulayamaz.
 Acil geri alma: `drop trigger trg_guard_profile_payment_mfa on public.profile_payment;`
 
 ## Aşamalı yönetici zorunluluğu

@@ -28,11 +28,19 @@
 --      supabase/bekleyen/shieldauth_yonetici_zorunlu.sql uygulanır.
 --
 -- YAYIN SIRASI (önemli):
---   1. Bu migration
+--   1. Bu migration            → hiçbir şeyi ZORUNLU KILMAZ (aşağıya bak)
 --   2. supabase functions deploy shieldauth  (+ SHIELDAUTH_* secret'ları)
 --   3. Web uygulaması (adım atlama modalı)
--- 2 yayınlanmadan 1 uygulanırsa IBAN değişikliği "doğrulama gerekli" hatası
--- verir ve kişi doğrulayamaz. Geri alma: aşağıdaki trigger'ı düşürmek yeterli.
+--   4. 20260929091000_shieldauth_odeme_tetikleyici.sql  → IBAN kuralını açar
+--
+-- BU DOSYA BİLEREK ETKİSİZDİR. Ödeme tetikleyicisi ayrı dosyada çünkü 1 ile 2
+-- arasında kaldığı sürece kimse IBAN'ını değiştiremez AMA doğrulama da
+-- yapamaz (doğrulayacak fonksiyon henüz yayında değil) — yani kilitlenir.
+-- Tetikleyiciyi en sona alınca o pencere hiç oluşmuyor.
+--
+-- is_admin() değişikliği 1. adımda inebilir: TOTP kurmuş kimse olmadığı için
+-- shieldauth_mfa_users boş, enrolled=false, sonuç eskisiyle birebir aynı.
+-- Geri alma: drop trigger trg_guard_profile_payment_mfa on public.profile_payment;
 
 -- ---------------------------------------------------------------------------
 -- Doğrulama kayıtları (yalnızca service_role)
@@ -150,10 +158,8 @@ begin
 end;
 $$;
 
-drop trigger if exists trg_guard_profile_payment_mfa on public.profile_payment;
-create trigger trg_guard_profile_payment_mfa
-  before insert or update on public.profile_payment
-  for each row execute function public.guard_profile_payment_mfa();
+-- Tetikleyici BU DOSYADA DEĞİL: 20260929091000_shieldauth_odeme_tetikleyici.sql.
+-- Sebep aşağıdaki "YAYIN SIRASI" notunda.
 
 comment on function public.guard_profile_payment_mfa() is
   'ShieldAuth: IBAN/fatura değişikliği son 10 dakikada iki adımlı doğrulama ister (ödeme yönlendirme dolandırıcılığına karşı). service_role muaftır.';

@@ -12,8 +12,12 @@
 //
 // AŞAMALI GEÇİŞ: TOTP kurmamış kullanıcı için zorunluluk YOK — aksi halde
 // özellik yayına girdiği an herkes partner uygulamalardan kilitlenirdi.
-// Tablolar henüz yoksa (migration uygulanmadan fonksiyon yayınlanırsa) sorgu
-// hata verir; bu durumda da kullanıcı kilitlenmez.
+//
+// HATA DURUMU: Bir güvenlik kapısı hata verdiğinde GEÇİRMEMELİ. Tek istisna
+// tablonun henüz hiç olmaması (fonksiyon migration'dan önce yayınlanırsa):
+// o zaman özellik daha yayında değildir, kimseyi kilitlemeyiz. Başka her hata
+// (bağlantı kopması, şema önbelleği, hız sınırı) "doğrulama yok" sayılır —
+// aksi halde çalınmış bir oturum, sorguyu hata verdirerek kapıyı açabilirdi.
 
 // deno-lint-ignore no-explicit-any
 type Admin = any;
@@ -40,7 +44,13 @@ export async function tazeMfaEksik(admin: Admin, userId: string, sessionId: stri
     .select("totp_enrolled")
     .eq("user_id", userId)
     .maybeSingle();
-  if (error || !kayit?.totp_enrolled) return false;
+  if (error) {
+    // 42P01 / PGRST205 = tablo yok → özellik henüz yayında değil, geçir.
+    const kod = String((error as { code?: string }).code ?? "");
+    if (kod === "42P01" || kod === "PGRST205") return false;
+    return true; // başka her hata: kapıyı kapalı tut.
+  }
+  if (!kayit?.totp_enrolled) return false;
   if (!sessionId) return true;
 
   const sinir = new Date(Date.now() - sureSn * 1000).toISOString();
