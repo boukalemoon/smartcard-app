@@ -1,9 +1,11 @@
-import { exportToCSV, verifyPasswordForExport } from '../utils/exportHelpers'
+import { exportToCSV } from '../utils/exportHelpers'
+import { useAdimAtlama } from '../hooks/useAdimAtlama'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { Users, DollarSign, CreditCard, TrendingUp, Search, RefreshCw, Trash2, Shield, ShieldOff } from 'lucide-react'
 
 export default function AdminCRM() {
+  const { adimAtla } = useAdimAtlama()
   const [users, setUsers] = useState([])
   const [subscriptions, setSubscriptions] = useState([])
   const [commissions, setCommissions] = useState([])
@@ -191,13 +193,17 @@ Silinirse bu organizasyonlar yöneticisiz kalır. Yine de silinsin mi?`)) {
   }
 
   const handleExportUsers = async () => {
-    const verified = await verifyPasswordForExport(supabase)
+    // Şifre penceresi yerine iki adımlı doğrulama: eski yöntem istemcide
+    // çalışıyor, yeni oturum açıyor ve atlanabiliyordu.
+    const verified = await adimAtla({ sebep: 'Veri dışa aktarma', zorla: true })
     if (!verified) return
     exportToCSV(users.map(u => ({ 'Ad Soyad': u.name, 'Email': u.email, 'Rol': u.role, 'Kayıt': new Date(u.created_at).toLocaleDateString('tr-TR') })), 'users')
   }
 
   const handleExportSubscriptions = async () => {
-    const verified = await verifyPasswordForExport(supabase)
+    // Şifre penceresi yerine iki adımlı doğrulama: eski yöntem istemcide
+    // çalışıyor, yeni oturum açıyor ve atlanabiliyordu.
+    const verified = await adimAtla({ sebep: 'Veri dışa aktarma', zorla: true })
     if (!verified) return
     exportToCSV(subscriptions.map(s => ({ 'Kullanıcı': s.profiles?.name, 'Email': s.profiles?.email, 'Plan': s.plan, 'Durum': s.status, 'Tarih': new Date(s.created_at).toLocaleDateString('tr-TR') })), 'subscriptions')
   }

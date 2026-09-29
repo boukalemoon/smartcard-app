@@ -32,6 +32,7 @@
 // çıkana kadarki açık pencereyi daraltır.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { oturumKimligi, tazeMfaEksik } from "../_shared/mfa.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -213,6 +214,13 @@ Deno.serve(async (req: Request) => {
 
     // Doğrulanmamış hesapla başka cihazda oturum açtırılmaz.
     if (!user.email_confirmed_at) return json({ error: "email_not_verified" }, 403);
+
+    // Başka bir cihaza oturum açtırmak hesabın anahtarını vermek demek.
+    // Doğrulama uygulaması kurmuş kişide bu oturumda son 10 dakikada
+    // doğrulama yoksa onay verilmez; panel doğrulatıp tekrar dener.
+    if (await tazeMfaEksik(admin, user.id, oturumKimligi(req.headers.get("authorization")), 10 * 60)) {
+      return json({ error: "mfa_required" }, 403);
+    }
 
     const { data, error } = await admin
       .from("ilgezdi_qr_sessions")

@@ -16,6 +16,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { oturumKimligi, tazeMfaEksik } from "../_shared/mfa.ts";
 
 const KNOWN_PARTNERS = ["arku", "ilgezdi", "tinga"];
 const TTL_VARSAYILAN_SN = 300; // web yönlendirme akışı için
@@ -95,6 +96,13 @@ Deno.serve(async (req: Request) => {
     });
     if (izin === false) {
       return json({ error: "Çok fazla istek. Bir dakika sonra tekrar deneyin.", code: "rate_limited" }, 429);
+    }
+
+    // İKİ ADIMLI DOĞRULAMA — QRtım kimlik sağlayıcı: bu belirteç Arku / İlgezdi /
+    // Tınga'ya giriş demek. Doğrulama uygulaması kurmuş kişide, bu oturumda son
+    // 12 saatte doğrulama yoksa belirteç verilmez; istemci doğrulatıp tekrar dener.
+    if (await tazeMfaEksik(admin, user.id, oturumKimligi(authHeader), 12 * 3600)) {
+      return json({ error: "İki adımlı doğrulama gerekiyor.", code: "mfa_required" }, 403);
     }
 
     const ttlSn = Math.min(TTL_EN_COK_SN, Math.max(TTL_EN_AZ_SN,

@@ -9,6 +9,9 @@ import PublicCardPreview from './PublicCardPreview'
 import { filtreyiAraligaCevir } from '../utils/analyticsHelpers'
 import AnalyticsFilter from './AnalyticsFilter'
 import ReferralDashboard from './ReferralDashboard'
+import GuvenlikKarti from './GuvenlikKarti'
+import { useAdimAtlama } from '../hooks/useAdimAtlama'
+import { odemeBilgisiniYaz } from '../lib/odemeBilgisi'
 import OrganizationManager from './OrganizationManager'
 import CorporateDashboard from './CorporateDashboard'
 import { useState, useEffect, useCallback } from 'react'
@@ -57,6 +60,7 @@ export default function Dashboard({ session }) {
   // Sınıf adları tam metin: Tailwind çalışma anında birleştirilen adı görmez.
   const sagSutunVar = ['kartim', 'paylasim', 'hesap'].includes(bolum)
   const { showToast } = useToast()
+  const { adimAtla } = useAdimAtlama()
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
@@ -623,6 +627,7 @@ export default function Dashboard({ session }) {
                 {bolum === 'kimlik' && profile?.user_id && <QrtimIdCard userId={profile.user_id} />}
                 {bolum === 'kartim' && profile && <SocialLinksManager profileId={profile.id} />}
                 {bolum === 'kimlik' && profile && <OrganizationManager profileId={profile.id} />}
+                {bolum === 'hesap' && profile && <GuvenlikKarti />}
                 {bolum === 'hesap' && profile && <ReferralDashboard profile={profile} />}
               </div>
 
@@ -733,9 +738,9 @@ export default function Dashboard({ session }) {
                                     variant: 'danger',
                                     onConfirm: async () => {
                                       const newAccounts = profile.bank_accounts.filter((_, i) => i !== index)
-                                      const { error } = await supabase
-                                        .from('profile_payment')
-                                        .upsert({ profile_id: profile.id, bank_accounts: newAccounts, updated_at: new Date().toISOString() }, { onConflict: 'profile_id' })
+                                      const { error, iptal } = await odemeBilgisiniYaz(adimAtla,
+                                        { profile_id: profile.id, bank_accounts: newAccounts, updated_at: new Date().toISOString() })
+                                      if (iptal) return
                                       if (error) {
                                         showToast('Hata: ' + error.message, 'error')
                                         return
@@ -825,9 +830,9 @@ export default function Dashboard({ session }) {
                                 message: 'Fatura bilgilerinizi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
                                 variant: 'danger',
                                 onConfirm: async () => {
-                                  const { error } = await supabase
-                                    .from('profile_payment')
-                                    .upsert({ profile_id: profile.id, billing_info: null, updated_at: new Date().toISOString() }, { onConflict: 'profile_id' })
+                                  const { error, iptal } = await odemeBilgisiniYaz(adimAtla,
+                                    { profile_id: profile.id, billing_info: null, updated_at: new Date().toISOString() })
+                                  if (iptal) return
                                   if (error) {
                                     showToast('Hata: ' + error.message, 'error')
                                     return
@@ -1097,12 +1102,11 @@ export default function Dashboard({ session }) {
             // Yeni ekleme
             newAccounts = [...(profile.bank_accounts || []), data]
           }
-          const { error } = await supabase
-            .from('profile_payment')
-            // show_bank_accounts BİLEREK yazılmıyor: kullanıcı görünürlüğü
-            // kapatmışsa hesap eklemek onu geri açmamalı (IBAN herkese açık
-            // karta düşerdi). Görünürlük yalnızca kendi anahtarından değişir.
-            .upsert({ profile_id: profile.id, bank_accounts: newAccounts, updated_at: new Date().toISOString() }, { onConflict: 'profile_id' })
+          // show_bank_accounts BİLEREK yazılmıyor: kullanıcı görünürlüğü
+          // kapatmışsa hesap eklemek onu geri açmamalı (IBAN herkese açık
+          // karta düşerdi). Görünürlük yalnızca kendi anahtarından değişir.
+          const { error } = await odemeBilgisiniYaz(adimAtla,
+            { profile_id: profile.id, bank_accounts: newAccounts, updated_at: new Date().toISOString() })
           if (error) throw error
           setProfile(prev => ({ ...prev, bank_accounts: newAccounts }))
         }}
@@ -1114,9 +1118,8 @@ export default function Dashboard({ session }) {
         onClose={() => setBillingModal({ isOpen: false })}
         billingInfo={profile?.billing_info}
         onSave={async (data) => {
-          const { error } = await supabase
-            .from('profile_payment')
-            .upsert({ profile_id: profile.id, billing_info: data, show_billing_info: true, updated_at: new Date().toISOString() }, { onConflict: 'profile_id' })
+          const { error } = await odemeBilgisiniYaz(adimAtla,
+            { profile_id: profile.id, billing_info: data, show_billing_info: true, updated_at: new Date().toISOString() })
           if (error) throw error
           setProfile(prev => ({ ...prev, billing_info: data, show_billing_info: true }))
         }}

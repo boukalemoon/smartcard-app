@@ -5,7 +5,8 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // src/vendor: dışarıdan kopyalanan paketler (ShieldAuth), kendi reposunda denetleniyor.
+  globalIgnores(['dist', 'src/vendor']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [

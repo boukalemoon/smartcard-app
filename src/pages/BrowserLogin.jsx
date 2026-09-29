@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { useAdimAtlama } from '../hooks/useAdimAtlama'
 
 /**
  * İlgezdi tarayyıcısı QR girişi onay sayfası.
@@ -26,6 +27,7 @@ export default function BrowserLogin() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [istek, setIstek] = useState(null) // { requester_label, created_at, expires_at }
+  const { adimAtla } = useAdimAtlama()
 
   const token = new URLSearchParams(window.location.search).get('token')
 
@@ -66,7 +68,7 @@ export default function BrowserLogin() {
     setBusy(false)
   }
 
-  const handleApprove = async () => {
+  const handleApprove = async (tekrar = false) => {
     setBusy(true)
     setError('')
     try {
@@ -84,6 +86,15 @@ export default function BrowserLogin() {
       const data = await res.json()
       if (res.ok && data.ok) {
         setDone(true)
+      } else if (data.error === 'mfa_required' && !tekrar) {
+        // Başka cihaza oturum açtırmak için bu oturumda son 10 dakikada
+        // iki adımlı doğrulama gerekiyor. Doğrulayınca onayı bir kez daha dene.
+        setBusy(false)
+        if (await adimAtla({ sebep: 'Başka bir cihazda oturum açmayı onaylamak', zorla: true })) {
+          return handleApprove(true)
+        }
+        setError('Onay için iki adımlı doğrulama gerekiyor.')
+        return
       } else if (data.error === 'not_found_or_expired') {
         setError('QR kodun süresi dolmuş. İlgezdi tarayıcısında QR kodu yenileyip tekrar okutun.')
       } else if (data.error === 'email_not_verified') {
@@ -182,7 +193,7 @@ export default function BrowserLogin() {
           Vazgeç
         </button>
         <button
-          onClick={handleApprove} disabled={busy}
+          onClick={() => handleApprove()} disabled={busy}
           className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold rounded-lg transition"
         >
           {busy ? 'Onaylanıyor...' : 'Onayla'}

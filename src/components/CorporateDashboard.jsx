@@ -1,5 +1,6 @@
 import OrganizationProfileManager from './OrganizationProfileManager'
-import { exportToCSV, verifyPasswordForExport } from '../utils/exportHelpers'
+import { exportToCSV } from '../utils/exportHelpers'
+import { useAdimAtlama } from '../hooks/useAdimAtlama'
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import MemberManager from './MemberManager'
@@ -28,6 +29,7 @@ const BOS_TOPLAM = {
 }
 
 export default function CorporateDashboard({ profile }) {
+  const { adimAtla } = useAdimAtlama()
   const [organizations, setOrganizations] = useState([])
   const [selectedOrg, setSelectedOrg] = useState(null)
   const [showMemberManager, setShowMemberManager] = useState(false)
@@ -106,7 +108,9 @@ export default function CorporateDashboard({ profile }) {
   }
 
   const handleExportMembers = async () => {
-    const verified = await verifyPasswordForExport(supabase)
+    // Şifre penceresi yerine iki adımlı doğrulama: eski yöntem istemcide
+    // çalışıyor, yeni oturum açıyor ve atlanabiliyordu.
+    const verified = await adimAtla({ sebep: 'Veri dışa aktarma', zorla: true })
     if (!verified) return
     try {
       const hepsi = []
@@ -134,7 +138,9 @@ export default function CorporateDashboard({ profile }) {
 
   const handleExportAnalytics = async () => {
     if (uyeAnalizi.length === 0) { alert('Bu dönemde dışa aktarılacak veri yok.'); return }
-    const verified = await verifyPasswordForExport(supabase)
+    // Şifre penceresi yerine iki adımlı doğrulama: eski yöntem istemcide
+    // çalışıyor, yeni oturum açıyor ve atlanabiliyordu.
+    const verified = await adimAtla({ sebep: 'Veri dışa aktarma', zorla: true })
     if (!verified) return
     const kurum = organizations.find(o => o.id === analizKurumu)
     exportToCSV(uyeAnalizi.map(u => ({

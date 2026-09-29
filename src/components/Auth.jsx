@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useToast } from './Toast'
 import { checkLoginRateLimit, checkSignupRateLimit } from '../utils/rateLimiting'
+import { useAdimAtlama } from '../hooks/useAdimAtlama'
 
 // Şifre asgari uzunluğu. Supabase panelinden de aynı değere çekilmeli
 // (Authentication → Policies), aksi halde bu yalnızca arayüz kontrolü kalır.
@@ -73,7 +74,21 @@ function isSafeCallback(url) {
   return detectPartnerSource(url) !== null
 }
 
-async function issuePartnerToken(partnerName, session) {
+// Doğrulama uygulaması kurmuş kişide partner belirteci taze iki adımlı
+// doğrulama ister (sunucu 403 { code: "mfa_required" } döner). Böyle bir
+// durumda `adimAtla` ile doğrulatıp BİR kez daha deneriz; yine olmazsa belirteç
+// verilmez (null) ve partner uygulamaya belirteçsiz dönülür.
+async function issuePartnerToken(partnerName, session, adimAtla) {
+  const ilk = await requestPartnerToken(partnerName, session)
+  if (ilk?.code === 'mfa_required' && adimAtla
+      && await adimAtla({ sebep: 'Bağlı uygulamaya giriş', zorla: true })) {
+    const tekrar = await requestPartnerToken(partnerName, session)
+    return tekrar?.token ? tekrar : null
+  }
+  return ilk?.token ? ilk : null
+}
+
+async function requestPartnerToken(partnerName, session) {
   try {
     const res = await fetch(
       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/partner-issue-token`,
@@ -86,8 +101,9 @@ async function issuePartnerToken(partnerName, session) {
         body: JSON.stringify({ partner_name: partnerName }),
       }
     )
-    if (!res.ok) return null
-    return await res.json()
+    const govde = await res.json().catch(() => null)
+    if (!res.ok) return govde?.code === 'mfa_required' ? { code: 'mfa_required' } : null
+    return govde
   } catch {
     return null
   }
@@ -96,6 +112,7 @@ async function issuePartnerToken(partnerName, session) {
 export default function Auth({ initialMode = 'signup' }) {
   const navigate = useNavigate()
   const { showToast } = useToast()
+  const { adimAtla } = useAdimAtlama()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -143,7 +160,7 @@ export default function Auth({ initialMode = 'signup' }) {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
       sessionStorage.removeItem('partner_callback')
-      const tokenData = await issuePartnerToken(partnerName, session)
+      const tokenData = await issuePartnerToken(partnerName, session, adimAtla)
       const redirectUrl = new URL(cb)
       if (tokenData?.token) {
         redirectUrl.searchParams.set('qrtim_token', tokenData.token)
@@ -154,7 +171,8 @@ export default function Auth({ initialMode = 'signup' }) {
       window.location.href = redirectUrl.toString()
     }
     autoLinkIfLoggedIn()
-  }, [])
+    // adimAtla sabit kimlikli (useCallback, bağımlılıksız): effect yine bir kez çalışır.
+  }, [adimAtla])
 
   useEffect(() => {
   setMode(initialMode)
@@ -229,7 +247,7 @@ export default function Auth({ initialMode = 'signup' }) {
           sessionStorage.removeItem('partner_callback')
           const partnerName = detectPartnerSource(cb)
           if (partnerName && signInData?.session) {
-            const tokenData = await issuePartnerToken(partnerName, signInData.session)
+            const tokenData = await issuePartnerToken(partnerName, signInData.session, adimAtla)
             if (tokenData?.token) {
               const redirectUrl = new URL(cb)
               redirectUrl.searchParams.set('qrtim_token', tokenData.token)

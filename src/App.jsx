@@ -22,6 +22,8 @@ import CerezPolitikasi from './pages/CerezPolitikasi'
 import Iletisim from './pages/Iletisim'
 import BrowserLogin from './pages/BrowserLogin'
 import OdemeSonuc from './pages/OdemeSonuc'
+import { ShieldAuthSaglayici } from './contexts/ShieldAuthContext'
+import MfaKapisi from './components/MfaKapisi'
 
 function App() {
   const [session, setSession] = useState(null)
@@ -61,6 +63,7 @@ function App() {
   return (
     <ToastProvider>
       <ThemeProvider>
+        <ShieldAuthSaglayici>
         <DashboardModeProvider>
           <Router>
             {/* ÖZEL ALAN ADI: kişinin kendi adresinde YALNIZCA kart açılır.
@@ -101,11 +104,11 @@ function App() {
             {/* Protected routes */}
             <Route 
   path="/dashboard" 
-  element={session ? <Dashboard session={session} /> : <Navigate to="/" replace />} 
+  element={session ? <MfaKapisi><Dashboard session={session} /></MfaKapisi> : <Navigate to="/" replace />} 
 />
 <Route 
   path="/admin" 
-  element={session ? <AdminPage session={session} /> : <Navigate to="/" replace />} 
+  element={session ? <MfaKapisi><AdminPage session={session} /></MfaKapisi> : <Navigate to="/" replace />} 
 />
 
 <Route path="/iletisim" element={<Iletisim />} />
@@ -113,6 +116,7 @@ function App() {
             )}
         </Router>
       </DashboardModeProvider>
+        </ShieldAuthSaglayici>
     </ThemeProvider>
     </ToastProvider>
   )
