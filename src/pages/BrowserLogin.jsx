@@ -26,7 +26,9 @@ export default function BrowserLogin() {
   const [error, setError] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [istek, setIstek] = useState(null) // { requester_label, created_at, expires_at }
+  const [istek, setIstek] = useState(null) // { requester_label, created_at, expires_at, same_network, match_options? }
+  // Sayı eşleştirme (v2 İlgezdi): kişinin seçtiği sayı
+  const [secilenSayi, setSecilenSayi] = useState(null)
   const { adimAtla } = useAdimAtlama()
 
   const token = new URLSearchParams(window.location.search).get('token')
@@ -80,7 +82,7 @@ export default function BrowserLogin() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ action: 'approve', session_token: token }),
+          body: JSON.stringify({ action: 'approve', session_token: token, match_code: secilenSayi }),
         }
       )
       const data = await res.json()
@@ -95,6 +97,9 @@ export default function BrowserLogin() {
         }
         setError('Onay için iki adımlı doğrulama gerekiyor.')
         return
+      } else if (data.error === 'match_failed') {
+        setError('Seçilen sayı bilgisayar ekranındakiyle eşleşmedi. Güvenliğiniz için bu QR iptal edildi; İlgezdi\'de yeni QR oluşturun.')
+        setIstek(null)
       } else if (data.error === 'not_found_or_expired') {
         setError('QR kodun süresi dolmuş. İlgezdi tarayıcısında QR kodu yenileyip tekrar okutun.')
       } else if (data.error === 'email_not_verified') {
@@ -178,11 +183,48 @@ export default function BrowserLogin() {
       <p className="text-gray-600 mb-4">İlgezdi tarayıcısında oturum açılsın mı?</p>
       {istek && (
         <div className="mb-6 p-3 bg-gray-50 border border-gray-200 rounded-lg text-left text-sm">
-          <div className="text-gray-500">İsteği yapan cihaz</div>
+          {/* Cihaz adı QR'ı üreten programın KENDİ beyanı; saldırgan istediğini
+              yazabilir (denetim G-04). Bu yüzden öyle etiketleniyor ve yanında
+              sunucunun kendi gözlemi (aynı ağ mı) gösteriliyor. */}
+          <div className="text-gray-500">Cihazın kendi bildirdiği ad</div>
           <div className="font-semibold text-gray-800">{istek.requester_label}</div>
           <div className="text-gray-500 mt-1">
             {new Date(istek.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} itibarıyla bekliyor
           </div>
+          {istek.same_network === true && (
+            <div className="mt-2 text-green-700">
+              İstek, şu an bağlı olduğunuz ağdan geliyor.
+            </div>
+          )}
+          {istek.same_network === false && (
+            <div className="mt-2 p-2 rounded bg-amber-50 border border-amber-200 text-amber-800">
+              <strong>Dikkat:</strong> Bu istek sizinle aynı ağdan gelmiyor. Telefonunuz mobil
+              veride, bilgisayarınız Wi-Fi'da ise bu normal olabilir. QR kodu size biri
+              gönderdiyse onaylamayın.
+            </div>
+          )}
+        </div>
+      )}
+      {istek?.match_options && (
+        <div className="mb-6 text-left">
+          <p className="text-sm font-semibold text-gray-800 mb-2">
+            İlgezdi'nin ekranında, QR kodun yanında hangi sayı yazıyor?
+          </p>
+          <div className="flex gap-3">
+            {istek.match_options.map((n) => (
+              <button
+                key={n} type="button" onClick={() => setSecilenSayi(n)}
+                className={`flex-1 py-3 text-xl font-bold rounded-lg border-2 transition ${
+                  secilenSayi === n ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-gray-500">
+            Sayıyı göremiyorsanız QR size başkası tarafından gönderilmiştir; onaylamayın.
+          </p>
         </div>
       )}
       <div className="flex gap-3">
@@ -193,7 +235,7 @@ export default function BrowserLogin() {
           Vazgeç
         </button>
         <button
-          onClick={() => handleApprove()} disabled={busy}
+          onClick={() => handleApprove()} disabled={busy || (istek?.match_options && secilenSayi === null)}
           className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold rounded-lg transition"
         >
           {busy ? 'Onaylanıyor...' : 'Onayla'}

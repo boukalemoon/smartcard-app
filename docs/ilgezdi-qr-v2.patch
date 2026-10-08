@@ -1,0 +1,61 @@
+diff --git a/src/renderer/auth-screen.js b/src/renderer/auth-screen.js
+index cb8bacd..c3af473 100644
+--- a/src/renderer/auth-screen.js
++++ b/src/renderer/auth-screen.js
+@@ -5,6 +5,7 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
+ 
+ let _qrPoll      = null;
+ let _qrToken     = null;
++let _qrSecret    = null; // QR protokolü v2 istemci sırrı; yalnızca bellekte
+ let _countdown   = null;
+ let _eventsReady = false;
+ 
+@@ -103,8 +104,18 @@ async function qrApi(body) {
+   return r.json();
+ }
+ 
++// QRtım QR protokolü v2: sunucu bir client_secret döndürür. Sır yalnızca
++// bellekte tutulur, QR'a GİRMEZ; yoklamada gönderilir. QR'ı gören biri
++// (ekran paylaşımı, fotoğraf) oturumu yoklayıp alamaz. Sunucu tarafında
++// ILGEZDI_QR_STRICT=true açılınca sırsız istemciler reddedilir.
++function cihazEtiketi() {
++  const p = (navigator.userAgentData?.platform || navigator.platform || '').toLowerCase();
++  const os = p.includes('win') ? 'Windows' : p.includes('mac') ? 'macOS' : p.includes('linux') ? 'Linux' : '';
++  return os ? `İlgezdi · ${os}` : 'İlgezdi tarayıcısı';
++}
++
+ async function createQrSession() {
+-  const data = await qrApi({ action: 'create' });
++  const data = await qrApi({ action: 'create', v: 2, device_label: cihazEtiketi() });
+   if (!data?.session_token) throw new Error(T('auth.qrCreateFailed'));
+   return data;
+ }
+@@ -125,6 +136,10 @@ async function loadQrCode() {
+   try {
+     const session = await createQrSession();
+     _qrToken = session.session_token;
++    _qrSecret = session.client_secret || null;
++    // Sayı eşleştirme: kullanıcı telefonda bu sayıyı seçer. QR'ı ona başkası
++    // gönderdiyse bu ekranı göremez ve doğru sayıyı bilemez (QRLjacking).
++    const eslesme = session.match_code ? ` · Telefonda seçin: ${session.match_code}` : '';
+ 
+     // QR yerelde üretilir — session_token asla üçüncü taraf servise gönderilmez.
+     const payload = `https://qartim.com/browser-login?token=${session.session_token}`;
+@@ -134,7 +149,7 @@ async function loadQrCode() {
+ 
+     _countdown = setInterval(() => {
+       const left = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+-      setQrStatus(T('auth.qrScan', { seconds: left }), '');
++      setQrStatus(T('auth.qrScan', { seconds: left }) + eslesme, '');
+       if (left <= 0) {
+         clearInterval(_countdown);
+         setQrStatus(T('auth.qrExpired'), 'error');
+@@ -143,7 +158,7 @@ async function loadQrCode() {
+ 
+     _qrPoll = setInterval(async () => {
+       try {
+-        const res = await qrApi({ action: 'status', session_token: _qrToken });
++        const res = await qrApi({ action: 'status', session_token: _qrToken, client_secret: _qrSecret });
+         if (res?.status === 'approved' && res.token_hash) {
+           stopQrPoll();
+           setQrStatus(T('auth.qrApproved'), 'success');

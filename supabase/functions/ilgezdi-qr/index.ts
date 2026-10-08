@@ -75,17 +75,40 @@ function rastgeleHex(bayt = 32): string {
   return Array.from(a).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+// GERÇEK İSTEMCİ IP'Sİ (denetim G-04).
+//
+// x-forwarded-for'un İLK değeri istemcinin kendisinin yazabildiği değerdir;
+// eski sürüm onu kullanıyordu. Sırsız (eski İlgezdi) oturumların tek bağı IP
+// olduğu için, kurbanın ağ adresini bilen biri bu başlığı taklit edip QR'ı
+// başka bir ağdan yoklayabilirdi. Veritabanı tarafı (request_client_ip)
+// aynı sebeple cf-connecting-ip'e geçmişti; burası geride kalmıştı.
+//
+// Sıra: cf-connecting-ip (Cloudflare yazar, istemci taklit edemez) → yoksa
+// eski davranış (x-forwarded-for'un ilk değeri). x-real-ip BİLEREK
+// kullanılmıyor: ağ geçidinin kendi adresi olabilir; öyleyse herkes aynı
+// IP'yi paylaşır ve "dakikada 10 QR" sınırı tüm kullanıcılar için tek kovaya
+// döner. Yayından sonra denetim kaydında (ilgezdi.qr_*) cf başlığının geldiği
+// doğrulanmalı.
 function istemciIp(req: Request): string {
-  return (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "bilinmeyen";
+  const gecerli = (v: string | null) => {
+    const t = (v ?? "").trim();
+    return /^[0-9a-fA-F:.]{3,45}$/.test(t) ? t : "";
+  };
+  return gecerli(req.headers.get("cf-connecting-ip")) ||
+    gecerli((req.headers.get("x-forwarded-for") ?? "").split(",")[0]) ||
+    "bilinmeyen";
 }
 
-async function sinirIcinde(anahtar: string, en_cok: number, pencere_sn: number): Promise<boolean> {
+async function sinirIcinde(
+  anahtar: string, en_cok: number, pencere_sn: number, hatadaIzin = true,
+): Promise<boolean> {
   const { data, error } = await admin.rpc("check_rate_limit", {
     p_key: anahtar, p_max: en_cok, p_window_seconds: pencere_sn,
   });
-  // Sınırlayıcı hata verirse hizmeti kesmeyiz; ama sonucu "izin yok" diye
-  // okumak yerine açıkça izin veririz ki kullanıcı kilitlenmesin.
-  if (error) return true;
+  // Girişli kullanıcının adımlarında (inceleme, onay, yoklama) sınırlayıcı
+  // arızası kişiyi kilitlemesin. Kimliksiz oturum AÇMA ise kapalı başarısız
+  // olur (hatadaIzin=false): arıza anında tabloyu şişirmeye kapı açılmasın.
+  if (error) return hatadaIzin;
   return data !== false;
 }
 
@@ -95,6 +118,41 @@ async function kullaniciyiAl(req: Request) {
   const { data, error } = await admin.auth.getUser(jwt);
   if (error || !data?.user) return null;
   return data.user;
+}
+
+// Ağ öneki: IPv6 için ilk 4 grup (/64), IPv4 için adresin kendisi. "Aynı ağ
+// mı" bilgisi için; IPv6'da aynı evdeki cihazların adresleri farklıdır.
+function agOneki(ip: string): string {
+  if (!ip.includes(":")) return ip;
+  const [sol, sag = ""] = ip.split("::");
+  const a = sol ? sol.split(":") : [];
+  const b = ip.includes("::") ? (sag ? sag.split(":") : []) : [];
+  const tam = ip.includes("::")
+    ? [...a, ...Array(Math.max(0, 8 - a.length - b.length)).fill("0"), ...b]
+    : a;
+  return tam.slice(0, 4).map((g) => g.toLowerCase().replace(/^0+(?=.)/, "")).join(":") + "::/64";
+}
+
+// 10–99 arası, kriptografik rastgele.
+function eslesmeKodu(): number {
+  const a = new Uint32Array(1);
+  crypto.getRandomValues(a);
+  return 10 + (a[0] % 90);
+}
+
+// Doğru kod + iki farklı yanlış kod, karışık sırada. Hangisinin doğru olduğu
+// cevaptan anlaşılmaz.
+function eslesmeSecenekleri(dogru: number): number[] {
+  const set = new Set<number>([dogru]);
+  while (set.size < 3) set.add(eslesmeKodu());
+  const dizi = [...set];
+  for (let i = dizi.length - 1; i > 0; i--) {
+    const r = new Uint32Array(1);
+    crypto.getRandomValues(r);
+    const j = r[0] % (i + 1);
+    [dizi[i], dizi[j]] = [dizi[j], dizi[i]];
+  }
+  return dizi;
 }
 
 function cihazEtiketi(ham: unknown, req: Request): string {
@@ -126,7 +184,7 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
-  let body: { action?: string; session_token?: string; client_secret?: string; device_label?: string; v?: number };
+  let body: { action?: string; session_token?: string; client_secret?: string; device_label?: string; v?: number; match_code?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -139,9 +197,13 @@ Deno.serve(async (req: Request) => {
   // ── 1) Tarayıcı: yeni QR oturumu ─────────────────────────────────────────
   if (action === "create") {
     // Kimliksiz uç: tabloyu şişirmeye karşı IP başına sınır.
-    if (!(await sinirIcinde(`qr-create:${ip}`, 10, 60))) {
-      return json({ error: "rate_limited" }, 429);
-    }
+    const { data: izin, error: sinirHatasi } = await admin.rpc("check_rate_limit", {
+      p_key: `qr-create:${ip}`, p_max: 10, p_window_seconds: 60,
+    });
+    // Kimliksiz oturum AÇMA kapalı başarısız olur: sınırlayıcı arızasında
+    // tabloyu şişirmeye kapı açılmasın. Arıza 503, sınır aşımı 429.
+    if (sinirHatasi) return json({ error: "unavailable" }, 503);
+    if (izin === false) return json({ error: "rate_limited" }, 429);
 
     // Eski oturumlar birikmesin (hiç sorgulanmayan 'pending' satırlar
     // eskiden sonsuza kadar kalıyordu).
@@ -158,15 +220,20 @@ Deno.serve(async (req: Request) => {
       return json({ error: "client_update_required" }, 400);
     }
     const client_secret = yeniIstemci ? rastgeleHex(32) : null;
+    // Sayı eşleştirme yalnızca v2 istemcide: eski istemci sayıyı gösteremez.
+    const match_code = yeniIstemci ? eslesmeKodu() : null;
 
     const { data, error } = await admin
       .from("ilgezdi_qr_sessions")
       .insert({
         status: "pending",
         client_secret_hash: client_secret ? await sha256Hex(client_secret) : null,
-        // Sırsız oturumda tek bağ budur; sırlı oturumda gerekmez (ağ değişse
-        // bile çalışsın diye yazılmaz).
-        creator_ip_hash: client_secret ? null : await sha256Hex(ip),
+        // Her oturumda yazılır. Sırsız oturumda yoklamanın tek bağıdır; sırlı
+        // oturumda yoklamaya uygulanmaz (ağ değişse de çalışsın), yalnızca
+        // onay ekranındaki "aynı ağ mı" uyarısı için kullanılır.
+        creator_ip_hash: await sha256Hex(ip),
+        creator_net_hash: await sha256Hex(agOneki(ip)),
+        match_code,
         requester_label: cihazEtiketi(body.device_label, req),
       })
       .select("session_token, expires_at")
@@ -175,7 +242,7 @@ Deno.serve(async (req: Request) => {
     return json({
       session_token: data.session_token,
       expires_at: data.expires_at,
-      ...(client_secret ? { client_secret } : {}),
+      ...(client_secret ? { client_secret, match_code } : {}),
     });
   }
 
@@ -193,14 +260,29 @@ Deno.serve(async (req: Request) => {
 
     const { data: row } = await admin
       .from("ilgezdi_qr_sessions")
-      .select("status, requester_label, created_at, expires_at")
+      .select("status, requester_label, created_at, expires_at, creator_ip_hash, creator_net_hash, match_code")
       .eq("session_token", session_token)
       .maybeSingle();
     if (!row || row.status !== "pending" || new Date(row.expires_at) < new Date()) {
       return json({ error: "not_found_or_expired" }, 404);
     }
+    // AYNI AĞ MI (denetim G-04). Cihaz adı QR'ı üreten istemcinin KENDİ
+    // beyanıdır (device_label); saldırgan "İlgezdi · Windows" yazabilir. Onay
+    // ekranına sunucunun kendi gözlemini de veriyoruz: QR'ı üreten ağ ile onay
+    // veren telefonun ağı aynı mı. Telefon mobil veride ise "farklı" çıkması
+    // normaldir; arayüz bunu uyarı olarak gösterir, engel olarak değil.
+    // IP'nin kendisi istemciye verilmez, yalnızca karşılaştırma sonucu.
+    const ayniAg = row.creator_net_hash
+      ? esit(await sha256Hex(agOneki(ip)), row.creator_net_hash)
+      : row.creator_ip_hash
+      ? esit(await sha256Hex(ip), row.creator_ip_hash)
+      : null;
     return json({
       requester_label: row.requester_label ?? "Bilinmeyen cihaz",
+      label_self_reported: true,
+      same_network: ayniAg,
+      // v2: kişi bilgisayar ekranındaki sayıyı bu üç seçenekten seçer.
+      ...(row.match_code ? { match_options: eslesmeSecenekleri(row.match_code) } : {}),
       created_at: row.created_at,
       expires_at: row.expires_at,
     });
@@ -222,6 +304,26 @@ Deno.serve(async (req: Request) => {
       return json({ error: "mfa_required" }, 403);
     }
 
+    // SAYI EŞLEŞTİRME (v2). Yanlış sayı oturumu YAKAR: tek deneme hakkı.
+    const { data: bekleyen } = await admin
+      .from("ilgezdi_qr_sessions")
+      .select("match_code")
+      .eq("session_token", session_token)
+      .eq("status", "pending")
+      .maybeSingle();
+    if (bekleyen?.match_code) {
+      const secilen = Number(body.match_code);
+      if (!Number.isInteger(secilen) || secilen !== bekleyen.match_code) {
+        await admin
+          .from("ilgezdi_qr_sessions")
+          .update({ status: "expired" })
+          .eq("session_token", session_token)
+          .eq("status", "pending");
+        await denetim("ilgezdi.qr_match_failed", user.id, {});
+        return json({ error: "match_failed" }, 403);
+      }
+    }
+
     const { data, error } = await admin
       .from("ilgezdi_qr_sessions")
       .update({
@@ -238,7 +340,11 @@ Deno.serve(async (req: Request) => {
     if (error) return json({ error: "approve_failed" }, 500);
     if (!data) return json({ error: "not_found_or_expired" }, 404);
 
-    await denetim("ilgezdi.qr_approved", user.id, { cihaz: data.requester_label });
+    await denetim("ilgezdi.qr_approved", user.id, {
+      cihaz: data.requester_label,
+      // Yayın sonrası doğrulama: IP gerçekten taklit edilemeyen başlıktan mı geliyor?
+      ip_kaynagi: req.headers.get("cf-connecting-ip") ? "cf" : "xff",
+    });
     return json({ ok: true });
   }
 
