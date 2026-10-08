@@ -9,6 +9,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { belirtecOzeti } from "../_shared/belirtec.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -42,11 +43,27 @@ Deno.serve(async (req: Request) => {
       { auth: { persistSession: false } },
     );
 
-    const { data: tok, error: tokErr } = await admin
+    // Tabloda belirtecin ÖZETİ durur (bkz. _shared/belirtec.ts).
+    //
+    // GEÇİŞ (15.10.2026'dan sonra kaldırılabilir): bu fonksiyon
+    // partner-issue-token'dan ÖNCE yayınlanır; o arada düz metin yazılmış en
+    // fazla 5 dakikalık belirteçler de bulunsun diye özet yoksa düz metne
+    // bakılır. Yakma, bulunan anahtarla yapılır.
+    const ozet = await belirtecOzeti(token);
+    let anahtar = ozet;
+    let { data: tok, error: tokErr } = await admin
       .from("partner_link_tokens")
       .select("token, user_id, partner, expires_at, used_at")
-      .eq("token", token)
+      .eq("token", ozet)
       .maybeSingle();
+    if (!tok && !tokErr) {
+      ({ data: tok, error: tokErr } = await admin
+        .from("partner_link_tokens")
+        .select("token, user_id, partner, expires_at, used_at")
+        .eq("token", token)
+        .maybeSingle());
+      anahtar = token;
+    }
 
     if (tokErr) return json({ valid: false, code: "lookup_failed", error: "Doğrulama hatası" }, 500);
     if (!tok) return json({ valid: false, code: "token_invalid", error: "Geçersiz token" }, 401);
@@ -83,7 +100,7 @@ Deno.serve(async (req: Request) => {
     const { data: yakilan, error: yakErr } = await admin
       .from("partner_link_tokens")
       .update({ used_at: simdi })
-      .eq("token", token)
+      .eq("token", anahtar)
       .eq("partner", "arku")
       .is("used_at", null)
       .gt("expires_at", simdi)

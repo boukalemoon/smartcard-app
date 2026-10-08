@@ -17,6 +17,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { oturumKimligi, tazeMfaEksik } from "../_shared/mfa.ts";
+import { belirtecOzeti } from "../_shared/belirtec.ts";
 
 const KNOWN_PARTNERS = ["arku", "ilgezdi", "tinga"];
 const TTL_VARSAYILAN_SN = 300; // web yönlendirme akışı için
@@ -111,8 +112,9 @@ Deno.serve(async (req: Request) => {
     const token = crypto.randomUUID() + crypto.randomUUID().replaceAll("-", "");
     const expires_at = new Date(Date.now() + ttlSn * 1000).toISOString();
 
+    // Tabloya ÖZET yazılır; düz metin yalnızca bu cevapla kullanıcıya gider.
     const { error: insErr } = await admin.from("partner_link_tokens").insert({
-      token,
+      token: await belirtecOzeti(token),
       user_id: user.id,
       partner: partner_name,
       expires_at,
