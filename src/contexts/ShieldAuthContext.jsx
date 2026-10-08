@@ -28,9 +28,11 @@ export function ShieldAuthSaglayici({ children }) {
   const adimAtla = useCallback(async ({ sebep = 'Bu işlem', zorla = false } = {}) => {
     const durum = await mfaDurumum()
     if (!zorla && durum?.taze_10_dk) return true
-    // Doğrulama uygulaması kuruluysa o önce gelir; herkes doğrulanmış
-    // e-postasına gelen kodla da geçebilir, kimse kilitlenmez.
-    const yontemler = durum?.totp_kurulu ? ['totp', 'email', 'backup'] : ['email']
+    // Doğrulama uygulaması kurmuş kişide e-posta kodu SUNULMAZ: veritabanı onu
+    // saymıyor (denetim G-02 — e-postası ele geçirilen hesapta e-posta kodu
+    // ikinci faktör olamaz). Telefonu olmayan yedek kodla geçer. TOTP
+    // kurmamış kişi doğrulanmış e-postasına gelen kodla geçer.
+    const yontemler = durum?.totp_kurulu ? ['totp', 'backup'] : ['email']
     return new Promise((coz) => {
       bekleyen.current = coz
       setPencere({ sebep, yontemler })

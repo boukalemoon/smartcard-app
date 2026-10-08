@@ -53,13 +53,18 @@ export async function tazeMfaEksik(admin: Admin, userId: string, sessionId: stri
   if (!kayit?.totp_enrolled) return false;
   if (!sessionId) return true;
 
+  // TOTP kurmuş kişide e-posta kodu SAYILMAZ (denetim G-02): e-posta hesabı
+  // düşmüş birinde e-posta kodu hem birinci hem ikinci faktörü karşılar.
+  // Veritabanındaki shieldauth_mfa_fresh() ile aynı kural.
   const sinir = new Date(Date.now() - sureSn * 1000).toISOString();
-  const { data: onay } = await admin
+  const { data: onay, error: onayHatasi } = await admin
     .from("shieldauth_mfa_assertions")
     .select("user_id")
     .eq("user_id", userId)
     .eq("session_id", sessionId)
+    .in("method", ["totp", "backup_code"])
     .gte("verified_at", sinir)
     .maybeSingle();
+  if (onayHatasi) return true; // hata: kapıyı kapalı tut
   return !onay;
 }
