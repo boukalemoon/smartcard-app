@@ -22,6 +22,7 @@ import CerezPolitikasi from './pages/CerezPolitikasi'
 import Iletisim from './pages/Iletisim'
 import BrowserLogin from './pages/BrowserLogin'
 import OdemeSonuc from './pages/OdemeSonuc'
+import SifreYenile from './pages/SifreYenile'
 import { ShieldAuthSaglayici } from './contexts/ShieldAuthContext'
 import MfaKapisi from './components/MfaKapisi'
 
@@ -37,8 +38,14 @@ function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
+      // Parola sıfırlama bağlantısı Supabase'in izin listesinde olmayan bir
+      // adrese düşerse oturum yine açılır ama form görünmez. Hangi sayfaya
+      // inerse insin kişiyi yeni parola formuna götür.
+      if (event === 'PASSWORD_RECOVERY' && window.location.pathname !== '/sifre-yenile') {
+        window.location.replace('/sifre-yenile')
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -58,7 +65,11 @@ function App() {
   // Partner (Arku vb.) bağlama akışında, kullanıcı zaten giriş yapmış olsa bile
   // /login sayfası Auth bileşenini göstermeli ki token üretilip partner'a
   // geri dönülebilsin. Aksi halde session varken /dashboard'a yönlenip akış kopar.
-  const hasPartnerCallback = !!new URLSearchParams(window.location.search).get('callback')
+  // Callback adres çubuğunda olmayabilir: kişi giriş/kayıt arasında geçince
+  // yalnızca sessionStorage'da kalır. İkisine de bakılmazsa giriş sonrası
+  // /dashboard'a atlanır ve partner onay ekranı hiç görünmez.
+  const hasPartnerCallback = !!new URLSearchParams(window.location.search).get('callback') ||
+    !!sessionStorage.getItem('partner_callback')
 
   return (
     <ToastProvider>
@@ -96,6 +107,7 @@ function App() {
             <Route path="/login" element={!session || hasPartnerCallback ? <Auth initialMode="login" /> : <Navigate to="/dashboard" />} />
             <Route path="/signup" element={!session || hasPartnerCallback ? <Auth initialMode="signup" /> : <Navigate to="/dashboard" />} />
             <Route path="/auth/confirm" element={<AuthConfirm />} />
+            <Route path="/sifre-yenile" element={<SifreYenile />} />
 
             {/* İlgezdi tarayıcısı QR giriş onayı (girişli/girişsiz her durumda render edilir) */}
             <Route path="/browser-login" element={<BrowserLogin />} />

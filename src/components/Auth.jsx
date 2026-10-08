@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useToast } from './Toast'
 import { checkLoginRateLimit, checkSignupRateLimit } from '../utils/rateLimiting'
 import { useAdimAtlama } from '../hooks/useAdimAtlama'
+import { SITE_URL } from '../lib/siteUrl'
 
 // Şifre asgari uzunluğu. Supabase panelinden de aynı değere çekilmeli
 // (Authentication → Policies), aksi halde bu yalnızca arayüz kontrolü kalır.
@@ -74,6 +75,33 @@ function isSafeCallback(url) {
   return detectPartnerSource(url) !== null
 }
 
+// ONAY EKRANI (denetim G-03). Eskiden QRtım'e girişli biri partnerin
+// /login?callback=… adresine geldiğinde belirteç SORULMADAN üretilip
+// yönlendiriliyordu: herhangi bir sayfa girişli kişiyi bu adrese gönderip
+// kimliğini sessizce bir uygulamaya bağlatabiliyordu. Artık kişi hangi
+// uygulamanın hangi bilgilerini alacağını görür ve kendisi onaylar.
+// Alan listesi arku-link / tinga-link'in döndürdüğü alanlarla aynı olmalı.
+const PARTNER_BILGI = {
+  arku: { ad: 'Arku Remote' },
+  ilgezdi: { ad: 'İlgezdi' },
+  tinga: { ad: 'Tınga' },
+}
+const PAYLASILAN_ALANLAR = [
+  'Ad soyad ve kullanıcı adı',
+  'Doğrulanmış e-posta adresi',
+  'Telefon, unvan ve firma (profilinizde varsa)',
+  'Profil fotoğrafı',
+  'Abonelik planı',
+]
+
+// Kullanıcı onay vermediğinde partnere boş elle dönülür; partner bilinmeyen
+// parametreyi yok sayarsa "giriş yapılmadı" görünür.
+function reddiPartnereBildir(cb) {
+  const u = new URL(cb)
+  u.searchParams.set('qrtim_error', 'access_denied')
+  window.location.href = u.toString()
+}
+
 // Doğrulama uygulaması kurmuş kişide partner belirteci taze iki adımlı
 // doğrulama ister (sunucu 403 { code: "mfa_required" } döner). Böyle bir
 // durumda `adimAtla` ile doğrulatıp BİR kez daha deneriz; yine olmazsa belirteç
@@ -120,6 +148,10 @@ export default function Auth({ initialMode = 'signup' }) {
   const [mode, setMode] = useState(initialMode)
   const [referralCode, setReferralCode] = useState(null)
   const [arkuCallback, setArkuCallback] = useState(null)
+  // Partner onay ekranı: { partnerName, cb, session }
+  const [onay, setOnay] = useState(null)
+  // "Şifremi unuttum": null | 'form' | 'gonderildi'
+  const [sifirlama, setSifirlama] = useState(null)
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
@@ -159,20 +191,57 @@ export default function Auth({ initialMode = 'signup' }) {
       if (!partnerName) return
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
-      sessionStorage.removeItem('partner_callback')
-      const tokenData = await issuePartnerToken(partnerName, session, adimAtla)
-      const redirectUrl = new URL(cb)
-      if (tokenData?.token) {
-        redirectUrl.searchParams.set('qrtim_token', tokenData.token)
-        redirectUrl.searchParams.set('qrtim_email', tokenData.email ?? '')
-        redirectUrl.searchParams.set('qrtim_name', tokenData.name ?? '')
-        redirectUrl.searchParams.set('qrtim_username', tokenData.username ?? '')
-      }
-      window.location.href = redirectUrl.toString()
+      // Belirteç burada ÜRETİLMEZ: önce kişinin onayı (bkz. PARTNER_BILGI).
+      setOnay({ partnerName, cb, session })
     }
     autoLinkIfLoggedIn()
-    // adimAtla sabit kimlikli (useCallback, bağımlılıksız): effect yine bir kez çalışır.
-  }, [adimAtla])
+  }, [])
+
+  // Onaydan sonra: belirteci üret, partnere dön. Oturum TIKLAMA ANINDA
+  // okunur: onay ekranında uzun beklenirse ilk oturumun erişim belirteci
+  // eskimiş olabilir (supabase-js onu arka planda yeniler).
+  const partnereGonder = async () => {
+    if (!onay) return
+    setLoading(true)
+    sessionStorage.removeItem('partner_callback')
+    const { data: { session: guncel } } = await supabase.auth.getSession()
+    const tokenData = guncel ? await issuePartnerToken(onay.partnerName, guncel, adimAtla) : null
+    const redirectUrl = new URL(onay.cb)
+    if (tokenData?.token) {
+      redirectUrl.searchParams.set('qrtim_token', tokenData.token)
+      redirectUrl.searchParams.set('qrtim_email', tokenData.email ?? '')
+      redirectUrl.searchParams.set('qrtim_name', tokenData.name ?? '')
+      redirectUrl.searchParams.set('qrtim_username', tokenData.username ?? '')
+    } else {
+      // Belirteç alınamadı (oturum bitti, doğrulama iptal edildi): partner
+      // sessizce "girişsiz" kalmasın, sebebini bilsin.
+      redirectUrl.searchParams.set('qrtim_error', 'token_unavailable')
+    }
+    window.location.href = redirectUrl.toString()
+  }
+
+  const partneriReddet = () => {
+    if (!onay) return
+    sessionStorage.removeItem('partner_callback')
+    reddiPartnereBildir(onay.cb)
+  }
+
+  const sifirlamaIste = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${SITE_URL}/sifre-yenile`,
+      })
+      // Adresin kayıtlı olup olmadığı SÖYLENMEZ: her durumda aynı mesaj.
+      // Hız sınırı da istisna değil — Supabase yalnızca KAYITLI adres için
+      // "N saniye sonra tekrar deneyin" der; farklı mesaj göstermek iki hızlı
+      // denemeyle hesabın varlığını ele verirdi.
+      setSifirlama('gonderildi')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
   setMode(initialMode)
@@ -244,20 +313,13 @@ export default function Auth({ initialMode = 'signup' }) {
 
         const cb = sessionStorage.getItem('partner_callback')
         if (cb && isSafeCallback(cb)) {
-          sessionStorage.removeItem('partner_callback')
           const partnerName = detectPartnerSource(cb)
           if (partnerName && signInData?.session) {
-            const tokenData = await issuePartnerToken(partnerName, signInData.session, adimAtla)
-            if (tokenData?.token) {
-              const redirectUrl = new URL(cb)
-              redirectUrl.searchParams.set('qrtim_token', tokenData.token)
-              redirectUrl.searchParams.set('qrtim_email', tokenData.email)
-              redirectUrl.searchParams.set('qrtim_name', tokenData.name)
-              redirectUrl.searchParams.set('qrtim_username', tokenData.username ?? '')
-              window.location.href = redirectUrl.toString()
-              return
-            }
+            // Belirteç onay ekranından sonra üretilir.
+            setOnay({ partnerName, cb, session: signInData.session })
+            return
           }
+          sessionStorage.removeItem('partner_callback')
           window.location.href = cb
           return
         }
@@ -279,6 +341,78 @@ export default function Auth({ initialMode = 'signup' }) {
     } else {
       navigate('/login')
     }
+  }
+
+  if (onay) {
+    const partnerAdi = PARTNER_BILGI[onay.partnerName]?.ad ?? onay.partnerName
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+          <h1 className="text-xl font-bold text-gray-900 text-center mb-2">
+            {partnerAdi} QRtım hesabınızla giriş yapmak istiyor
+          </h1>
+          <p className="text-sm text-gray-600 text-center mb-6">
+            <span className="font-semibold">{onay.session.user?.email}</span> olarak giriş yapılacak.
+          </p>
+          <p className="text-sm font-semibold text-gray-700 mb-2">{partnerAdi} şu bilgileri alacak:</p>
+          <ul className="text-sm text-gray-700 space-y-1 mb-6 list-disc pl-5">
+            {PAYLASILAN_ALANLAR.map((a) => <li key={a}>{a}</li>)}
+          </ul>
+          <div className="flex gap-3">
+            <button
+              type="button" onClick={partneriReddet} disabled={loading}
+              className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 disabled:opacity-50"
+            >
+              Vazgeç
+            </button>
+            <button
+              type="button" onClick={partnereGonder} disabled={loading}
+              className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-semibold hover:shadow-lg disabled:opacity-50"
+            >
+              {loading ? 'Yönlendiriliyor...' : 'İzin ver'}
+            </button>
+          </div>
+          <p className="mt-4 text-xs text-gray-500 text-center">
+            Bu isteği siz başlatmadıysanız Vazgeç'e basın.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (sifirlama) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+          <h1 className="text-xl font-bold text-gray-900 text-center mb-6">Şifremi unuttum</h1>
+          {sifirlama === 'gonderildi' ? (
+            <p className="text-sm text-gray-700 text-center">
+              Bu adres kayıtlıysa parola sıfırlama bağlantısı gönderdik. E-postanızı (ve spam klasörünü) kontrol edin.
+            </p>
+          ) : (
+            <form onSubmit={sifirlamaIste} className="space-y-4">
+              <input
+                type="email" required autoComplete="email"
+                value={email} onChange={(e) => setEmail(e.target.value)}
+                placeholder="ornek@email.com"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
+              />
+              <button
+                type="submit" disabled={loading}
+                className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50"
+              >
+                {loading ? 'Gönderiliyor...' : 'Sıfırlama bağlantısı gönder'}
+              </button>
+            </form>
+          )}
+          <div className="mt-6 text-center">
+            <button onClick={() => setSifirlama(null)} className="text-blue-600 hover:underline text-sm font-medium">
+              Giriş ekranına dön
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -354,6 +488,16 @@ export default function Auth({ initialMode = 'signup' }) {
               minLength={mode === 'signup' ? MIN_PASSWORD_LENGTH : undefined}
               autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
             />
+            {mode === 'login' && (
+              <div className="mt-2 text-right">
+                <button
+                  type="button" onClick={() => setSifirlama('form')}
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  Şifremi unuttum
+                </button>
+              </div>
+            )}
           </div>
 
           <button

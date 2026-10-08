@@ -64,7 +64,8 @@ export default function AuthConfirm() {
         }
 
         setStatus('success')
-        setTimeout(() => navigate('/dashboard'), 800)
+        // Parola sıfırlama bağlantısı: panele değil, yeni parola formuna.
+        setTimeout(() => navigate(type === 'recovery' ? '/sifre-yenile' : '/dashboard'), 800)
 
       } catch (err) {
         console.error('Confirm error:', err)
