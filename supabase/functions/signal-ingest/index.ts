@@ -13,6 +13,9 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const MAX_SIGNALS = 200;
+// Tek sinyal gövdesi için üst sınır (denetim D-14). Sinyaller davranış/tercih
+// özetidir; birkaç KB'yi aşan gövde ya hata ya kötüye kullanımdır.
+const MAX_PAYLOAD_BYTES = 4096;
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -31,6 +34,12 @@ function json(body: unknown, status = 200): Response {
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ ok: false, error: "Yalnızca POST" }, 405);
+
+  // Gövde ayrıştırılmadan önce boyut tavanı (denetim D-14): 200 sinyal × 4 KB.
+  const uzunluk = Number(req.headers.get("content-length") ?? "0");
+  if (uzunluk > MAX_SIGNALS * MAX_PAYLOAD_BYTES + 16384) {
+    return json({ ok: false, error: "Gövde çok büyük" }, 413);
+  }
 
   try {
     const body = await req.json().catch(() => ({}));
@@ -84,6 +93,7 @@ Deno.serve(async (req: Request) => {
       const type = typeof s?.type === "string" ? s.type.slice(0, 60) : null;
       if (!type) continue;
       const payload = (s?.payload && typeof s.payload === "object") ? s.payload : {};
+      if (new TextEncoder().encode(JSON.stringify(payload)).length > MAX_PAYLOAD_BYTES) continue;
       rows.push({
         user_id: link.user_id,
         partner: link.partner,

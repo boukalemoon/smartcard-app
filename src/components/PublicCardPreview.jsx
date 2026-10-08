@@ -1,5 +1,6 @@
 import AvatarFlipCard from './AvatarFlipCard'
 import { Linkedin, Facebook, Twitter, Instagram, Youtube, Github, Globe, Twitch, Music, Camera, Send } from 'lucide-react'
+import { guvenliUrl } from '../utils/guvenliUrl'
 
 const PLATFORM_CONFIG = {
   linkedin:  { icon: Linkedin,  color: '#0A66C2', label: 'LinkedIn' },
@@ -101,7 +102,7 @@ export default function PublicCardPreview({ profile, themeColor, socialLinks = [
                   return (
                     <a
                       key={link.id}
-                      href={link.url}
+                      href={guvenliUrl(link.url) ?? undefined}
                       target="_blank"
                       rel="noopener noreferrer"
                       title={config.label}

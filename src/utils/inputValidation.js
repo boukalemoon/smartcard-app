@@ -64,7 +64,10 @@ export const validateCatalogLink = (link) => {
   }
   
   // Tehlikeli protokolleri engelle
-  if (link.url && (link.url.includes('javascript:') || link.url.includes('data:'))) {
+  // Büyük/küçük harf ve boşluk hilelerine karşı normalize edilerek bakılır
+  // ("JaVaScRiPt:", "java\tscript:"). Asıl koruma isValidUrl'deki http/https şartı.
+  const yalin = [...(link.url || '').toLowerCase()].filter((c) => c.charCodeAt(0) > 32).join('')
+  if (/^(javascript|data|vbscript):/.test(yalin)) {
     errors.push('Güvenlik nedeniyle bu URL kullanılamaz');
   }
   

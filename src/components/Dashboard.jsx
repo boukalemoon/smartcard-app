@@ -38,6 +38,7 @@ import { checkProfileUpdateRateLimit } from '../utils/rateLimiting'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import DashboardNav from './DashboardNav'
 import { gecerliBolum } from '../lib/dashboardBolumler'
+import { guvenliUrl } from '../utils/guvenliUrl'
 
 // plan_features'ta 999 "sınırsız" anlamına gelir; kullanıcıya sayı olarak
 // göstermek yerine kelimeyle yazılır.
@@ -644,7 +645,7 @@ export default function Dashboard({ session }) {
                             <div className="flex-1 min-w-0">
                               <p className="font-semibold text-gray-900 dark:text-gray-100 mb-1 truncate">{link.title}</p>
                               <a  
-                                href={link.url}
+                                href={guvenliUrl(link.url) ?? undefined}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-sm text-blue-600 hover:underline block truncate"
@@ -939,7 +940,7 @@ export default function Dashboard({ session }) {
                         <div className="space-y-3">
                           <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                             <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Google Yorum Linki:</p>
-                            <a href={profile.google_review_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm block truncate">{profile.google_review_link}</a>
+                            <a href={guvenliUrl(profile.google_review_link) ?? undefined} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm block truncate">{profile.google_review_link}</a>
                           </div>
                          <button onClick={() => setConfirmDialog({
                             isOpen: true,

@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { Upload, X, Loader } from 'lucide-react'
 
+const IZINLI_TURLER = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+
 export default function ImageUpload({ 
   currentImageUrl, 
   onUploadSuccess, 
@@ -26,8 +28,10 @@ export default function ImageUpload({
       }
 
       // Dosya tipi kontrolü
-      if (!file.type.startsWith('image/')) {
-        alert('Sadece resim dosyaları yüklenebilir!')
+      // SVG kabul edilmez: içinde betik taşıyabilir. Kova da aynı listeyi
+      // uyguluyor (migration 20261008102000); bu kontrol yalnızca erken uyarı.
+      if (!IZINLI_TURLER.includes(file.type)) {
+        alert('Yalnızca JPG, PNG, WebP veya GIF yüklenebilir.')
         return
       }
 
@@ -115,7 +119,7 @@ export default function ImageUpload({
         <div className="relative">
           <input
             type="file"
-            accept="image/*"
+            accept={IZINLI_TURLER.join(',')}
             onChange={uploadImage}
             disabled={uploading}
             className="hidden"

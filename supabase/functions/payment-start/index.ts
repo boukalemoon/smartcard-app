@@ -46,7 +46,9 @@ Deno.serve(async (req: Request) => {
 
   const url = Deno.env.get('SUPABASE_URL')!
   const servis = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null
+  // cf-connecting-ip taklit edilemez; x-forwarded-for'un ilk değeri istemcinin yazdığıdır (son çare).
+  const ip = req.headers.get('cf-connecting-ip')?.trim() ||
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null
   const ua = req.headers.get('user-agent')
 
   const yetki = req.headers.get('authorization')

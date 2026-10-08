@@ -54,7 +54,9 @@ Deno.serve(async (req: Request) => {
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   )
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null
+  // cf-connecting-ip taklit edilemez; x-forwarded-for'un ilk değeri istemcinin yazdığıdır (son çare).
+  const ip = req.headers.get('cf-connecting-ip')?.trim() ||
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null
   const ua = req.headers.get('user-agent')
   const siteUrl = (Deno.env.get('PUBLIC_SITE_URL') ?? 'https://www.qartim.com').replace(/\/+$/, '')
   const tarayiciMi = (req.headers.get('accept') ?? '').includes('text/html')
@@ -66,6 +68,14 @@ Deno.serve(async (req: Request) => {
       p_visibility: 'internal', p_meta: meta, p_actor_kind: 'service',
       p_ip: ip, p_user_agent: ua,
     })
+
+  // Kayıt sınırı: sınırlayıcı hata verirse kaydı yaz (denetim izi kaybolmasın).
+  const kayitIzni = async (anahtar: string) => {
+    const { data, error } = await servis.rpc('check_rate_limit', {
+      p_key: anahtar, p_max: 5, p_window_seconds: 60,
+    })
+    return error ? true : data !== false
+  }
 
   const sonuc = (durum: string, niyetId?: string | null, http = 200) => {
     if (tarayiciMi) {
@@ -91,8 +101,13 @@ Deno.serve(async (req: Request) => {
 
   // 1) KAPALI BAŞARISIZLIK
   if (!hazirMi()) {
-    await log('payment.callback_blocked', 'denied', 'critical',
-      { sebep: 'protokol_dogrulanmadi', parametreler: temizle(param) })
+    // Bu uç kimliksizdir (bankanın oturumu yok). Her isteğe "critical" kayıt
+    // yazmak, denetim kaydını dışarıdan şişirilebilir yapıyordu (denetim D-13).
+    // IP başına dakikada en çok 5 kayıt; fazlası sessizce reddedilir.
+    if (await kayitIzni(`odeme-bildirim:${ip ?? 'bilinmeyen'}`)) {
+      await log('payment.callback_blocked', 'denied', 'critical',
+        { sebep: 'protokol_dogrulanmadi', parametreler: temizle(param) })
+    }
     return sonuc('altyapi_hazir_degil', null, 503)
   }
 
@@ -101,8 +116,10 @@ Deno.serve(async (req: Request) => {
   // 2) İMZA
   const b = await bildirimiDogrula(yap, param)
   if (!b.gecerli || !b.merchantRef) {
-    await log('payment.callback_invalid_signature', 'denied', 'critical',
-      { parametreler: temizle(param) }, b.merchantRef)
+    if (await kayitIzni(`odeme-imza:${ip ?? 'bilinmeyen'}`)) {
+      await log('payment.callback_invalid_signature', 'denied', 'critical',
+        { parametreler: temizle(param) }, b.merchantRef)
+    }
     return sonuc('dogrulanamadi', null, 400)
   }
 

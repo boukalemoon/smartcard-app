@@ -5,6 +5,7 @@ import {
   Github, Globe, Twitch, Music, Camera, Send,
   Plus, Trash2, ExternalLink, Check, X, Crown
 } from 'lucide-react';
+import { guvenliUrl } from '../utils/guvenliUrl';
 
 const SOCIAL_PLATFORMS = [
   { id: 'linkedin', name: 'LinkedIn', icon: Linkedin, placeholder: 'https://linkedin.com/in/username', color: 'bg-blue-600' },
@@ -501,7 +502,7 @@ export default function SocialLinksManager({ profileId }) {
                         )}
                       </p>
                       <a
-                        href={link.url}
+                        href={guvenliUrl(link.url) ?? undefined}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 truncate"
