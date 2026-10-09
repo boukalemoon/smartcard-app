@@ -80,14 +80,19 @@ Dashboard → Edge Functions → **Secrets** (sol menüde Edge Functions altınd
    - `PUBLIC_SITE_URL=https://www.qrtim.com.tr`
    - `ALLOWED_ORIGINS=https://www.qrtim.com.tr,https://qrtim.com.tr`
    - ShieldAuth panelinde QRtım uygulamasının izinli adreslerine de yeni alan adı eklenir.
-3. **Edge Function'lar** — A3'teki ayara göre (kapalı olana `--no-verify-jwt`):
+3. **Edge Function'lar** — paneldeki mevcut JWT ayarı korunarak (09.10.2026'da okundu: `arku-link` açık; `tinga-link`, `signal-ingest`, `payment-callback` kapalı):
    ```powershell
    npx supabase functions deploy shieldauth
-   npx supabase functions deploy arku-link tinga-link
+   npx supabase functions deploy arku-link
+   npx supabase functions deploy tinga-link --no-verify-jwt
    npx supabase functions deploy partner-issue-token
    npx supabase functions deploy payment-callback --no-verify-jwt
-   npx supabase functions deploy payment-start signal-ingest partner-verify-token
+   npx supabase functions deploy signal-ingest --no-verify-jwt
+   npx supabase functions deploy payment-start partner-verify-token
    ```
+   `ilgezdi-qr` 6. adımda; İlgezdi uygulaması bu uca kullanıcı oturumu olmadan (yalnız `apikey` ile) istek attığı için panelde JWT ayarı **kapalı** olmalı — yayından önce kontrol edin, kapalıysa `--no-verify-jwt` ile yayınlayın.
+   Canlı secret'lar (09.10.2026): yalnızca `ARKU_API_KEY` ve `VERCEL_TOKEN` özel; `SHIELDAUTH_*` yok, 2. adımda eklenir.
+
 4. **Vercel ortam değişkeni:** Settings → Environment Variables → `VITE_PUBLIC_URL = https://www.qrtim.com.tr` (Production ve Preview).
 5. **Web — önce önizleme:**
    ```powershell
@@ -102,7 +107,7 @@ Dashboard → Edge Functions → **Secrets** (sol menüde Edge Functions altınd
 6. **Veritabanı, sonra QR fonksiyonu** (A1'in sonucuna göre `db push` ya da SQL Editor):
    ```powershell
    npx supabase db push
-   npx supabase functions deploy ilgezdi-qr
+   npx supabase functions deploy ilgezdi-qr --no-verify-jwt   # panelde kapalıysa
    ```
    Web yayını bitmeden veritabanı güncellenirse TOTP kullanıcıları doğrulama ekranında döngüye girer.
 7. **Eski alan adı:** Vercel → Settings → Domains → `qartim.com` ve `www.qartim.com` → *Redirect to* `www.qrtim.com.tr` (308). `smartcard-app.vercel.app` da aynı yere. Basılı kartlardaki `qartim.com/card/...` ve `/k/...` adresleri yolu korunarak yeni adrese gider. **Eski alan adı süresiz yenilenmeli.**
