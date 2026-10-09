@@ -23,64 +23,31 @@ Testler: `npm run test:sql` — 23 durum, gerçek migration dosyalarıyla bellek
 ## Durum tespiti (09.10.2026)
 
 - **Canlı web sitesi** GitHub `main` dalından otomatik yayınlanıyor; son yayın `aaf50d7` (11.09.2026). Bu dal `main`'in 50'den fazla commit önünde: ShieldAuth, personalar, randevu, özel alan adı ve bu güvenlik paketi dahil.
-- **Edge Function'lar:** canlıda 13 fonksiyon var, `shieldauth` YOK.
-- **Alan adı:** `www.qrtim.com.tr` Vercel projesine bağlı ve doğrulanmış (`qrtim.com.tr` → `www` yönlendiriyor). `qartim.com` hâlâ ayrı çalışıyor.
-- **Veritabanı:** hangi migration'ların uygulandığı bilinmiyor; A adımı bunu ortaya çıkarır.
+- **Edge Function'lar:** canlıda 13 fonksiyon var, `shieldauth` YOK. JWT ayarı: `arku-link` açık; `tinga-link`, `signal-ingest`, `payment-callback` kapalı; `ilgezdi-qr` kontrol edilecek (kapalı olmalı).
+- **Secret'lar:** yalnızca `ARKU_API_KEY` ve `VERCEL_TOKEN` özel; `SHIELDAUTH_*` ve ödeme anahtarları yok (ödeme kapalı kalır).
+- **Alan adı:** `www.qrtim.com.tr` Vercel projesine bağlı ve doğrulanmış. `qartim.com` hâlâ ayrı çalışıyor.
+- **Veritabanı:** personalar, randevu, özel alan adı ve partner planı canlıda; ShieldAuth, IBAN kuralı ve Faz 0 kuralları yok.
+- **Migration geçmişi uyuşmuyor:** depodaki birçok dosya (0510, 0713–0718, 0909–0922 arası) canlıya panelden/başka sürüm numarasıyla uygulanmış. Bu yüzden **`supabase db push` KULLANILMAZ** — eski dosyaları yeniden çalıştırmaya kalkar. Veritabanı değişiklikleri `docs/yayin/` altındaki iki hazır dosyayla SQL Editor'den yapılır.
+- **CLI:** `supabase` komutu PATH'te değil; her komut `npx supabase ...` şeklinde yazılır.
 
-## A. Ön kontrol — hiçbir şeyi değiştirmez
+## B. Yayın — sırayla, her adım bitmeden sonrakine geçmeyin
 
-### A1. Supabase SQL Editor'de çalıştırın, sonucu paylaşın
-```sql
-select
-  to_regclass('public.personas')                  is not null as personas_0917,
-  to_regclass('public.appointments')              is not null as randevu_0921,
-  to_regclass('public.custom_domains')            is not null as ozel_alan_0921,
-  exists (select 1 from pg_proc where proname = 'partner_effective_plan') as partner_plan_0922,
-  to_regclass('public.shieldauth_mfa_assertions') is not null as shieldauth_0929,
-  exists (select 1 from pg_trigger where tgname = 'trg_guard_profile_payment_mfa') as iban_kurali_0929,
-  exists (select 1 from pg_trigger where tgname = 'zz_mfa_kimlik_yazma_trg')      as faz0_1008,
-  to_regclass('supabase_migrations.schema_migrations') is not null as cli_gecmisi_var;
-```
-Son sütun `true` ise ikinci sorgu:
-```sql
-select version, name from supabase_migrations.schema_migrations order by version desc limit 20;
-```
-Not: `supabase migration list` bir SQL komutu değil, PowerShell komutudur; SQL Editor'de çalışmaz.
+**1. Veritabanı paketi 1 (etkisiz altyapı)** — SQL Editor → New query → `docs/yayin/1_shieldauth_altyapi.sql` dosyasının tamamını yapıştır → Run. Hiçbir kural açmaz, yalnız ShieldAuth tablolarını kurar. `shieldauth` fonksiyonu bu tablolara ihtiyaç duyduğu için önce bu çalışır.
 
-### A2. Supabase CLI (PowerShell)
-```powershell
-supabase --version
-```
-- *"supabase is not recognized"* → CLI kurulu değil. Kurmadan her komutun başına `npx` yazın: `npx supabase --version`.
-- Sonra:
-```powershell
-npx supabase login                                   # tarayıcı açılır, onaylayın
-npx supabase link --project-ref kfpnsxoxfrxepxezatsr  # veritabanı şifresini sorar
-npx supabase migration list
-npx supabase secrets list
-```
-Hata alırsanız hata metninin tamamını kopyalayın.
-
-### A3. Fonksiyonların JWT ayarı (Dashboard)
-Edge Functions listesinde **fonksiyonun adına tıklayın** → açılan sayfada **Details** sekmesi → *Enforce JWT Verification*. Şu dördüne bakmak yeter: `arku-link`, `tinga-link`, `signal-ingest`, `payment-callback`. Hangisi açık, hangisi kapalı not edin.
-
-### A4. Secret'lar (CLI çalışmazsa Dashboard'dan)
-Dashboard → Edge Functions → **Secrets** (sol menüde Edge Functions altında). Var olan adları not edin; değerleri paylaşmayın.
-
-## B. Yayın (A'nın sonuçlarına göre birlikte netleştirilecek)
-
-1. **Supabase Auth ayarları** — Authentication → URL Configuration:
+**2. Supabase Auth ayarları** — Authentication → URL Configuration:
    - Site URL: `https://www.qrtim.com.tr`
-   - Redirect URLs: `https://www.qrtim.com.tr/**` (eski `qartim.com` satırları geçiş süresince kalsın)
+   - Redirect URLs: `https://www.qrtim.com.tr/**` ve `https://qrtim.com.tr/**` (eski `qartim.com` satırları geçiş süresince kalsın)
    - Providers → Email: *Secure email change* açık.
    - Email Templates: içinde `qartim.com` geçen şablon varsa `www.qrtim.com.tr` yapın.
-2. **Secret'lar:**
+
+**3. Secret'lar** — Edge Functions → Secrets → Add:
    - `SHIELDAUTH_API_KEY`, `SHIELDAUTH_APP_ID=qartim`, `SHIELDAUTH_BASE_URL`
    - `SHIELDAUTH_ALLOWED_ORIGINS=https://www.qrtim.com.tr,https://qrtim.com.tr`
    - `PUBLIC_SITE_URL=https://www.qrtim.com.tr`
    - `ALLOWED_ORIGINS=https://www.qrtim.com.tr,https://qrtim.com.tr`
    - ShieldAuth panelinde QRtım uygulamasının izinli adreslerine de yeni alan adı eklenir.
-3. **Edge Function'lar** — paneldeki mevcut JWT ayarı korunarak (09.10.2026'da okundu: `arku-link` açık; `tinga-link`, `signal-ingest`, `payment-callback` kapalı):
+
+**4. Edge Function'lar** (PowerShell, `networqr` klasöründe; önce bir kez `npx supabase login` ve `npx supabase link --project-ref kfpnsxoxfrxepxezatsr`). Paneldeki JWT ayarı korunur:
    ```powershell
    npx supabase functions deploy shieldauth
    npx supabase functions deploy arku-link
@@ -88,29 +55,36 @@ Dashboard → Edge Functions → **Secrets** (sol menüde Edge Functions altınd
    npx supabase functions deploy partner-issue-token
    npx supabase functions deploy payment-callback --no-verify-jwt
    npx supabase functions deploy signal-ingest --no-verify-jwt
-   npx supabase functions deploy payment-start partner-verify-token
+   npx supabase functions deploy payment-start
+   npx supabase functions deploy partner-verify-token
    ```
-   `ilgezdi-qr` 6. adımda; İlgezdi uygulaması bu uca kullanıcı oturumu olmadan (yalnız `apikey` ile) istek attığı için panelde JWT ayarı **kapalı** olmalı — yayından önce kontrol edin, kapalıysa `--no-verify-jwt` ile yayınlayın.
-   Canlı secret'lar (09.10.2026): yalnızca `ARKU_API_KEY` ve `VERCEL_TOKEN` özel; `SHIELDAUTH_*` yok, 2. adımda eklenir.
+   `ilgezdi-qr` burada YAYINLANMAZ (yeni sütunlara ihtiyaç duyar) → 7. adım.
 
-4. **Vercel ortam değişkeni:** Settings → Environment Variables → `VITE_PUBLIC_URL = https://www.qrtim.com.tr` (Production ve Preview).
-5. **Web — önce önizleme:**
+**5. Vercel ortam değişkeni:** Settings → Environment Variables → `VITE_PUBLIC_URL = https://www.qrtim.com.tr` (Production ve Preview).
+
+**6. Web — önce önizleme:**
    ```powershell
    git push -u origin guvenlik/denetim-faz0
    ```
-   Vercel bu dal için bir önizleme adresi üretir; giriş, kart, parola sıfırlama orada denenir. Sorun yoksa `main`'e birleştirilir:
+   Vercel bu dal için önizleme adresi üretir; giriş, kart, parola sıfırlama orada denenir. Sorun yoksa `main`'e birleştirilir:
    ```powershell
    git checkout main
    git merge --ff-only guvenlik/denetim-faz0
    git push origin main
    ```
-6. **Veritabanı, sonra QR fonksiyonu** (A1'in sonucuna göre `db push` ya da SQL Editor):
+   Vercel'de yeni yayının **Ready** olmasını bekleyin.
+
+**7. Veritabanı paketi 2 (kuralları açar), sonra QR fonksiyonu:**
+   - SQL Editor → `docs/yayin/2_kurallari_ac.sql` tamamını yapıştır → Run. Tek işlemdir: önkoşul eksikse ya da bir satır hata verirse hiçbir şey uygulanmaz; hata metnini paylaşın.
+   - Ardından:
    ```powershell
-   npx supabase db push
-   npx supabase functions deploy ilgezdi-qr --no-verify-jwt   # panelde kapalıysa
+   npx supabase functions deploy ilgezdi-qr --no-verify-jwt   # panelde JWT kapalıysa
    ```
-   Web yayını bitmeden veritabanı güncellenirse TOTP kullanıcıları doğrulama ekranında döngüye girer.
-7. **Eski alan adı:** Vercel → Settings → Domains → `qartim.com` ve `www.qartim.com` → *Redirect to* `www.qrtim.com.tr` (308). `smartcard-app.vercel.app` da aynı yere. Basılı kartlardaki `qartim.com/card/...` ve `/k/...` adresleri yolu korunarak yeni adrese gider. **Eski alan adı süresiz yenilenmeli.**
+   6. adım bitmeden paket 2 çalışırsa TOTP kullanıcıları doğrulama ekranında döngüye girer.
+
+**8. Eski alan adı:** Vercel → Settings → Domains → `qartim.com` ve `www.qartim.com` → *Redirect to* `www.qrtim.com.tr` (308). Basılı kartlardaki `qartim.com/card/...` ve `/k/...` adresleri yolu korunarak yeni adrese gider. **Eski alan adı süresiz yenilenmeli.**
+
+**İsteğe bağlı — geçmişi düzeltme:** CLI geçmişini dosyalarla eşitlemek isterseniz (ileride `db push` kullanabilmek için) bu ayrı ve dikkat isteyen bir iş; birlikte, canlıdaki her sürüm tek tek karşılaştırılarak `npx supabase migration repair` ile yapılır. Faz 0 yayını için gerekmez.
 
 ## C. Kontroller (yayından sonra, SQL Editor)
 ```sql
