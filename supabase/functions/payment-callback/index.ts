@@ -58,7 +58,7 @@ Deno.serve(async (req: Request) => {
   const ip = req.headers.get('cf-connecting-ip')?.trim() ||
     req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null
   const ua = req.headers.get('user-agent')
-  const siteUrl = (Deno.env.get('PUBLIC_SITE_URL') ?? 'https://www.qartim.com').replace(/\/+$/, '')
+  const siteUrl = (Deno.env.get('PUBLIC_SITE_URL') ?? 'https://www.qrtim.com.tr').replace(/\/+$/, '')
   const tarayiciMi = (req.headers.get('accept') ?? '').includes('text/html')
 
   const log = (action: string, result: string, severity: string, meta: Record<string, unknown>, ref?: string | null) =>

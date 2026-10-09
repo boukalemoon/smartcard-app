@@ -26,7 +26,7 @@ export default function GizlilikPolitikasi() {
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">1. Veri Sorumlusu</h2>
             <p>
               Bu Gizlilik Politikası, <strong>Sognare Organizasyon ve Dan. Hiz. Ltd. Şti.</strong> ("Şirket", "biz") tarafından
-              işletilen <strong>QRtım</strong> platformuna (qartim.com) ilişkindir.
+              işletilen <strong>QRtım</strong> platformuna (qrtim.com.tr) ilişkindir.
             </p>
             <div className="mt-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm space-y-1">
               <p><strong>Şirket Ünvanı:</strong> Sognare Organizasyon ve Dan. Hiz. Ltd. Şti.</p>

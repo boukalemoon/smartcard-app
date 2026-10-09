@@ -268,7 +268,7 @@ export default function NFCCardsPage() {
                         </div>
                       </div>
                       <div className="relative z-10 flex justify-between items-end">
-                        <div className="text-white/50 text-xs">qartim.com/profil</div>
+                        <div className="text-white/50 text-xs">qrtim.com.tr/profil</div>
                         <div className="w-8 h-8 bg-white/90 rounded-md p-1">
                           <div className="w-full h-full grid grid-cols-3 gap-px">
                             {[...Array(9)].map((_, i) => (

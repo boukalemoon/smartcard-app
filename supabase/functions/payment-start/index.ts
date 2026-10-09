@@ -19,7 +19,7 @@ import {
 } from '../_shared/paynkolay.ts'
 
 const IZINLI_KOKENLER = new Set(
-  (Deno.env.get('ALLOWED_ORIGINS') ?? 'https://www.qartim.com,https://qartim.com')
+  (Deno.env.get('ALLOWED_ORIGINS') ?? 'https://www.qrtim.com.tr,https://qrtim.com.tr')
     .split(',').map((s) => s.trim()).filter(Boolean),
 )
 

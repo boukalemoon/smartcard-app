@@ -16,7 +16,7 @@
 // verify_jwt = true (varsayılan) kalmalı. Anonim oturumlar reddedilir.
 //
 // Secret'lar: SHIELDAUTH_API_KEY, SHIELDAUTH_APP_ID, SHIELDAUTH_BASE_URL,
-//             SHIELDAUTH_ALLOWED_ORIGINS (virgülle; ör. https://qartim.com,https://www.qartim.com)
+//             SHIELDAUTH_ALLOWED_ORIGINS (virgülle; ör. https://www.qrtim.com.tr,https://qrtim.com.tr)
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createSupabaseShieldAuth } from "../_shared/shieldauth/supabase.js";

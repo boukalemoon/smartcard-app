@@ -5,7 +5,7 @@ import { useAdimAtlama } from '../hooks/useAdimAtlama'
 /**
  * İlgezdi tarayyıcısı QR girişi onay sayfası.
  *
- * İlgezdi, QR koduna `https://qrtim.com/browser-login?token=<session_token>`
+ * İlgezdi, QR koduna `https://www.qrtim.com.tr/browser-login?token=<session_token>`
  * gömer. Bu sayfa:
  *  1. Kullanıcı giriş yapmamışsa küçük bir giriş formu gösterir,
  *  2. Girişliyse onay ister,

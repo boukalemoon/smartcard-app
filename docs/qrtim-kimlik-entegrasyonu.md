@@ -44,7 +44,7 @@ hesabı açıp sizdeki hesabı devralabilir — şifreyle korunan hesaplar dahil
 ### 3a. Web yönlendirmeli (kullanıcı QRtım'e girişli değilse)
 
 ```
-Uygulama  →  https://www.qartim.com/giris?callback=<uygulama adresi>
+Uygulama  →  https://www.qrtim.com.tr/login?callback=<uygulama adresi>
              (kullanıcı QRtım'de giriş yapar)
 QRtım     →  partner-issue-token  →  tek kullanımlık belirteç
 QRtım     →  <callback>?qrtim_token=<belirteç>

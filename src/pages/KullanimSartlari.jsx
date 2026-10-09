@@ -26,7 +26,7 @@ export default function KullanimSartlari() {
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">1. Taraflar ve Kapsam</h2>
             <p>
               Bu Kullanım Şartları, <strong>Sognare Organizasyon ve Dan. Hiz. Ltd. Şti.</strong> tarafından
-              işletilen <strong>QRtım</strong> platformunu (qartim.com) kullanan bireyler ve kurumlar ile
+              işletilen <strong>QRtım</strong> platformunu (qrtim.com.tr) kullanan bireyler ve kurumlar ile
               Şirket arasındaki ilişkiyi düzenler. Platforma kayıt olarak veya platformu kullanarak bu
               şartları kabul etmiş sayılırsınız.
             </p>

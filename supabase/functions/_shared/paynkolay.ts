@@ -24,7 +24,7 @@
 //   PAYNKOLAY_MERCHANT_KEY   üye iş yeri anahtarı
 //   PAYNKOLAY_SECRET_KEY     imza anahtarı — ASLA istemciye gitmez
 //   PAYNKOLAY_BASE_URL       test veya canlı uç nokta kökü
-//   PUBLIC_SITE_URL          https://www.qartim.com (domain taşınınca güncellenir)
+//   PUBLIC_SITE_URL          https://www.qrtim.com.tr
 
 export const PROTOKOL_DOGRULANDI = false
 

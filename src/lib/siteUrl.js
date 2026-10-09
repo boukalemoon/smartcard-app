@@ -14,16 +14,16 @@
 //   Bu yüzden adres ortam değişkeninden gelir, tarayıcının o anda hangi
 //   adreste olduğundan bağımsızdır.
 //
-// DOMAIN TAŞIMASINDA YAPILACAK:
+// DOMAIN TAŞIMASI (09.10.2026: qartim.com → www.qrtim.com.tr):
 //   1. Vercel'de VITE_PUBLIC_URL = https://www.qrtim.com.tr
-//   2. Aşağıdaki YEDEK_ADRES sabitini de güncelle
+//   2. Aşağıdaki YEDEK_ADRES sabiti güncellendi
 //   3. ESKİ DOMAİNİ KAPATMA. Bugüne kadar basılmış her kart qartim.com diyor;
 //      o adres süresiz yenilenmeli ve yolu koruyarak kalıcı yönlendirilmeli
 //      (qartim.com/card/ahmet → qrtim.com.tr/card/ahmet).
 
 // Ortam değişkeni tanımsız kalırsa üretimde kullanılacak adres.
 // Önizleme adresine düşmektense bilinen üretim adresine düşmek daha güvenli.
-const YEDEK_ADRES = 'https://www.qartim.com'
+const YEDEK_ADRES = 'https://www.qrtim.com.tr'
 
 function normalize(deger) {
   if (!deger) return null
