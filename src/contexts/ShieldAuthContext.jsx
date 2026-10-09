@@ -4,6 +4,7 @@ import Modal from '../components/Modal'
 import { useTheme } from './ThemeContext'
 import { ShieldAuthBaglami } from './shieldauthBaglam'
 import { SHIELDAUTH_ENDPOINT, mfaDurumum, shieldauthBasliklari } from '../lib/shieldauth'
+import { MFA_AKTIF } from '../lib/mfaAyari'
 
 // ADIM ATLAMA (step-up) SAĞLAYICISI
 //
@@ -26,6 +27,8 @@ export function ShieldAuthSaglayici({ children }) {
   }, [])
 
   const adimAtla = useCallback(async ({ sebep = 'Bu işlem', zorla = false } = {}) => {
+    // Doğrulama servisi kapalıyken pencere açılmaz (bkz. lib/mfaAyari.js).
+    if (!MFA_AKTIF) return true
     const durum = await mfaDurumum()
     if (!zorla && durum?.taze_10_dk) return true
     // Doğrulama uygulaması kurmuş kişide e-posta kodu SUNULMAZ: veritabanı onu

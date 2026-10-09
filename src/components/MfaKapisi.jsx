@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { MfaChallenge } from '../vendor/shieldauth-react/index.js'
 import { supabase } from '../lib/supabaseClient'
 import { mfaDurumum } from '../lib/shieldauth'
+import { MFA_AKTIF } from '../lib/mfaAyari'
 
 // GİRİŞ KAPISI — doğrulama uygulaması kurmuş kişi panele girmeden önce
 //
@@ -23,7 +24,12 @@ const YOKLAMA_MS = 60 * 1000
 
 const serbestMi = (d) => !d?.totp_kurulu || d.taze_12_saat
 
+// Doğrulama servisi kapalıyken kapı yok (bkz. lib/mfaAyari.js).
 export default function MfaKapisi({ children }) {
+  return MFA_AKTIF ? <MfaKapisiAcik>{children}</MfaKapisiAcik> : children
+}
+
+function MfaKapisiAcik({ children }) {
   const [durum, setDurum] = useState(undefined)
   // Panel bu oturumda en az bir kez açıldı mı (süre dolunca üstüne pencere).
   const [gecti, setGecti] = useState(false)

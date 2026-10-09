@@ -10,6 +10,7 @@ import { filtreyiAraligaCevir } from '../utils/analyticsHelpers'
 import AnalyticsFilter from './AnalyticsFilter'
 import ReferralDashboard from './ReferralDashboard'
 import GuvenlikKarti from './GuvenlikKarti'
+import { MFA_AKTIF } from '../lib/mfaAyari'
 import { useAdimAtlama } from '../hooks/useAdimAtlama'
 import { odemeBilgisiniYaz } from '../lib/odemeBilgisi'
 import OrganizationManager from './OrganizationManager'
@@ -628,7 +629,7 @@ export default function Dashboard({ session }) {
                 {bolum === 'kimlik' && profile?.user_id && <QrtimIdCard userId={profile.user_id} />}
                 {bolum === 'kartim' && profile && <SocialLinksManager profileId={profile.id} />}
                 {bolum === 'kimlik' && profile && <OrganizationManager profileId={profile.id} />}
-                {bolum === 'hesap' && profile && <GuvenlikKarti />}
+                {bolum === 'hesap' && profile && MFA_AKTIF && <GuvenlikKarti />}
                 {bolum === 'hesap' && profile && <ReferralDashboard profile={profile} />}
               </div>
 
