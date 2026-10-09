@@ -20,113 +20,124 @@ Bu belge, kodu yazılmış ve yerelde doğrulanmış düzeltmelerin **canlıya h
 
 Testler: `npm run test:sql` — 23 durum, gerçek migration dosyalarıyla bellek içi PostgreSQL'de.
 
-## Başlamadan önce bilinmesi gereken
+## Durum tespiti (09.10.2026)
 
-- Bu değişiklikler `guvenlik/denetim-faz0` dalında; dal `feat/shieldauth-mfa`'nın üzerine kurulu. O dal da `main`'in 44 commit önünde ve **ShieldAuth henüz canlıya alınmadı** (bkz. `docs/shieldauth-entegrasyonu.md`). Yani bu yayın ShieldAuth'u da canlıya alır.
-- Canlı veritabanında hangi migration'ların uygulandığını depodan bilemiyoruz. 2. adım bunu gösterir; orada beklenmedik bir liste çıkarsa durun.
-- **verify_jwt:** depoda `supabase/config.toml` yok. `supabase functions deploy` her fonksiyonu JWT zorunlu yayınlar. Panelde (Edge Functions → fonksiyon → Details → *Enforce JWT Verification*) kapalı olanları yayınlarken komuta `--no-verify-jwt` ekleyin. `payment-callback` kesinlikle kapalı olmalı.
+- **Canlı web sitesi** GitHub `main` dalından otomatik yayınlanıyor; son yayın `aaf50d7` (11.09.2026). Bu dal `main`'in 50'den fazla commit önünde: ShieldAuth, personalar, randevu, özel alan adı ve bu güvenlik paketi dahil.
+- **Edge Function'lar:** canlıda 13 fonksiyon var, `shieldauth` YOK.
+- **Alan adı:** `www.qrtim.com.tr` Vercel projesine bağlı ve doğrulanmış (`qrtim.com.tr` → `www` yönlendiriyor). `qartim.com` hâlâ ayrı çalışıyor.
+- **Veritabanı:** hangi migration'ların uygulandığı bilinmiyor; A adımı bunu ortaya çıkarır.
 
-## Adım adım (Windows, PowerShell)
+## A. Ön kontrol — hiçbir şeyi değiştirmez
 
-### 0. Yerel hazırlık
-```powershell
-cd $HOME\Desktop\networqr
-git checkout guvenlik/denetim-faz0
-npm install
-npm run test:sql          # "23 gecti, 0 kaldi" görmelisiniz
-node scripts/kontrol.mjs  # "SONUÇ: geçti"
-```
-
-### 1. Panel ayarları (Supabase Dashboard, tarayıcıdan)
-1. **Authentication → URL Configuration → Redirect URLs:** `https://www.qartim.com/sifre-yenile` ve `https://qartim.com/sifre-yenile` ekleyin.
-2. **Authentication → Providers → Email:** *Secure email change* açık olsun.
-3. ShieldAuth panelinden (Uygulamalar) QRtım uygulamasının API anahtarını alın; 3. adımda lazım.
-
-### 2. Canlıdaki durum
-```powershell
-supabase migration list        # "Remote" sütunu boş olanlar henüz uygulanmamış
-supabase db push --dry-run     # uygulanacak dosyaların listesi; hiçbir şey değiştirmez
-```
-Listede en az şunlar olmalı: `20260929090000`, `20260929091000`, `20261008100000`, `20261008101000`, `20261008102000`, `20261008103000`. Daha eski dosyalar da çıkarsa onlar da uygulanacak demektir; listeyi bana iletin, birlikte bakalım.
-
-### 3. Secret'lar
-```powershell
-supabase secrets list
-# SHIELDAUTH_* yoksa:
-supabase secrets set SHIELDAUTH_API_KEY=sa_... SHIELDAUTH_APP_ID=qartim SHIELDAUTH_BASE_URL=https://<shieldauth-api> SHIELDAUTH_ALLOWED_ORIGINS=https://qartim.com,https://www.qartim.com
-```
-
-### 4. Edge Function'lar (ilgezdi-qr HARİÇ)
-```powershell
-supabase functions deploy shieldauth
-supabase functions deploy arku-link tinga-link       # panelde JWT kapalıysa: --no-verify-jwt
-supabase functions deploy partner-issue-token
-supabase functions deploy payment-callback --no-verify-jwt
-supabase functions deploy payment-start signal-ingest partner-verify-token   # signal-ingest için panele bakın
-```
-`arku-link` ve `tinga-link` önce çıkar: hem yeni (özet) hem eski (düz metin) belirteci kabul ederler. `ilgezdi-qr` en sona kalır çünkü yeni sütunlara yazar (6. adım).
-
-### 5. Web uygulaması
-```powershell
-vercel --prod
-```
-(Her zamanki yönteminiz farklıysa onu kullanın.) Bu sürüm TOTP kullanıcısına e-posta kodu sunmaz ve parola sıfırlama sayfasını içerir.
-
-### 6. Veritabanı, sonra ilgezdi-qr
-```powershell
-supabase db push
-supabase functions deploy ilgezdi-qr
-```
-Migration'lar web uygulamasından ÖNCE uygulanırsa eski panel TOTP kullanıcısına e-posta kodu sunar, veritabanı onu saymaz ve kişi kapıda döngüye girer. Bu yüzden sıra 5 → 6.
-
-### 7. Kontroller (Supabase SQL Editor)
+### A1. Supabase SQL Editor'de çalıştırın, sonucu paylaşın
 ```sql
--- Kapı tetikleyicileri yerinde mi? profiles, personas, social_links, organizations, members (+ varsa diğerleri)
+select
+  to_regclass('public.personas')                  is not null as personas_0917,
+  to_regclass('public.appointments')              is not null as randevu_0921,
+  to_regclass('public.custom_domains')            is not null as ozel_alan_0921,
+  exists (select 1 from pg_proc where proname = 'partner_effective_plan') as partner_plan_0922,
+  to_regclass('public.shieldauth_mfa_assertions') is not null as shieldauth_0929,
+  exists (select 1 from pg_trigger where tgname = 'trg_guard_profile_payment_mfa') as iban_kurali_0929,
+  exists (select 1 from pg_trigger where tgname = 'zz_mfa_kimlik_yazma_trg')      as faz0_1008,
+  to_regclass('supabase_migrations.schema_migrations') is not null as cli_gecmisi_var;
+```
+Son sütun `true` ise ikinci sorgu:
+```sql
+select version, name from supabase_migrations.schema_migrations order by version desc limit 20;
+```
+Not: `supabase migration list` bir SQL komutu değil, PowerShell komutudur; SQL Editor'de çalışmaz.
+
+### A2. Supabase CLI (PowerShell)
+```powershell
+supabase --version
+```
+- *"supabase is not recognized"* → CLI kurulu değil. Kurmadan her komutun başına `npx` yazın: `npx supabase --version`.
+- Sonra:
+```powershell
+npx supabase login                                   # tarayıcı açılır, onaylayın
+npx supabase link --project-ref kfpnsxoxfrxepxezatsr  # veritabanı şifresini sorar
+npx supabase migration list
+npx supabase secrets list
+```
+Hata alırsanız hata metninin tamamını kopyalayın.
+
+### A3. Fonksiyonların JWT ayarı (Dashboard)
+Edge Functions listesinde **fonksiyonun adına tıklayın** → açılan sayfada **Details** sekmesi → *Enforce JWT Verification*. Şu dördüne bakmak yeter: `arku-link`, `tinga-link`, `signal-ingest`, `payment-callback`. Hangisi açık, hangisi kapalı not edin.
+
+### A4. Secret'lar (CLI çalışmazsa Dashboard'dan)
+Dashboard → Edge Functions → **Secrets** (sol menüde Edge Functions altında). Var olan adları not edin; değerleri paylaşmayın.
+
+## B. Yayın (A'nın sonuçlarına göre birlikte netleştirilecek)
+
+1. **Supabase Auth ayarları** — Authentication → URL Configuration:
+   - Site URL: `https://www.qrtim.com.tr`
+   - Redirect URLs: `https://www.qrtim.com.tr/**` (eski `qartim.com` satırları geçiş süresince kalsın)
+   - Providers → Email: *Secure email change* açık.
+   - Email Templates: içinde `qartim.com` geçen şablon varsa `www.qrtim.com.tr` yapın.
+2. **Secret'lar:**
+   - `SHIELDAUTH_API_KEY`, `SHIELDAUTH_APP_ID=qartim`, `SHIELDAUTH_BASE_URL`
+   - `SHIELDAUTH_ALLOWED_ORIGINS=https://www.qrtim.com.tr,https://qrtim.com.tr`
+   - `PUBLIC_SITE_URL=https://www.qrtim.com.tr`
+   - `ALLOWED_ORIGINS=https://www.qrtim.com.tr,https://qrtim.com.tr`
+   - ShieldAuth panelinde QRtım uygulamasının izinli adreslerine de yeni alan adı eklenir.
+3. **Edge Function'lar** — A3'teki ayara göre (kapalı olana `--no-verify-jwt`):
+   ```powershell
+   npx supabase functions deploy shieldauth
+   npx supabase functions deploy arku-link tinga-link
+   npx supabase functions deploy partner-issue-token
+   npx supabase functions deploy payment-callback --no-verify-jwt
+   npx supabase functions deploy payment-start signal-ingest partner-verify-token
+   ```
+4. **Vercel ortam değişkeni:** Settings → Environment Variables → `VITE_PUBLIC_URL = https://www.qrtim.com.tr` (Production ve Preview).
+5. **Web — önce önizleme:**
+   ```powershell
+   git push -u origin guvenlik/denetim-faz0
+   ```
+   Vercel bu dal için bir önizleme adresi üretir; giriş, kart, parola sıfırlama orada denenir. Sorun yoksa `main`'e birleştirilir:
+   ```powershell
+   git checkout main
+   git merge --ff-only guvenlik/denetim-faz0
+   git push origin main
+   ```
+6. **Veritabanı, sonra QR fonksiyonu** (A1'in sonucuna göre `db push` ya da SQL Editor):
+   ```powershell
+   npx supabase db push
+   npx supabase functions deploy ilgezdi-qr
+   ```
+   Web yayını bitmeden veritabanı güncellenirse TOTP kullanıcıları doğrulama ekranında döngüye girer.
+7. **Eski alan adı:** Vercel → Settings → Domains → `qartim.com` ve `www.qartim.com` → *Redirect to* `www.qrtim.com.tr` (308). `smartcard-app.vercel.app` da aynı yere. Basılı kartlardaki `qartim.com/card/...` ve `/k/...` adresleri yolu korunarak yeni adrese gider. **Eski alan adı süresiz yenilenmeli.**
+
+## C. Kontroller (yayından sonra, SQL Editor)
+```sql
 select tgrelid::regclass as tablo from pg_trigger where tgname = 'zz_mfa_kimlik_yazma_trg';
-
--- IBAN kuralı bağlı mı?
 select tgname from pg_trigger where tgname = 'trg_guard_profile_payment_mfa';
-
--- Görsel kovaları sınırlı mı?
 select id, allowed_mime_types, file_size_limit from storage.buckets where id in ('avatars','backgrounds','logos');
-
--- Kurtarma fonksiyonları istemciye kapalı mı? (hepsi false olmalı)
 select proname, has_function_privilege('anon', oid, 'execute') anon, has_function_privilege('authenticated', oid, 'execute') auth
 from pg_proc where proname like 'recovery_%';
 ```
-
-**IP başlığı taklit edilebiliyor mu?** (PowerShell'de `curl.exe`)
+**IP başlığı testi** (PowerShell):
 ```powershell
 curl.exe -X POST https://kfpnsxoxfrxepxezatsr.supabase.co/functions/v1/ilgezdi-qr -H "apikey: <anon anahtarı>" -H "Content-Type: application/json" -H "cf-connecting-ip: 203.0.113.7" -d "{\"action\":\"create\"}"
 ```
 ```sql
 select bucket_key from rate_limit_hits where bucket_key like 'qr-create:%' order by window_start desc limit 5;
 ```
-`qr-create:203.0.113.7` görünüyorsa başlık istemciden geliyor demektir; bana söyleyin, `istemciIp()` geri alınır.
+`qr-create:203.0.113.7` görünürse başlık istemciden geliyor: `istemciIp()` geri alınır.
 
-**Elle deneme:**
-1. Parolasız kullanıcı: giriş ekranında "Şifremi unuttum" → e-posta → bağlantı → yeni parola.
-2. TOTP kurmuş hesap: giriş → panel kapısında yalnızca "doğrulama uygulaması / yedek kod" seçenekleri görünmeli.
-3. Arku girişi: onay ekranı ("Arku Remote QRtım hesabınızla giriş yapmak istiyor") → İzin ver → Arku'da oturum.
-4. İlgezdi QR girişi (eski sürüm): onay ekranında "Cihazın kendi bildirdiği ad" ve ağ bilgisi; giriş çalışmalı.
+**Elle deneme:** şifremi unuttum akışı; TOTP hesabıyla girişte yalnızca uygulama/yedek kod; Arku girişinde onay ekranı; eski İlgezdi ile QR girişi.
 
-### 8. İlgezdi
-`docs/ilgezdi-qr-v2.patch` İlgezdi deposunda uygulanır (`git apply …\networqr\docs\ilgezdi-qr-v2.patch`), yeni sürüm yayınlanır. QR'ın yanında 2 haneli sayı çıkar, telefonda aynı sayı seçilir. Kullanıcıların çoğu güncelledikten sonra:
-```powershell
-supabase secrets set ILGEZDI_QR_STRICT=true
-```
+## D. İlgezdi
+`docs/ilgezdi-qr-v2.patch` İlgezdi deposunda uygulanır (`git apply`): sır + sayı eşleştirme + QR adresi `www.qrtim.com.tr`. Yeni sürüm kullanıcılara ulaştıktan sonra `ILGEZDI_QR_STRICT=true`.
 
-### Acil geri alma
+## Acil geri alma
 ```sql
--- Kimlik yazma kapısı
 do $$ declare t text; begin
   foreach t in array array['profiles','personas','persona_social_links','social_links','profile_fields','custom_domains','organizations','members','appointment_settings']
   loop execute format('drop trigger if exists zz_mfa_kimlik_yazma_trg on public.%I', t); end loop;
 end $$;
--- IBAN kuralı
 drop trigger if exists trg_guard_profile_payment_mfa on public.profile_payment;
 ```
-Edge Function'lar için: önceki commit'e dönüp aynı `supabase functions deploy` komutu.
+Web: Vercel → Deployments → önceki üretim yayını → *Promote to Production*.
 
 ## Canlıda ayrıca bakılacaklar (depodan görülemiyor)
 - Çekirdek tabloların politikaları (denetim raporundaki sorgu).
