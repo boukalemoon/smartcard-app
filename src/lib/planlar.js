@@ -14,11 +14,16 @@
 // Sınırlar sunucudaki public.plan_features tablosundan (my_plan_limits) alındı;
 // sunucu bu sınırları kendisi uygular. Burada yalnız gösterim için yazılır.
 
-// Ayrı sipariş edilen NFC kart bedeli (PaymentModal'daki NFC_PRICE ile aynı).
-export const NFC_KART_FIYATI = 799
+// Ayrı sipariş edilen PVC NFC kart bedeli. PaymentModal ve NFCCardDesigner
+// buradan okur; kendi sabitlerini TUTMAZLAR (eskiden PaymentModal'da ayrı bir
+// NFC_PRICE ve ayrı bir plan fiyat tablosu vardı, ayrışmaya açıktı).
+export const NFC_KART_FIYATI = 249
 
-// Yıllık + kart paketinin, yıllık pakete göre farkı da bu bedeldir
-// (ör. Öğrenci 990 → 1.789). Tutarlar plan_prices ile birebir.
+// Yıllık + kart paketi = yıllık ücret + (pakete dahil kart adedi × kart bedeli).
+// ÖNCEKİ HÂLİ: fark her planda sabit 799 ₺'ydi, yani 1 kart ile 10 kart aynı
+// parayı ediyordu. Artık adede göre ölçekleniyor.
+// Tutarlar plan_prices ile birebir olmalı; biri değişirse diğeri de
+// (supabase/migrations/20261017120000_fiyat_guncellemesi.sql deseniyle).
 export const PLANLAR = [
   {
     anahtar: 'free',
@@ -41,7 +46,7 @@ export const PLANLAR = [
     anahtar: 'student',
     ad: 'Öğrenci',
     alt: '.edu doğrulamalı',
-    fiyat: { aylik: 99, yillik: 990, yillikKartli: 1789 },
+    fiyat: { aylik: 49, yillik: 490, yillikKartli: 739 },
     kartHediyesi: { adet: 1, tur: 'PVC' },
     sinir: { profil: 3, sosyal: null, kurum: 2 },
     dugme: 'Öğrenci planı',
@@ -55,7 +60,7 @@ export const PLANLAR = [
     anahtar: 'professional',
     ad: 'Profesyonel',
     alt: 'Bireysel tam paket',
-    fiyat: { aylik: 249, yillik: 2490, yillikKartli: 3289 },
+    fiyat: { aylik: 159, yillik: 1590, yillikKartli: 1839 },
     kartHediyesi: { adet: 1, tur: 'PVC' },
     sinir: { profil: 5, sosyal: null, kurum: null },
     onerilen: true,
@@ -72,7 +77,7 @@ export const PLANLAR = [
     anahtar: 'stk',
     ad: 'STK Özel',
     alt: 'Dernek, sendika, topluluk',
-    fiyat: { aylik: 449, yillik: 4290, yillikKartli: 5089 },
+    fiyat: { aylik: 279, yillik: 2790, yillikKartli: 4284 },
     kartHediyesi: { adet: 6, tur: 'PVC' },
     sinir: { profil: 10, sosyal: null, kurum: null },
     dugme: 'STK planına geç',
@@ -87,7 +92,7 @@ export const PLANLAR = [
     anahtar: 'business',
     ad: 'Kurumsal',
     alt: 'Şirketler için',
-    fiyat: { aylik: 899, yillik: 8990, yillikKartli: 9789 },
+    fiyat: { aylik: 549, yillik: 5490, yillikKartli: 7980 },
     kartHediyesi: { adet: 10, tur: 'NFC' },
     sinir: { profil: 10, sosyal: null, kurum: null },
     koyu: true,

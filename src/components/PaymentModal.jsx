@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { X, CreditCard, Check } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
+import { planBul } from '../lib/planlar'
 
 import { bildir } from '../lib/bildirim'
 export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal = false, currentSubscription = null, initialPeriod = 'monthly' }) {
@@ -11,43 +12,21 @@ export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal 
 
   if (!isOpen) return null
 
-  // NFC kart fiyatı
-  const NFC_PRICE = 799
-
-  // Plan fiyatları — güncel
-  const planPricing = {
-    student: {
-      name: 'Öğrenci',
-      monthly: 99,
-      yearly: 990,
-      yearlyWithCard: 1789,
-      nfcIncluded: 1
-    },
-    professional: {
-      name: 'Profesyonel',
-      monthly: 249,
-      yearly: 2490,
-      yearlyWithCard: 3289,
-      nfcIncluded: 1
-    },
-    stk: {
-      name: 'STK Özel',
-      monthly: 449,
-      yearly: 4290,
-      yearlyWithCard: 5089,
-      nfcIncluded: 6
-    },
-    business: {
-      name: 'Kurumsal',
-      monthly: 899,
-      yearly: 8990,
-      yearlyWithCard: 9789,
-      nfcIncluded: 10
-    }
+  // ÖNCEKİ HÂLİ: burada ikinci bir tam fiyat tablosu (planPricing) ve ayrı bir
+  // NFC_PRICE sabiti vardı. Fiyat üç yerde yaşıyordu — planlar.js, bu dosya ve
+  // sunucudaki plan_prices — biri güncellenip diğeri atlandığında kişi ekranda
+  // bir tutar görüp başka tutar ödüyordu. Artık fiyat tek kaynaktan okunur;
+  // ödeme tutarını yine sunucu belirler (payment_create_intent → plan_prices)
+  // ve aşağıdaki karşılaştırma ikisi ayrışırsa kişiye sorar.
+  const plan = planBul(selectedPlan)
+  if (!plan) return null
+  const currentPlan = {
+    name: plan.ad,
+    monthly: plan.fiyat.aylik,
+    yearly: plan.fiyat.yillik,
+    yearlyWithCard: plan.fiyat.yillikKartli,
+    nfcIncluded: plan.kartHediyesi?.adet ?? 0,
   }
-
-  const currentPlan = planPricing[selectedPlan]
-  if (!currentPlan) return null
 
   const hasOrderedNFCBefore = currentSubscription?.nfc_cards_used > 0
   const showNFCOption = !isRenewal || !hasOrderedNFCBefore
