@@ -1,4 +1,4 @@
-import { IdCard, Share2, BadgeCheck, Inbox, BarChart3, User, Handshake } from 'lucide-react'
+import { LayoutGrid, IdCard, Share2, BadgeCheck, Inbox, BarChart3, User, Handshake } from 'lucide-react'
 
 // PANEL BÖLÜMLERİ
 //
@@ -20,6 +20,7 @@ import { IdCard, Share2, BadgeCheck, Inbox, BarChart3, User, Handshake } from 'l
 // yenileme (fast refresh) bozulur ve geliştirirken sayfa tam yeniden yüklenir.
 
 export const BOLUMLER = [
+  { anahtar: 'genel',    ad: 'Genel bakış', simge: LayoutGrid },
   { anahtar: 'kartim',   ad: 'Kartım',   simge: IdCard },
   { anahtar: 'paylasim', ad: 'Paylaşım', simge: Share2 },
   { anahtar: 'kimlik',   ad: 'Kimlik',   simge: BadgeCheck },
@@ -29,7 +30,7 @@ export const BOLUMLER = [
   { anahtar: 'hesap',    ad: 'Hesap',    simge: User },
 ]
 
-export const VARSAYILAN_BOLUM = 'kartim'
+export const VARSAYILAN_BOLUM = 'genel'
 
 // Adresten gelen değere güvenmiyoruz: tanımadığımız bir bölüm adı gelirse
 // boş ekran yerine varsayılana düşer.

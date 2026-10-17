@@ -1,53 +1,36 @@
 import { useToast } from '../components/Toast'
-import Modal, { ConfirmModal } from './Modal'
+import { ConfirmModal } from './Modal'
 import BankAccountModal from './BankAccountModal'
 import BillingInfoModal from './BillingInfoModal'
 import ServiceModal from './ServiceModal'
 import CatalogLinkModal from './CatalogLinkModal'
-import ImageUpload from './ImageUpload'
-import PublicCardPreview from './PublicCardPreview'
-import { filtreyiAraligaCevir } from '../utils/analyticsHelpers'
-import AnalyticsFilter from './AnalyticsFilter'
-import ReferralDashboard from './ReferralDashboard'
-import GuvenlikKarti from './GuvenlikKarti'
-import { MFA_AKTIF } from '../lib/mfaAyari'
 import { useAdimAtlama } from '../hooks/useAdimAtlama'
 import { odemeBilgisiniYaz } from '../lib/odemeBilgisi'
-import OrganizationManager from './OrganizationManager'
-import CorporateDashboard from './CorporateDashboard'
 import { useState, useEffect, useCallback } from 'react'
 import PaymentModal from './PaymentModal'
 import { supabase } from '../lib/supabaseClient'
 import { useSubscription } from '../hooks/useSubscription'
 import { useDashboardMode } from '../contexts/DashboardModeContext'
-import ThemeToggle from './ThemeToggle'
-import DashboardModeToggle from './DashboardModeToggle'
-import NFCWriter from './NFCWriter'
-import SocialLinksManager from './SocialLinksManager'
-import UsernameEditor from './UsernameEditor'
-import QrtimIdCard from './QrtimIdCard'
-import PersonaManager from './PersonaManager'
-import CardContacts from './CardContacts'
-import VerificationManager from './VerificationManager'
-import CustomDomainManager from './CustomDomainManager'
-import AppointmentManager from './AppointmentManager'
-import LinkPerformance from './LinkPerformance'
-import PersonaShare from './PersonaShare'
-import ActivityLog from './ActivityLog'
 import { validateProfile } from '../utils/inputValidation'
 import { checkProfileUpdateRateLimit } from '../utils/rateLimiting'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import DashboardNav from './DashboardNav'
 import { gecerliBolum } from '../lib/dashboardBolumler'
-import { guvenliUrl } from '../utils/guvenliUrl'
 
-import { Check, Pencil, Trash2, LogOut, ShieldCheck } from 'lucide-react'
-
-// plan_features'ta 999 "sınırsız" anlamına gelir; kullanıcıya sayı olarak
-// göstermek yerine kelimeyle yazılır.
-function sinirYazi(deger) {
-  return deger >= 999 ? 'Sınırsız' : String(deger)
-}
+import { LogOut, ShieldCheck, User as UserIcon } from 'lucide-react'
+import PanelKabugu from '../panel/PanelKabugu'
+import { bireyselMenu } from '../panel/menuler'
+import { cardUrl } from '../lib/siteUrl'
+import PlanKarti from '../panel/bireysel/PlanKarti'
+import DavetBandi from '../panel/bireysel/DavetBandi'
+import GenelBakis from '../panel/bireysel/GenelBakis'
+import Kartim from '../panel/bireysel/Kartim'
+import Paylasim from '../panel/bireysel/Paylasim'
+import Kimlik from '../panel/bireysel/Kimlik'
+import Gelenler from '../panel/bireysel/Gelenler'
+import Olcum from '../panel/bireysel/Olcum'
+import Partner from '../panel/bireysel/Partner'
+import Hesap from '../panel/bireysel/Hesap'
+import KurumPaneli from '../panel/kurumsal/KurumPaneli'
 
 export default function Dashboard({ session }) {
   const navigate = useNavigate()
@@ -59,15 +42,10 @@ export default function Dashboard({ session }) {
     setAramaParam({ bolum: yeni }, { replace: true })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
-  // Her bölümün yan sütunu yok. İki sütunlu ızgarayı koşulsuz bırakmak,
-  // yan sütunu olmayan bölümlerde ekranın üçte birini boş bırakıyordu.
-  // Sınıf adları tam metin: Tailwind çalışma anında birleştirilen adı görmez.
-  const sagSutunVar = ['kartim', 'paylasim', 'hesap'].includes(bolum)
   const { showToast } = useToast()
   const { adimAtla } = useAdimAtlama()
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState(false)
   const [themeColor, setThemeColor] = useState('#3B82F6')
   const [showPayment, setShowPayment] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState(null)
@@ -85,6 +63,8 @@ export default function Dashboard({ session }) {
   // Kuruma üyelik artık kişinin onayıyla başlıyor.
   const [davetler, setDavetler] = useState([])
   const [davetIsleniyor, setDavetIsleniyor] = useState(null)
+  // Menüdeki "Gelenler" sayacı: onay bekleyen randevular.
+  const [gelenSayisi, setGelenSayisi] = useState(0)
   const [socialLinks, setSocialLinks] = useState([])
   const [name, setName] = useState('')
   const [title, setTitle] = useState('')
@@ -106,8 +86,8 @@ export default function Dashboard({ session }) {
     variant: 'primary'
   })
 
-  const { isCorporate, ensureAllowed } = useDashboardMode()
-  const { subscription, loading: subLoading, getLimits } = useSubscription(profile?.id)
+  const { isCorporate, ensureAllowed, setIndividual, setCorporate } = useDashboardMode()
+  const { subscription, loading: subLoading } = useSubscription(profile?.id)
 
   useEffect(() => { loadProfile() }, [])
   useEffect(() => {
@@ -118,6 +98,9 @@ export default function Dashboard({ session }) {
       loadOrganizationCount()
       planSinirlariniYukle()
       davetleriYukle()
+      supabase.rpc('my_appointments').then(({ data }) => {
+        setGelenSayisi((Array.isArray(data) ? data : []).filter((r) => r.durum === 'bekliyor').length)
+      })
     }
   }, [profile?.id])
   // Kurumsal panel yetkisi: bir organizasyona bağlı olmak (ya da platform
@@ -233,68 +216,6 @@ export default function Dashboard({ session }) {
     finally { setOrgSayisiGeldi(true) }
   }
 
-  const saveProfile = async () => {
-    try {
-      setLoading(true)
-
-      // Session geçerliliğini doğrula — email onayı sonrası race condition'ı önler
-      const { data: sessionData } = await supabase.auth.getSession()
-      const currentSession = sessionData?.session
-      if (!currentSession?.user) {
-        showToast('Oturum süresi dolmuş, sayfayı yenileyin', 'error')
-        return
-      }
-      const userId = currentSession.user.id
-
-      const rateCheck = checkProfileUpdateRateLimit(userId)
-      if (!rateCheck.allowed) {
-        showToast(rateCheck.message, 'warning')
-        return
-      }
-      const validation = validateProfile({ name, title, company, phone, bio })
-      if (!validation.valid) {
-        showToast('Hata: ' + Object.values(validation.errors).join(', '), 'error')
-        return
-      }
-
-      if (profile) {
-        // .select() ŞART: satır sayısı kontrol edilmezse, erişim kuralı
-        // güncellemeyi engellediğinde `error` boş döner, 0 satır güncellenir
-        // ve kullanıcıya yine "Profil kaydedildi" gösterilirdi. Görüntülenme
-        // sayacında aynı sessiz hata aylarca fark edilmeden kalmıştı.
-        const { data, error } = await supabase
-          .from('profiles')
-          .update({ ...validation.sanitized, updated_at: new Date().toISOString() })
-          .eq('user_id', userId)
-          .select('id')
-        if (error) throw error
-        if (!data || data.length === 0) {
-          showToast('Profil kaydedilemedi — oturumunuzu yenileyip tekrar deneyin.', 'error')
-          return
-        }
-      } else {
-        // Trigger'ın oluşturmadığı durum — id'yi açıkça set et (RLS uyumluluğu).
-        // Profil zaten varsa birincil anahtar çakışması yerine güncelle:
-        // kullanıcılar "kaydedilemiyor" hatasını tam olarak bu yüzden alıyordu.
-        const { error } = await supabase.from('profiles').upsert({
-          id: userId,
-          user_id: userId,
-          email: currentSession.user.email,
-          ...validation.sanitized
-        }, { onConflict: 'id' })
-        if (error) throw error
-      }
-
-      showToast('Profil kaydedildi', 'success')
-      setEditing(false)
-      loadProfile()
-    } catch (error) {
-      showToast('Hata: ' + error.message, 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const updateAvatar = async (avatarUrl) => {
     try {
       await profilAlaniKaydet({ avatar_url: avatarUrl })
@@ -305,789 +226,98 @@ export default function Dashboard({ session }) {
     }
   }
 
-  if (loading) {
+
+  // Temel bilgileri (ad, unvan, şirket, telefon, hakkımda) değerleriyle kaydet.
+  // Kartım düzenleyicisi kendi formunu tutar; doğrulama ve hız sınırı burada.
+  const temelBilgileriKaydet = async (degerler) => {
+    const { data: sessionData } = await supabase.auth.getSession()
+    const userId = sessionData?.session?.user?.id
+    if (!userId) throw new Error('Oturum süresi dolmuş, sayfayı yenileyin')
+    const rateCheck = checkProfileUpdateRateLimit(userId)
+    if (!rateCheck.allowed) throw new Error(rateCheck.message)
+    const validation = validateProfile(degerler)
+    if (!validation.valid) throw new Error(Object.values(validation.errors).join(', '))
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ ...validation.sanitized, updated_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .select('id')
+    if (error) throw error
+    if (!data || data.length === 0) throw new Error('Profil kaydedilemedi — oturumunuzu yenileyip tekrar deneyin.')
+    setProfile((prev) => ({ ...prev, ...validation.sanitized }))
+    setName(validation.sanitized.name ?? name); setTitle(validation.sanitized.title ?? title)
+    setCompany(validation.sanitized.company ?? company); setPhone(validation.sanitized.phone ?? phone); setBio(validation.sanitized.bio ?? bio)
+    return true
+  }
+
+  const odemeyiAc = (plan = 'professional', billingCycle = 'yearly') => {
+    setSelectedPlan({ plan, billingCycle })
+    setShowPayment(true)
+  }
+
+  if (!profile && loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="flex items-center justify-center min-h-screen bg-zemin">
+        <div className="w-12 h-12 border-[3px] border-aksan border-t-transparent rounded-full animate-spin" aria-label="Yükleniyor"></div>
       </div>
     )
   }
 
-  const limits = getLimits()
+  // Sayfalara giden ortak veri ve işlemler. Her sayfa yalnızca ihtiyacını alır.
+  const ctx = {
+    session, profile, setProfile, subscription, subLoading, planBilgisi, planSinirlariniYukle,
+    analytics, analizAralik, setAnalizAralik, socialLinks, setSocialLinks, loadProfile,
+    profilAlaniKaydet, temelBilgileriKaydet, updateAvatar, themeColor, setThemeColor,
+    showToast, adimAtla, odemeyiAc, bolumDegistir, isAdmin, orgCount,
+    davetler, daveteYanitVer, davetIsleniyor,
+    bankaDuzenle: (account = null, index = null) => setBankModal({ isOpen: true, account, index }),
+    faturaDuzenle: () => setBillingModal({ isOpen: true }),
+    hizmetDuzenle: (service = null, index = null) => setServiceModal({ isOpen: true, service, index }),
+    belgeDuzenle: (link = null, index = null) => setCatalogModal({ isOpen: true, link, index }),
+    onayIste: (secenek) => setConfirmDialog({ isOpen: true, variant: 'danger', ...secenek }),
+  }
+
+  const SAYFALAR = {
+    genel: GenelBakis, kartim: Kartim, paylasim: Paylasim, kimlik: Kimlik,
+    gelenler: Gelenler, olcum: Olcum, partner: Partner, hesap: Hesap,
+  }
+  const Sayfa = SAYFALAR[bolum] || GenelBakis
+  const kurumsalAcik = orgCount > 0 || isAdmin
+  const cikis = async () => { await supabase.auth.signOut(); navigate('/') }
+  const hesapMenusu = [
+    { ad: 'Hesap ve güvenlik', ikon: UserIcon, onClick: () => bolumDegistir('hesap') },
+    isAdmin && { ad: 'Yönetici paneli', ikon: ShieldCheck, onClick: () => navigate('/admin') },
+    { ad: 'Çıkış yap', ikon: LogOut, onClick: cikis, tehlike: true },
+  ]
+  const kullanici = { ad: profile?.name || session.user.email, avatar: profile?.avatar_url, eposta: session.user.email }
+
   return (
     <>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-200 dark:border-gray-800 sticky top-0 z-10">
-          <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between">
-              <button type="button" onClick={() => navigate('/')} aria-label="QRtım ana sayfa" className="shrink-0 rounded-md dark:bg-white dark:px-2 dark:py-1"><img src="/qrtim-logo.png" alt="QRtım" className="h-9 sm:h-11 w-auto" /></button>
-              <div className="flex items-center gap-2 sm:gap-3">
-                <DashboardModeToggle hasOrganizations={orgCount > 0} profile={profile} />
-                <ThemeToggle />
-                <button onClick={async () => { await supabase.auth.signOut(); navigate('/') }} aria-label="Çıkış yap" className="inline-flex items-center gap-2 h-10 px-3 sm:px-4 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 rounded-lg font-semibold text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"><LogOut size={16} aria-hidden="true" /><span className="hidden sm:inline">Çıkış</span></button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-          {subscription && (
-            <div className="mb-6 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h3 className="font-bold text-lacivert-900 dark:text-white">{limits?.name || subscription.plan} {isCorporate && '- Kurumsal Mod'}</h3>
-                  {/* Sayılar plan_features'tan gelir (my_plan_limits); daha önce
-                      abonelik satırındaki kolonlar gösteriliyordu ve sunucunun
-                      uyguladığı kuralla çelişiyordu. */}
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    {planBilgisi ? (
-                      <>
-                        Profiller: {planBilgisi.kullanim.profil}/{sinirYazi(planBilgisi.sinir.profil)}
-                        {' • '}Organizasyon: {planBilgisi.kullanim.organizasyon}/{sinirYazi(planBilgisi.sinir.organizasyon)}
-                        {' • '}Sosyal medya: {planBilgisi.kullanim.sosyal_medya}/{sinirYazi(planBilgisi.sinir.sosyal_medya)}
-                      </>
-                    ) : 'Plan bilgileri yükleniyor…'}
-                  </p>
-                </div>
-                {subscription.plan === 'free' && (
-                  <button onClick={() => { setSelectedPlan({ plan: 'professional', billingCycle: 'yearly' }); setShowPayment(true) }} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm">Planı Yükselt</button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {isAdmin && (
-            <div className="mb-6 p-4 bg-lacivert-900 dark:bg-lacivert-950 border border-lacivert-800 rounded-xl text-white">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <ShieldCheck size={22} className="text-blue-300 shrink-0" aria-hidden="true" />
-                  <div>
-                    <h3 className="text-base font-bold">Platform yöneticisi</h3>
-                    <p className="text-sm text-lacivert-200">Kullanıcıları, abonelikleri ve ödemeleri yönetin</p>
-                  </div>
-                </div>
-                <button onClick={() => window.location.href = '/admin'} className="px-4 py-2 bg-white text-lacivert-900 rounded-lg font-semibold text-sm hover:bg-lacivert-50 transition-colors">Yönetici paneli →</button>
-              </div>
-            </div>
-          )}
-
-          {davetler.length > 0 && (
-            <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-800 rounded-xl">
-              <h3 className="text-lg font-bold text-amber-900 dark:text-amber-100 mb-1">
-                Organizasyon daveti{davetler.length > 1 ? ` (${davetler.length})` : ''}
-              </h3>
-              <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
-                Kabul ederseniz üyeliğiniz başlar ve kart hareketleriniz (görüntülenme,
-                QR, tıklama) o organizasyonun yöneticisine görünür. Reddederseniz hiçbir
-                veriniz paylaşılmaz.
-              </p>
-              <div className="space-y-2">
-                {davetler.map((d) => (
-                  <div key={d.member_id} className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-gray-800 rounded-lg p-3">
-                    <div>
-                      <div className="font-semibold text-gray-900 dark:text-gray-100">{d.organization_name}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {d.invited_by_name ? `${d.invited_by_name} davet etti` : 'Davet edildiniz'}
-                        {d.invited_at && ` · ${new Date(d.invited_at).toLocaleDateString('tr-TR')}`}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => daveteYanitVer(d, false)}
-                        disabled={davetIsleniyor === d.member_id}
-                        className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-                      >
-                        Reddet
-                      </button>
-                      <button
-                        onClick={() => daveteYanitVer(d, true)}
-                        disabled={davetIsleniyor === d.member_id}
-                        className="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 disabled:opacity-50"
-                      >
-                        {davetIsleniyor === d.member_id ? 'İşleniyor…' : 'Kabul Et'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {isCorporate ? (
-            <CorporateDashboard profile={profile} />
-          ) : (
-            <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-8">
-            <DashboardNav aktif={bolum} onChange={bolumDegistir} />
-            <div className={sagSutunVar ? 'grid xl:grid-cols-3 gap-6 min-w-0' : 'space-y-6 min-w-0'}>
-              <div className={sagSutunVar ? 'xl:col-span-2 space-y-6 min-w-0' : 'space-y-6 min-w-0'}>
-                {bolum === 'kartim' && (
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Profil Bilgileri</h2>
-                    {!editing ? (
-                      <button onClick={() => setEditing(true)} className="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-all">Düzenle</button>
-                    ) : (
-                      <div className="flex gap-2">
-                        <button onClick={saveProfile} disabled={loading} className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all disabled:opacity-50">Kaydet</button>
-                        <button onClick={() => { setEditing(false); loadProfile() }} className="px-4 py-2 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-all">İptal</button>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-4">
-                    {/* Profil Fotoğrafı */}
-                    <div className="flex flex-col items-center pb-4 border-b border-gray-200 dark:border-gray-700">
-                      <ImageUpload currentImageUrl={profile?.avatar_url} onUploadSuccess={updateAvatar} bucket="avatars" label="Profil Fotoğrafı" maxSize={2} />
-                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">Önerilen: 400×400px (kare) — Maks 2MB — JPG/PNG</p>
-                    </div>
-
-                    {/* Tema Rengi */}
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Tema Rengi</label>
-                       {themeColor !== profile?.theme_color && (
-                          <button onClick={async () => {
-                            try {
-                              await profilAlaniKaydet({ theme_color: themeColor })
-                              setProfile(prev => ({ ...prev, theme_color: themeColor }))
-                              showToast('Tema rengi kaydedildi', 'success')
-                            } catch (error) {
-                              showToast('Hata: ' + error.message, 'error')
-                            }
-                          }} className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-all animate-pulse">Kaydet</button>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-3 justify-center">
-                        {['#3B82F6', '#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#EF4444'].map(color => (
-                          <button key={color} onClick={() => setThemeColor(color)}
-                            className={`w-10 h-10 rounded-full border-2 transition-all hover:scale-110 ${themeColor === color ? 'border-gray-900 dark:border-white ring-2 ring-offset-2 ring-gray-900 dark:ring-white' : 'border-gray-300'}`}
-                            style={{ backgroundColor: color }} />
-                        ))}
-                      </div>
-                      <div className="flex items-center justify-center gap-3">
-                        <label className="text-sm text-gray-600 dark:text-gray-400">Özel Renk:</label>
-                        <input type="color" value={themeColor} onChange={(e) => setThemeColor(e.target.value)} className="w-16 h-10 rounded cursor-pointer border-2 border-gray-300" />
-                        <span className="text-sm font-mono text-gray-600 dark:text-gray-400">{themeColor}</span>
-                      </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center">{themeColor !== profile?.theme_color ? 'Değişiklikler kaydedilmedi!' : 'Kaydedildi'}</p>
-                    </div>
-
-                    {/* Önizleme */}
-                    <PublicCardPreview profile={profile} themeColor={themeColor} socialLinks={socialLinks} />
-
-                    {/* Arka Plan */}
-                    <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Arka Plan Resmi</label>
-                        {profile?.background_image_url && (
-                          <button onClick={() => setConfirmDialog({
-                            isOpen: true,
-                            title: 'Arka Plan Resmini Kaldır',
-                            message: 'Arka plan resmini kaldırmak istediğinize emin misiniz?',
-                            variant: 'danger',
-                            confirmText: 'Evet, Kaldır',
-                            onConfirm: async () => {
-                              try {
-                                await profilAlaniKaydet({ background_image_url: null })
-                                setProfile(prev => ({ ...prev, background_image_url: null }))
-                                showToast('Arka plan resmi kaldırıldı', 'success')
-                              } catch (error) {
-                                showToast('Hata: ' + error.message, 'error')
-                              }
-                            }
-                          })} className="px-3 py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-xs font-semibold hover:bg-red-100 transition-colors">Resmi Kaldır</button>
-                        )}
-                      </div>
-                      {profile?.background_image_url && (
-                        <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-                          <img src={profile.background_image_url} alt="Arka plan" className="w-full h-24 object-cover" />
-                        </div>
-                      )}
-                      <ImageUpload currentImageUrl={profile?.background_image_url}
-                        onUploadSuccess={async (url) => {
-                          try {
-                            await profilAlaniKaydet({ background_image_url: url })
-                            setProfile(prev => ({ ...prev, background_image_url: url }))
-                            showToast('Arka plan resmi güncellendi', 'success')
-                          } catch (error) {
-                            showToast('Hata: ' + error.message, 'error')
-                          }
-                        }}
-                        bucket="backgrounds" label="Arka Plan" maxSize={5} />
-                    </div>
-
-                    {/* Ad Soyad */}
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Ad Soyad</label>
-                      {editing ? <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none" placeholder="Ahmet Yılmaz" />
-                        : <p className="text-gray-900 dark:text-gray-100 font-medium">{name || '-'}</p>}
-                    </div>
-
-                    {/* Ünvan */}
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Ünvan</label>
-                      {editing ? <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none" placeholder="Yazılım Geliştirici" />
-                        : <p className="text-gray-900 dark:text-gray-100 font-medium">{title || '-'}</p>}
-                    </div>
-
-                    {/* Şirket */}
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Şirket</label>
-                      {editing ? <input type="text" value={company} onChange={(e) => setCompany(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none" placeholder="Tech Startup" />
-                        : <p className="text-gray-900 dark:text-gray-100 font-medium">{company || '-'}</p>}
-                    </div>
-
-                    {/* Telefon */}
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Telefon</label>
-                      {editing ? <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none" placeholder="+90 555 123 4567 veya +1 555 123 4567" />
-                        : <p className="text-gray-900 dark:text-gray-100 font-medium">{phone || '-'}</p>}
-                    </div>
-
-                    {/* Email — görünürlük artık "Profillerim" bölümünden
-                        yönetiliyor. Eski buradaki anahtar yalnızca React
-                        render'ında çalışıyordu; veri yine de gönderiliyordu. */}
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Email</label>
-                      <p className="text-gray-900 dark:text-gray-100 font-medium">{session.user.email}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Kartınızda görünüp görünmeyeceğini aşağıdaki <strong>Profillerim</strong> bölümünden, her profil için ayrı ayrı belirleyebilirsiniz.
-                      </p>
-                    </div>
-
-                    {/* Hakkımda */}
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Hakkımda</label>
-                      {editing ? (
-                        <textarea
-                          value={bio}
-                          onChange={(e) => setBio(e.target.value)}
-                          rows={4}
-                          autoComplete="off"
-                          autoCorrect="off"
-                          autoCapitalize="off"
-                          spellCheck="false"
-                          className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none"
-                          placeholder="Kendinizden bahsedin..."
-                        />
-                      ) : <p className="text-gray-900 dark:text-gray-100">{bio || '-'}</p>}
-                    </div>
-                  </div>
-                </div>
-
-                )}
-
-                {bolum === 'olcum' && (<>
-                {/* İstatistikler */}
-                <AnalyticsFilter
-                  isPremium
-                  onFilterChange={(filter) => setAnalizAralik(filtreyiAraligaCevir(filter))}
-                />
-                <div className="grid md:grid-cols-4 gap-4">
-                  {/* Tüm zamanlar sorulduğunda kartın GERÇEK sayacı gösterilir.
-                      Ayrıntılı olay kaydı sayaçtan sonra başladığı için olayları
-                      saymak daha küçük bir sayı verir; profil listesindeki sayı
-                      ile panelin farklı konuşmaması gerekiyor. Fark varsa ne
-                      kadarının ayrıntılı ölçüldüğünü açıkça yazıyoruz. */}
-                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-blue-500">
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">
-                      Görüntülenme {analizAralik.from ? '(seçili dönem)' : '(tüm zamanlar)'}
-                    </div>
-                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                      {analizAralik.from
-                        ? (analytics?.toplam_goruntulenme || 0)
-                        : Math.max(analytics?.omur_boyu_goruntulenme || 0, analytics?.toplam_goruntulenme || 0)}
-                    </div>
-                    {!analizAralik.from && (analytics?.omur_boyu_goruntulenme || 0) > (analytics?.toplam_goruntulenme || 0) && (
-                      <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                        {analytics.toplam_goruntulenme} tanesi ayrıntılı ölçülüyor; öncesi yalnızca sayaçta
-                      </div>
-                    )}
-                  </div>
-                  {/* QR ve NFC ayrımı, koda ve karta yazılan adresteki kaynak
-                      işaretinden gelir. Bu işaretten ÖNCE basılmış kartlarda
-                      işaret yok; onları "ölçülmedi" diye göstermek, sıfır
-                      göstermekten dürüst. */}
-                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-green-500">
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">QR / NFC ile Gelen</div>
-                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{(analytics?.qr || 0) + (analytics?.nfc || 0)}</div>
-                    {(analytics?.qr || 0) + (analytics?.nfc || 0) === 0 && (analytics?.kaynaksiz || 0) > 0 && (
-                      <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                        {analytics.kaynaksiz} görüntülenmenin kaynağı ölçülmemiş (eski kartlar)
-                      </div>
-                    )}
-                  </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-purple-500">
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Rehbere Kaydetme</div>
-                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{analytics?.rehbere_kaydetme || 0}</div>
-                  </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border-l-4 border-yellow-500">
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Bağlantı Tıklama</div>
-                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{analytics?.baglanti_tiklama || 0}</div>
-                  </div>
-                </div>
-
-                {profile?.id && <LinkPerformance aralik={analizAralik} />}
-                {profile && <ActivityLog />}
-                </>)}
-                {bolum === 'kartim' && profile?.id && <UsernameEditor currentUsername={profile.username} profileId={profile.id} onUpdate={(newUsername) => setProfile({ ...profile, username: newUsername })} />}
-                {bolum === 'kartim' && profile?.id && <PersonaManager username={profile.username} />}
-                {bolum === 'kimlik' && profile?.id && <VerificationManager />}
-                {bolum === 'paylasim' && profile?.id && <CustomDomainManager />}
-                {bolum === 'gelenler' && profile?.id && <AppointmentManager />}
-                {bolum === 'gelenler' && profile?.id && <CardContacts />}
-                {bolum === 'kimlik' && profile?.user_id && <QrtimIdCard userId={profile.user_id} />}
-                {bolum === 'kartim' && profile && <SocialLinksManager profileId={profile.id} />}
-                {bolum === 'kimlik' && profile && <OrganizationManager profileId={profile.id} />}
-                {bolum === 'hesap' && profile && MFA_AKTIF && <GuvenlikKarti />}
-                {bolum === 'partner' && profile && <ReferralDashboard profile={profile} />}
-              </div>
-
-              <div className="space-y-6">
-                {profile?.username && (
-                  <>
-                    {bolum === 'kartim' && (<>
-                    {/* Katalog */}
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Katalog & Dokümanlar</h3>
-                      <div className="space-y-3 mb-4">
-                        {(profile.catalog_links || []).map((link, index) => (
-                          <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-gray-900 dark:text-gray-100 mb-1 truncate">{link.title}</p>
-                              <a  
-                                href={guvenliUrl(link.url) ?? undefined}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm text-blue-600 hover:underline block truncate"
-                              >
-                                {link.url}
-                              </a>
-                            </div>
-                            <div className="flex gap-1 shrink-0">
-                              <button
-                                onClick={() => setCatalogModal({ isOpen: true, link, index })}
-                                className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                                title="Düzenle"
-                              >
-                                <Pencil size={16} aria-hidden="true" />
-                              </button>
-                              <button
-                                onClick={() => setConfirmDialog({
-                                  isOpen: true,
-                                  title: 'Linki Sil',
-                                  message: `"${link.title}" linkini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`,
-                                  variant: 'danger',
-                                  onConfirm: async () => {
-                                    const newLinks = profile.catalog_links.filter((_, i) => i !== index)
-                                    try {
-
-                                      await profilAlaniKaydet({ catalog_links: newLinks })
-
-                                    } catch (e) {
-
-                                      showToast('Hata: ' + e.message, 'error')
-
-                                      return
-
-                                    }
-                                    setProfile(prev => ({ ...prev, catalog_links: newLinks }))
-                                    showToast('Link silindi', 'success')
-                                  }
-                                })}
-                                className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                title="Sil"
-                              >
-                                <Trash2 size={16} aria-hidden="true" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <button
-                        onClick={() => setCatalogModal({ isOpen: true, link: null, index: null })}
-                        className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
-                      >
-                        + Doküman Ekle
-                      </button>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Google Drive, Dropbox veya kendi web sitenizden link ekleyin</p>
-                    </div>
-
-                    {/* Banka Hesapları */}
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Banka Hesapları</h3>
-                      <label className="flex items-center gap-2 mb-4 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
-                        <input type="checkbox" checked={profile.show_bank_accounts ?? false} onChange={async (e) => {
-                          const v = e.target.checked
-                          const { error } = await supabase.from('profile_payment').upsert({ profile_id: profile.id, show_bank_accounts: v, updated_at: new Date().toISOString() }, { onConflict: 'profile_id' })
-                          if (error) { showToast('Hata: ' + error.message, 'error'); return }
-                          setProfile(prev => ({ ...prev, show_bank_accounts: v }))
-                        }} className="w-4 h-4 rounded" />
-                        Kartvizitimde herkese göster
-                      </label>
-                      <div className="space-y-3 mb-4">
-                        {(profile.bank_accounts || []).map((account, index) => (
-                          <div key={index} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{account.bank_name}</p>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{account.account_holder}</p>
-                                <p className="text-xs font-mono text-gray-700 dark:text-gray-300 mt-1 break-all">{account.iban}</p>
-                              </div>
-                              <div className="flex gap-1 shrink-0">
-                                <button
-                                  onClick={() => setBankModal({ isOpen: true, account, index })}
-                                  className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                                  title="Düzenle"
-                                >
-                                  <Pencil size={16} aria-hidden="true" />
-                                </button>
-                                <button
-                                  onClick={() => setConfirmDialog({
-                                    isOpen: true,
-                                    title: 'Banka Hesabını Sil',
-                                    message: `"${account.bank_name}" hesabını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`,
-                                    variant: 'danger',
-                                    onConfirm: async () => {
-                                      const newAccounts = profile.bank_accounts.filter((_, i) => i !== index)
-                                      const { error, iptal } = await odemeBilgisiniYaz(adimAtla,
-                                        { profile_id: profile.id, bank_accounts: newAccounts, updated_at: new Date().toISOString() })
-                                      if (iptal) return
-                                      if (error) {
-                                        showToast('Hata: ' + error.message, 'error')
-                                        return
-                                      }
-                                      setProfile(prev => ({ ...prev, bank_accounts: newAccounts }))
-                                      showToast('Banka hesabı silindi', 'success')
-                                    }
-                                  })}
-                                  className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                  title="Sil"
-                                >
-                                  <Trash2 size={16} aria-hidden="true" />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <button
-                        onClick={() => setBankModal({ isOpen: true, account: null, index: null })}
-                        className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
-                      >
-                        + Banka Hesabı Ekle
-                      </button>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">IBAN'larınız kartvizitinizde görünür ve tek tık ile kopyalanabilir.</p>
-                    </div>
-
-                    {/* Fatura Bilgileri */}
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Fatura Bilgileri</h3>
-                      <label className="flex items-center gap-2 mb-4 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
-                        <input type="checkbox" checked={profile.show_billing_info ?? false} onChange={async (e) => {
-                          const v = e.target.checked
-                          const { error } = await supabase.from('profile_payment').upsert({ profile_id: profile.id, show_billing_info: v, updated_at: new Date().toISOString() }, { onConflict: 'profile_id' })
-                          if (error) { showToast('Hata: ' + error.message, 'error'); return }
-                          setProfile(prev => ({ ...prev, show_billing_info: v }))
-                        }} className="w-4 h-4 rounded" />
-                        Kartvizitimde herkese göster
-                      </label>
-
-                      {profile.billing_info ? (
-                        <div className="space-y-3">
-                          <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg space-y-2">
-                            <div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {profile.billing_info.is_individual ? 'Ad Soyad:' : 'Şirket Ünvanı:'}
-                              </p>
-                              <p className="font-semibold text-gray-900 dark:text-gray-100">{profile.billing_info.company_title}</p>
-                            </div>
-
-                            {profile.billing_info.tax_office && (
-                              <div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Vergi Dairesi:</p>
-                                <p className="text-sm text-gray-900 dark:text-gray-100">{profile.billing_info.tax_office}</p>
-                              </div>
-                            )}
-
-                            {profile.billing_info.tax_number && (
-                              <div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  {profile.billing_info.is_individual ? 'TC Kimlik No:' : 'Vergi No:'}
-                                </p>
-                                <p className="text-sm font-mono text-gray-900 dark:text-gray-100">{profile.billing_info.tax_number}</p>
-                              </div>
-                            )}
-
-                            {profile.billing_info.address && (
-                              <div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Adres:</p>
-                                <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{profile.billing_info.address}</p>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => setBillingModal({ isOpen: true })}
-                              className="flex-1 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
-                            >
-                              Düzenle
-                            </button>
-
-                            <button
-                              onClick={() => setConfirmDialog({
-                                isOpen: true,
-                                title: 'Fatura Bilgilerini Sil',
-                                message: 'Fatura bilgilerinizi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
-                                variant: 'danger',
-                                onConfirm: async () => {
-                                  const { error, iptal } = await odemeBilgisiniYaz(adimAtla,
-                                    { profile_id: profile.id, billing_info: null, updated_at: new Date().toISOString() })
-                                  if (iptal) return
-                                  if (error) {
-                                    showToast('Hata: ' + error.message, 'error')
-                                    return
-                                  }
-                                  setProfile(prev => ({ ...prev, billing_info: null }))
-                                  showToast('Fatura bilgileri silindi', 'success')
-                                }
-                              })}
-                              className="px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-                            >
-                              Sil
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Fatura/e-Fatura için müşterilerinizin ihtiyaç duyacağı bilgileri ekleyin.
-                          </p>
-
-                          <button
-                            onClick={() => setBillingModal({ isOpen: true })}
-                            className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
-                          >
-                            + Fatura Bilgileri Ekle
-                          </button>
-
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            Bu bilgiler kartvizitinizde görünür ve müşterileriniz tek tık ile kopyalayabilir.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Hizmetler */}
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Hizmetlerim</h3>
-                      <div className="space-y-3 mb-4">
-                        {(profile.services || []).map((service, index) => (
-                          <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <div className="flex items-start justify-between mb-2 gap-2">
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{service.title}</h4>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{service.description}</p>
-                              </div>
-                              <div className="flex gap-1 shrink-0">
-                                <button
-                                  onClick={() => setServiceModal({ isOpen: true, service, index })}
-                                  className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                                  title="Düzenle"
-                                >
-                                  <Pencil size={16} aria-hidden="true" />
-                                </button>
-                                <button
-                                  onClick={() => setConfirmDialog({
-                                    isOpen: true,
-                                    title: 'Hizmeti Sil',
-                                    message: `"${service.title}" hizmetini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`,
-                                    variant: 'danger',
-                                    onConfirm: async () => {
-                                      const newServices = profile.services.filter((_, i) => i !== index)
-                                      try {
-
-                                        await profilAlaniKaydet({ services: newServices })
-
-                                      } catch (e) {
-
-                                        showToast('Hata: ' + e.message, 'error')
-
-                                        return
-
-                                      }
-                                      setProfile(prev => ({ ...prev, services: newServices }))
-                                      showToast('Hizmet silindi', 'success')
-                                    }
-                                  })}
-                                  className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                  title="Sil"
-                                >
-                                  <Trash2 size={16} aria-hidden="true" />
-                                </button>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-4 text-sm">
-                              <span className="font-bold text-blue-600 dark:text-blue-400">₺{service.price}</span>
-                              {service.delivery_time && <span className="text-gray-500 dark:text-gray-400">{service.delivery_time}</span>}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <button
-                        onClick={() => setServiceModal({ isOpen: true, service: null, index: null })}
-                        className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm"
-                      >
-                        + Hizmet Ekle
-                      </button>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Freelance hizmetlerinizi ekleyin ve profilinizde sergileyin</p>
-                    </div>
-
-                    {/* Google Yorumlar */}
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Google Yorumlar</h3>
-                      {profile.google_review_link ? (
-                        <div className="space-y-3">
-                          <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Google Yorum Linki:</p>
-                            <a href={guvenliUrl(profile.google_review_link) ?? undefined} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm block truncate">{profile.google_review_link}</a>
-                          </div>
-                         <button onClick={() => setConfirmDialog({
-                            isOpen: true,
-                            title: 'Google Yorum Linkini Kaldır',
-                            message: 'Google yorum linkini kaldırmak istediğinize emin misiniz?',
-                            variant: 'danger',
-                            confirmText: 'Evet, Kaldır',
-                            onConfirm: async () => {
-                              try {
-
-                                await profilAlaniKaydet({ google_review_link: null, google_place_id: null })
-
-                              } catch (e) {
-
-                                showToast('Hata: ' + e.message, 'error')
-
-                                return
-
-                              }
-                              setProfile(prev => ({ ...prev, google_review_link: null, google_place_id: null }))
-                              showToast('Google yorum linki kaldırıldı', 'success')
-                            }
-                          })} className="w-full py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm font-semibold hover:bg-red-100 transition-colors">Linki Kaldır</button>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Profilinize Google İşletme yorumlarınızı ekleyin</p>
-                          <button onClick={() => {
-                            const link = prompt('Google İşletme yorum sayfası linkini yapıştırın:')
-                            if (!link) return
-                            profilAlaniKaydet({ google_review_link: link })
-                              .then(() => {
-                                setProfile(prev => ({ ...prev, google_review_link: link }))
-                                showToast('Google yorum linki eklendi', 'success')
-                              })
-                              .catch((e) => showToast('Hata: ' + e.message, 'error'))
-                          }} className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm">+ Google Yorum Linki Ekle</button>
-                          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
-                            <p className="text-xs text-blue-800 dark:text-blue-200"><strong>Nasıl bulunur?</strong><br />1. Google'da işletmenizi arayın<br />2. "Yorum yaz" butonuna tıklayın<br />3. Açılan sayfanın linkini kopyalayın</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    </>)}
-
-                    {bolum === 'paylasim' && (<>
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">QR Kod Özelleştirme</h3>
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">QR Kod Rengi</label>
-                          <div className="flex items-center gap-3">
-                            <input type="color" value={profile.qr_foreground_color || '#000000'} onChange={async (e) => { const color = e.target.value; try { await profilAlaniKaydet({ qr_foreground_color: color }); setProfile(prev => ({ ...prev, qr_foreground_color: color })) } catch (error) { console.error(error) } }} className="w-16 h-10 rounded cursor-pointer border-2 border-gray-300" />
-                            <span className="text-sm font-mono text-gray-600 dark:text-gray-400">{profile.qr_foreground_color || '#000000'}</span>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">QR Arka Plan Rengi</label>
-                          <div className="flex items-center gap-3">
-                            <input type="color" value={profile.qr_background_color || '#FFFFFF'} onChange={async (e) => { const color = e.target.value; try { await profilAlaniKaydet({ qr_background_color: color }); setProfile(prev => ({ ...prev, qr_background_color: color })) } catch (error) { console.error(error) } }} className="w-16 h-10 rounded cursor-pointer border-2 border-gray-300" />
-                            <span className="text-sm font-mono text-gray-600 dark:text-gray-400">{profile.qr_background_color || '#FFFFFF'}</span>
-                          </div>
-                        </div>
-                        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" checked={profile.qr_logo_enabled || false} onChange={async (e) => { const enabled = e.target.checked; try { await profilAlaniKaydet({ qr_logo_enabled: enabled }); setProfile(prev => ({ ...prev, qr_logo_enabled: enabled })) } catch (error) { console.error(error) } }} className="w-5 h-5 rounded border-gray-300" />
-                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">QR Kod ortasına profil fotoğrafı ekle</span>
-                          </label>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-8">{subscription?.plan === 'free' ? 'QR kodun ortasında profil fotoğrafınız görünür' : 'Profil fotoğrafınız QR kodun ortasında gösterilecek'}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <PersonaShare profile={profile} fallbackName={session.user.email} />
-                    <NFCWriter username={profile.username} cardCode={profile.card_code} />
-
-                    {subscription?.plan === 'free' ? (
-                      <div className="bg-purple-500 rounded-2xl shadow-lg p-6 text-white">
-                        <h2 className="text-xl font-semibold mb-2">NFC Kart</h2>
-                        <p className="text-purple-100 text-sm mb-4">Yıllık profesyonel abonelikte NFC kart pakete dahil</p>
-                        <button onClick={() => { setSelectedPlan({ plan: 'professional', billingCycle: 'yearly' }); setShowPayment(true) }} className="w-full py-3 bg-white text-purple-600 rounded-xl font-semibold hover:shadow-xl transition-all">Planı Yükselt</button>
-                      </div>
-                    ) : (
-                      <div className="bg-purple-500 rounded-2xl shadow-lg p-6 text-white">
-                        <h2 className="text-xl font-semibold mb-2">NFC Kartınız</h2>
-                        <p className="text-purple-100 text-sm mb-4">Dijital kartvizitinizi fiziksel karta dönüştürün</p>
-                        <button onClick={() => window.location.href = '/nfc-designer'} className="w-full py-3 bg-white text-purple-600 rounded-xl font-semibold hover:shadow-xl transition-all">Kart Tasarla</button>
-                      </div>
-                    )}
-                    </>)}
-                  </>
-                )}
-
-                {!profile?.username && (
-                  <div className="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-200 dark:border-yellow-800 rounded-2xl p-6">
-                    <h3 className="text-lg font-bold text-yellow-900 dark:text-yellow-300 mb-2">Kullanıcı adı gerekli</h3>
-                    <p className="text-sm text-yellow-800 dark:text-yellow-400">QR kod ve NFC özelliklerini kullanmak için bir kullanıcı adı belirlemeniz gerekiyor.</p>
-                  </div>
-                )}
-
-                {bolum === 'hesap' && (
-                <div className="bg-blue-500 rounded-2xl shadow-lg p-6 text-white">
-                  <h3 className="text-xl font-bold mb-2">Abonelik</h3>
-                  {subLoading ? <p className="text-blue-100 text-sm">Yükleniyor...</p> : (
-                    <>
-                      <p className="text-blue-100 text-sm mb-1 font-semibold">
-                        {subscription?.plan === 'professional' ? 'Profesyonel Plan' : subscription?.plan === 'stk' ? 'STK Özel Plan' : subscription?.plan === 'business' ? 'Kurumsal Plan' : '🆓 Başlangıç Planı'}
-                      </p>
-                      <div className="space-y-2 text-sm mt-3">
-                        <div className="flex items-center gap-2"><Check size={14} aria-hidden="true" className="shrink-0" /><span>{sinirYazi(planBilgisi?.sinir?.profil ?? 2)} profil</span></div>
-                        <div className="flex items-center gap-2"><Check size={14} aria-hidden="true" className="shrink-0" /><span>{sinirYazi(planBilgisi?.sinir?.organizasyon ?? 2)} organizasyon</span></div>
-                        <div className="flex items-center gap-2"><Check size={14} aria-hidden="true" className="shrink-0" /><span>{sinirYazi(planBilgisi?.sinir?.sosyal_medya ?? 3)} sosyal medya</span></div>
-                        {(planBilgisi?.sinir?.nfc_yillik ?? 0) > 0 && (
-                          <div className="flex items-center gap-2"><Check size={14} aria-hidden="true" className="shrink-0" /><span>Yıllık abonelikte {planBilgisi.sinir.nfc_yillik} NFC kart</span></div>
-                        )}
-                      </div>
-                      {planBilgisi?.expires_at && (
-                        <p className="text-xs text-blue-100 mt-3">
-                          Yenileme tarihi: {new Date(planBilgisi.expires_at).toLocaleDateString('tr-TR')}
-                        </p>
-                      )}
-                      {(!subscription || subscription.plan === 'free') && (
-                        <button onClick={() => { setSelectedPlan({ plan: 'professional', billingCycle: 'yearly' }); setShowPayment(true) }} className="w-full mt-4 py-3 bg-white text-blue-600 rounded-xl font-semibold hover:shadow-lg transition-all">Planı Yükselt</button>
-                      )}
-                    </>
-                  )}
-                </div>
-                )}
-              </div>
-            </div>
-            </div>
-          )}
-        </div>
-      </div>
-
+      {isCorporate ? (
+        <KurumPaneli
+          profile={profile}
+          session={session}
+          kullanici={kullanici}
+          hesapMenusu={hesapMenusu}
+          onModDegistir={(m) => (m === 'bireysel' ? setIndividual() : setCorporate())}
+        />
+      ) : (
+        <PanelKabugu
+          menu={bireyselMenu({ gelenSayisi })}
+          aktif={bolum}
+          onSec={bolumDegistir}
+          mod="bireysel"
+          kurumsalAcik={kurumsalAcik}
+          onModDegistir={(m) => (m === 'kurumsal' ? setCorporate() : setIndividual())}
+          kartUrl={profile?.username ? cardUrl(profile.username) : null}
+          kullanici={kullanici}
+          hesapMenusu={hesapMenusu}
+          altSlot={<PlanKarti ctx={ctx} />}
+        >
+          <DavetBandi ctx={ctx} />
+          <Sayfa ctx={ctx} />
+        </PanelKabugu>
+      )}
       {/* PaymentModal isOpen/selectedPlan bekliyor; panel plan/billingCycle
           gönderdiği için pencere hiç açılmıyordu — yükseltme düğmelerinin
           üçü de sessizce hiçbir şey yapmıyordu. */}
@@ -1186,7 +416,7 @@ export default function Dashboard({ session }) {
         title={confirmDialog.title}
         message={confirmDialog.message}
         variant={confirmDialog.variant}
-        confirmText="Evet, Sil"
+        confirmText={confirmDialog.confirmText || "Evet, sil"}
         cancelText="İptal"
         onConfirm={() => confirmDialog.onConfirm?.()}
       />
