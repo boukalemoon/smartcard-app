@@ -1,6 +1,16 @@
 {
-  "regions": ["fra1"],
+  "regions": [
+    "fra1"
+  ],
   "rewrites": [
+    {
+      "source": "/nfc-cards",
+      "destination": "/nfc-cards.html"
+    },
+    {
+      "source": "/iletisim",
+      "destination": "/iletisim.html"
+    },
     {
       "source": "/((?!api/).*)",
       "destination": "/index.html"

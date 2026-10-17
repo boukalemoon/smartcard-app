@@ -46,13 +46,21 @@ function kaldi(mesaj) {
 baslik('Derleme')
 try {
   if (existsSync('dist')) rmSync('dist', { recursive: true, force: true })
-  const cikti = execSync('npx vite build', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+  // ÖN-DERLEME DE BURADA: pazarlama sayfalarının HTML'i derleme anında
+  // üretiliyor. Yalnız `vite build` çalıştırsaydık ön-derlemeyi bozan bir
+  // değişiklik kapıdan geçer, canlıda boş HTML olarak ortaya çıkardı.
+  const cikti = execSync('npx vite build && node scripts/on-derle.mjs',
+    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
   if (!cikti.includes('built in')) {
     kaldi('derleme bitti ama beklenen başarı işareti yok')
   } else if (!existsSync('dist')) {
     kaldi('derleme başarı dedi ama dist oluşmadı')
+  } else if (!cikti.includes('sayfa ön-derlendi')) {
+    kaldi('ön-derleme beklenen işareti vermedi')
+  } else if (!existsSync('dist/nfc-cards.html')) {
+    kaldi('ön-derleme başarı dedi ama sayfa dosyası oluşmadı')
   } else {
-    gecti('derleme temiz ve dist üretildi')
+    gecti('derleme temiz, dist ve ön-derlenmiş sayfalar üretildi')
   }
 } catch (e) {
   const metin = `${e.stdout ?? ''}${e.stderr ?? ''}`

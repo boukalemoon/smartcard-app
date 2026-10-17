@@ -13,11 +13,20 @@ import react from '@vitejs/plugin-react'
 // yalnız JavaScript çalıştıran tarayıcıya görünür. Statik basınca içerik
 // HTML'in kendisinde durur.
 function aramaMotoruVerisi() {
+  // Sunucu (--ssr) derlemesinde çalışmaz: o derlemenin index.html'i yok ve
+  // sitemap/llms.txt'i istemci derlemesi üretir. Çift üretim dist-ssr'a
+  // çöp dosya bırakırdı.
+  let ssr = false
   return {
     name: 'qrtim-seo',
 
+    configResolved(config) {
+      ssr = !!config.build?.ssr
+    },
+
     // index.html'in <head>'ine yapısal veri (SSS + kuruluş/site).
     async transformIndexHtml() {
+      if (ssr) return []
       const { faqJsonLd } = await import('./src/site/acilis/sorularVerisi.js')
       const { kurulusJsonLd } = await import('./src/lib/sayfaMeta.js')
       return [
@@ -33,6 +42,7 @@ function aramaMotoruVerisi() {
     // üretiyoruz; elle yazılsaydı ilk fiyat değişikliğinde yanlış bilgi
     // veren bir dosya olurdu — yanlış fiyat, yanlış alıntı demek.
     async generateBundle() {
+      if (ssr) return
       const { siteHaritasi, SAYFALAR, KANONIK_ADRES } = await import('./src/lib/sayfaMeta.js')
       const { PLANLAR, KART_FIYATLARI } = await import('./src/lib/planlar.js')
       const { soruGruplari } = await import('./src/site/acilis/sorularVerisi.js')

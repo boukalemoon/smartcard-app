@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/on-derle.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "test:sql": "node supabase/tests/mfa_kapisi.test.mjs"

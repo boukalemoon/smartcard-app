@@ -38,6 +38,18 @@ export default defineConfig([
     },
   },
   {
+    // entry-prerender.jsx tarayıcı paketine HİÇ girmiyor: yalnız derleme
+    // anında Node'da çalışıp pazarlama sayfalarının HTML'ini üretiyor
+    // (scripts/on-derle.mjs). Fast refresh tarayıcıdaki sıcak değiştirme
+    // özelliği; burada böyle bir şey yok, bu yüzden "yalnız bileşen dışa
+    // aktar" kuralı bu dosya için anlamsız — render() ve YOLLAR'ı dışa
+    // aktarması gerekiyor.
+    files: ['src/entry-prerender.jsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
     // ICS üretimi kontrol karakterlerini BİLEREK hedefliyor: takvim
     // standardı bunları yasaklıyor ve temizlenmezlerse yalın CR sahte
     // takvim satırı enjekte etmeye yarıyor. Kuralın uyarmak istediği
