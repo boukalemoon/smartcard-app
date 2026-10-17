@@ -80,14 +80,17 @@ function PaylasDugmesi({ adres, baslik, hedef, acikBant }) {
   )
 }
 
-// Ready Player Me 3D avatarı varsa avatara dokununca görünüm değişir
-// (eski AvatarFlipCard davranışı).
+// Profil fotoğrafı; yoksa adın baş harfi.
+//
+// Eskiden burada Ready Player Me 3B avatarı vardı (avatara dokununca dönen
+// kart). Avatarı OLUŞTURAN arayüz tasarım geçişinde silindiği için kimse yeni
+// avatar ekleyemiyor, mevcut olanı da kaldıramıyordu; üstelik görsel
+// models.readyplayer.me'den çekildiği için kartı açan her ziyaretçi üçüncü
+// tarafa istek atıyordu. Okuma yolu da kaldırıldı.
+// profiles.avatar_3d_url kolonu SİLİNMEDİ: kendi avatar altyapımızı
+// kurduğumuzda eldeki veri kullanılabilir.
 function Avatar({ profile, kare }) {
-  const [ucBoyut, setUcBoyut] = useState(false)
-  const foto = safeUrl(profile.avatar_url)
-  const rpmId = typeof profile.avatar_3d_url === 'string' ? profile.avatar_3d_url.split('/').pop().replace('.glb', '').replace(/[^A-Za-z0-9_-]/g, '') : ''
-  const ucBoyutAdres = rpmId ? `https://models.readyplayer.me/${rpmId}.png?scene=fullbody-portrait-v1` : null
-  const gorsel = ucBoyut && ucBoyutAdres ? ucBoyutAdres : foto
+  const gorsel = safeUrl(profile.avatar_url)
   const ad = profile.name || ''
 
   const kutu = kare
@@ -96,22 +99,15 @@ function Avatar({ profile, kare }) {
   const icerik = gorsel
     ? <img src={gorsel} alt="" className="w-full h-full object-cover" />
     : <span aria-hidden="true">{basHarf(ad)}</span>
-  const ortak = birlestir('relative shrink-0 overflow-hidden inline-flex items-center justify-center font-baslik font-extrabold', kutu)
 
-  if (!ucBoyutAdres) {
-    return <span role="img" aria-label={`${ad} profil fotoğrafı`} className={ortak}>{icerik}</span>
-  }
   return (
-    <button
-      type="button"
-      aria-pressed={ucBoyut}
-      aria-label={ucBoyut ? `${ad} profil fotoğrafını göster` : `${ad} 3D avatarını göster`}
-      onClick={() => setUcBoyut((v) => !v)}
-      className={birlestir(ortak, 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white')}
+    <span
+      role="img"
+      aria-label={`${ad} profil fotoğrafı`}
+      className={birlestir('relative shrink-0 overflow-hidden inline-flex items-center justify-center font-baslik font-extrabold', kutu)}
     >
       {icerik}
-      <span className="absolute bottom-1 right-1 rounded-full bg-lacivert-950/80 text-white text-[10px] font-bold px-1.5 py-0.5 font-sans">{ucBoyut ? 'Foto' : '3D'}</span>
-    </button>
+    </span>
   )
 }
 
