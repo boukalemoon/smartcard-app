@@ -1,0 +1,21 @@
+# QRtım — tarayıcı yönergeleri
+#
+# Panel, giriş ve ödeme rotaları dizine girmemeli: arama sonucundan oraya
+# gelen biri boş ekran görür. Herkese açık kartlar (/card/, /k/) BİLEREK
+# serbest bırakıldı — kişinin kartının bulunabilir olması ürünün amacı.
+
+User-agent: *
+Allow: /
+
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /login
+Disallow: /signup
+Disallow: /browser-login
+Disallow: /sifre-yenile
+Disallow: /auth/
+Disallow: /odeme/
+Disallow: /nfc-designer
+Disallow: /org/
+
+Sitemap: https://www.qrtim.com.tr/sitemap.xml

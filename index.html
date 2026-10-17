@@ -5,7 +5,28 @@
     <link rel="icon" type="image/png" href="/qrtim-logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>QRtım — Dijital Kimlik ve Kartvizit Platformu</title>
-    <meta name="description" content="QRtım ile dijital kimliğinizi oluşturun: kartvizitinizi QR kod ve NFC kartla paylaşın, ne paylaştığınızı siz seçin." />
+    <meta name="description" content="Dijital kartvizitinizi QR kod ve NFC kartla paylaşın. Hangi bilginin kime görüneceğini siz seçin. Ücretsiz başlayın." />
+
+    <!-- Kanonik adres: aynı dağıtım üç alan adından da açılıyor
+         (www.qrtim.com.tr, qrtim.com.tr, qartim.com). Canonical olmadan
+         arama motoru bunları ayrı siteler sayıp sıralama gücünü bölüyordu.
+         Gezinirken sayfa başına güncellenir (src/components/SayfaMeta.jsx). -->
+    <link rel="canonical" href="https://www.qrtim.com.tr/" />
+
+    <!-- Paylaşım kartı. Ürünün tamamı bağlantı paylaşmaya dayanıyor ama
+         paylaşılan bağlantının önizlemesi yoktu: WhatsApp'ta, LinkedIn'de
+         çıplak adres görünüyordu. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="QRtım" />
+    <meta property="og:locale" content="tr_TR" />
+    <meta property="og:url" content="https://www.qrtim.com.tr/" />
+    <meta property="og:title" content="QRtım — Dijital Kimlik ve Kartvizit Platformu" />
+    <meta property="og:description" content="Dijital kartvizitinizi QR kod ve NFC kartla paylaşın. Hangi bilginin kime görüneceğini siz seçin. Ücretsiz başlayın." />
+    <meta property="og:image" content="https://www.qrtim.com.tr/qrtim-logo.png" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="QRtım — Dijital Kimlik ve Kartvizit Platformu" />
+    <meta name="twitter:description" content="Dijital kartvizitinizi QR kod ve NFC kartla paylaşın. Hangi bilginin kime görüneceğini siz seçin." />
+    <meta name="twitter:image" content="https://www.qrtim.com.tr/qrtim-logo.png" />
   </head>
   <body>
     <div id="root"></div>

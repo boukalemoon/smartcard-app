@@ -1,4 +1,5 @@
 import { ToastProvider } from './components/Toast'
+import SayfaMeta from './components/SayfaMeta'
 import AdminPage from './pages/AdminPage'
 import LandingPage from './pages/LandingPage'
 import { ThemeProvider } from './contexts/ThemeContext'
@@ -87,6 +88,8 @@ function App() {
         <ShieldAuthSaglayici>
         <DashboardModeProvider>
           <Router>
+            {/* Sayfa başlığı/açıklaması: SPA'da <head> kendiliğinden değişmez. */}
+            <SayfaMeta />
             {/* ÖZEL ALAN ADI: kişinin kendi adresinde YALNIZCA kart açılır.
                 Panel, giriş ve yönetim tek adreste (QRtım) kalır — oturum
                 tarayıcıda adrese göre ayrıldığı için, kişi kendi alan adında
