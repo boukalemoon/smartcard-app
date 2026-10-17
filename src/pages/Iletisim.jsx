@@ -1,14 +1,38 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Mail, Phone, MapPin, Send, Check } from 'lucide-react'
+import { Mail, Phone, MapPin, Send, Check, Clock, ChevronDown } from 'lucide-react'
+import SiteKabugu from '../site/SiteKabugu'
+import { SayfaUst, Mesaj } from '../site/sayfalar/ortak'
+import { dugme, ETIKET, GIRDI, KAP } from '../site/sayfalar/siniflar'
+import { birlestir } from '../panel/bicim'
+
+const BOS_FORM = { name: '', email: '', subject: '', message: '' }
+
+const KONULAR = ['Genel Soru', 'Teknik Destek', 'Faturalama / Ödeme', 'Kurumsal / STK Teklif', 'NFC Kart Siparişi', 'İş Birliği', 'Diğer']
+
+const ILETISIM = [
+  { ikon: <Mail size={20} aria-hidden="true" />, ad: 'E-posta', deger: 'info@qartim.com', href: 'mailto:info@qartim.com' },
+  { ikon: <Phone size={20} aria-hidden="true" />, ad: 'Telefon', deger: '0 216 998 08 89', href: 'tel:+902169980889' },
+  { ikon: <MapPin size={20} aria-hidden="true" />, ad: 'Adres', deger: <>Cevizli Mahallesi Saraylar Caddesi<br />No:6/85 Maltepe / İstanbul</> },
+]
+
+const SAATLER = [
+  ['Pazartesi – Cuma', '09:00 – 18:00'],
+  ['Cumartesi', '10:00 – 14:00'],
+  ['Pazar', 'Kapalı'],
+]
+
+function Zorunlu() {
+  return <span className="text-red-600 dark:text-red-400" aria-hidden="true"> *</span>
+}
 
 export default function Iletisim() {
-  const navigate = useNavigate()
-  const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' })
+  const [form, setForm] = useState(BOS_FORM)
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
 
+  // Form bir sunucuya gitmez: kişinin e-posta uygulamasını hazır bir mesajla
+  // açar (mailto). Metinler de bunu açıkça söyler.
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.name || !form.email || !form.message) {
@@ -21,143 +45,141 @@ export default function Iletisim() {
       const mailtoLink = `mailto:info@qartim.com?subject=${encodeURIComponent(form.subject || 'İletişim Formu')}&body=${encodeURIComponent(`Ad Soyad: ${form.name}\nE-posta: ${form.email}\n\n${form.message}`)}`
       window.location.href = mailtoLink
       setSent(true)
-    } catch (err) {
+    } catch {
       setError('Mesaj gönderilemedi. Lütfen tekrar deneyin.')
     } finally {
       setSending(false)
     }
   }
 
+  const alan = (ad) => ({ value: form[ad], onChange: (e) => setForm({ ...form, [ad]: e.target.value }) })
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <a href="/"><img src="/qrtım-logo.png" alt="QRtım" className="h-12 w-auto cursor-pointer" /></a>
-          <button onClick={() => navigate('/')} className="text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">← Anasayfaya Dön</button>
-        </div>
-      </header>
+    <SiteKabugu>
+      <div className={birlestir(KAP, 'py-12 sm:py-20 flex flex-col gap-10 sm:gap-14')}>
+        <SayfaUst
+          ust="İletişim"
+          baslik="Bize ulaşın"
+          alt="Sorularınız, önerileriniz veya iş birliği talepleriniz için aşağıdaki formu kullanabilir ya da doğrudan iletişim bilgilerimizden bize ulaşabilirsiniz."
+        />
 
-      <main className="max-w-6xl mx-auto px-4 py-16">
-        <div className="text-center mb-14">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">Bize Ulaşın</h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-            Sorularınız, önerileriniz veya iş birliği talepleriniz için aşağıdaki formu kullanabilir ya da doğrudan iletişim bilgilerimizden bize ulaşabilirsiniz.
-          </p>
-        </div>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-8 items-start">
+          {/* İletişim bilgileri: mobilde önce gelir ki kişi tek dokunuşla arayabilsin. */}
+          <aside className="flex flex-col gap-6 lg:order-2">
+            <section aria-labelledby="iletisim-bilgi" className="rounded-2xl border border-cizgi bg-yuzey p-6">
+              <h2 id="iletisim-bilgi" className="font-baslik text-[19px] font-bold text-metin">İletişim bilgileri</h2>
+              <ul className="mt-5 flex flex-col gap-5">
+                {ILETISIM.map(({ ikon, ad, deger, href }) => (
+                  <li key={ad} className="flex items-start gap-4">
+                    <span className="w-11 h-11 rounded-xl bg-aksan-acik text-aksan inline-flex items-center justify-center shrink-0">
+                      {ikon}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-metin-2">{ad}</p>
+                      {href ? (
+                        <a href={href} className="text-[15px] font-semibold text-metin hover:text-aksan transition-colors break-words">{deger}</a>
+                      ) : (
+                        <p className="text-[15px] leading-relaxed text-metin">{deger}</p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
 
-        <div className="grid lg:grid-cols-5 gap-10">
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow p-6 space-y-6">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">İletişim Bilgileri</h2>
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Mail size={18} className="text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-0.5">E-posta</p>
-                  <a href="mailto:info@qartim.com" className="text-blue-600 dark:text-blue-400 hover:underline text-sm">info@qartim.com</a>
-                </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Phone size={18} className="text-green-600 dark:text-green-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-0.5">Telefon</p>
-                  <a href="tel:+902169980889" className="text-green-600 dark:text-green-400 hover:underline text-sm">0 216 998 08 89</a>
-                </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <MapPin size={18} className="text-purple-600 dark:text-purple-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-0.5">Adres</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Cevizli Mahallesi Saraylar Caddesi<br />No:6/85 Maltepe / İstanbul</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow p-6">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Şirket Bilgileri</h2>
-              <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                <p><span className="font-semibold text-gray-700 dark:text-gray-300">Ünvan:</span> Sognare Organizasyon ve Dan. Hiz. Ltd. Şti.</p>
-                <p><span className="font-semibold text-gray-700 dark:text-gray-300">Vergi Dairesi:</span> Kartal</p>
-                <p><span className="font-semibold text-gray-700 dark:text-gray-300">Vergi No:</span> 7721298766</p>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl shadow p-6 text-white">
-              <h2 className="text-lg font-bold mb-4">Destek Saatleri</h2>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-blue-100">Pazartesi – Cuma</span><span className="font-semibold">09:00 – 18:00</span></div>
-                <div className="flex justify-between"><span className="text-blue-100">Cumartesi</span><span className="font-semibold">10:00 – 14:00</span></div>
-                <div className="flex justify-between"><span className="text-blue-100">Pazar</span><span className="font-semibold text-blue-200">Kapalı</span></div>
-              </div>
-              <div className="mt-4 pt-4 border-t border-white/20 text-xs text-blue-100">E-posta yanıt süresi: en geç 1 iş günü</div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-3">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow p-8">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Mesaj Gönderin</h2>
-              {sent ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
-                    <Check size={32} className="text-green-600 dark:text-green-400" />
+            <section aria-labelledby="sirket-bilgi" className="rounded-2xl border border-cizgi bg-yuzey p-6">
+              <h2 id="sirket-bilgi" className="font-baslik text-[19px] font-bold text-metin">Şirket bilgileri</h2>
+              <dl className="mt-4 flex flex-col text-sm">
+                {[
+                  ['Ünvan', 'Sognare Organizasyon ve Dan. Hiz. Ltd. Şti.'],
+                  ['Vergi Dairesi', 'Kartal'],
+                  ['Vergi No', '7721298766'],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex flex-col gap-0.5 py-2.5 border-b border-cizgi last:border-b-0">
+                    <dt className="text-metin-2">{k}</dt>
+                    <dd className="font-medium text-metin">{v}</dd>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Mesajınız İletildi!</h3>
-                  <p className="text-gray-500 dark:text-gray-400 mb-6">En kısa sürede size dönüş yapacağız.</p>
-                  <button onClick={() => { setSent(false); setForm({ name: '', email: '', subject: '', message: '' }) }} className="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all text-sm font-semibold">Yeni Mesaj Gönder</button>
-                </div>
-              ) : (
-                <form onSubmit={handleSubmit} className="space-y-5">
+                ))}
+              </dl>
+            </section>
+
+            {/* Destek saatleri: her iki temada koyu lacivert kart (tasarımdaki koyu blok). */}
+            <section aria-labelledby="destek-saat" className="rounded-2xl bg-lacivert-950 dark:bg-lacivert-900 text-white p-6 dark:border dark:border-cizgi">
+              <div className="flex items-center gap-2">
+                <Clock size={18} className="text-lacivert-200" aria-hidden="true" />
+                <h2 id="destek-saat" className="font-baslik text-[19px] font-bold text-white">Destek saatleri</h2>
+              </div>
+              <dl className="mt-4 flex flex-col gap-2.5 text-sm">
+                {SAATLER.map(([gun, saat]) => (
+                  <div key={gun} className="flex items-center justify-between gap-4">
+                    <dt className="text-lacivert-200">{gun}</dt>
+                    <dd className={birlestir('font-semibold tabular-nums', saat === 'Kapalı' ? 'text-lacivert-300' : 'text-white')}>{saat}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-5 pt-4 border-t border-white/10 text-[13px] text-lacivert-200">E-posta yanıt süresi: en geç 1 iş günü</p>
+            </section>
+          </aside>
+
+          <section aria-labelledby="mesaj-baslik" className="rounded-2xl border border-cizgi bg-yuzey p-6 sm:p-10 lg:order-1">
+            {sent ? (
+              <div className="flex flex-col items-center text-center gap-4 py-10" role="status">
+                <span className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300 inline-flex items-center justify-center">
+                  <Check size={28} aria-hidden="true" />
+                </span>
+                <h2 id="mesaj-baslik" className="font-baslik text-[24px] font-extrabold text-metin">E-posta uygulamanız açıldı</h2>
+                <p className="text-[15px] text-metin-2 max-w-sm">
+                  Mesajınız e-posta uygulamanızda hazır. Gönderdiğinizde en kısa sürede size dönüş yapacağız.
+                </p>
+                <button type="button" onClick={() => { setSent(false); setForm(BOS_FORM) }} className={dugme('ikincil', 'mt-2')}>
+                  Yeni mesaj yaz
+                </button>
+              </div>
+            ) : (
+              <>
+                <h2 id="mesaj-baslik" className="font-baslik text-[26px] font-extrabold tracking-[-0.01em] text-metin">Mesaj gönderin</h2>
+                <form onSubmit={handleSubmit} noValidate className="mt-6 flex flex-col gap-5">
                   <div className="grid sm:grid-cols-2 gap-5">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Ad Soyad <span className="text-red-500">*</span></label>
-                      <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ahmet Yılmaz" className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none transition-colors" />
+                      <label htmlFor="il-ad" className={ETIKET}>Ad Soyad<Zorunlu /></label>
+                      <input id="il-ad" type="text" autoComplete="name" required aria-required="true" {...alan('name')} placeholder="Ahmet Yılmaz" className={birlestir(GIRDI, 'h-12')} />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">E-posta <span className="text-red-500">*</span></label>
-                      <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="ornek@email.com" className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none transition-colors" />
+                      <label htmlFor="il-eposta" className={ETIKET}>E-posta<Zorunlu /></label>
+                      <input id="il-eposta" type="email" autoComplete="email" required aria-required="true" {...alan('email')} placeholder="ornek@email.com" className={birlestir(GIRDI, 'h-12')} />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Konu</label>
-                    <select value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none transition-colors">
-                      <option value="">Konu seçin...</option>
-                      <option value="Genel Soru">Genel Soru</option>
-                      <option value="Teknik Destek">Teknik Destek</option>
-                      <option value="Faturalama / Ödeme">Faturalama / Ödeme</option>
-                      <option value="Kurumsal / STK Teklif">Kurumsal / STK Teklif</option>
-                      <option value="NFC Kart Siparişi">NFC Kart Siparişi</option>
-                      <option value="İş Birliği">İş Birliği</option>
-                      <option value="Diğer">Diğer</option>
-                    </select>
+                    <label htmlFor="il-konu" className={ETIKET}>Konu</label>
+                    <div className="relative">
+                      <select id="il-konu" {...alan('subject')} className={birlestir(GIRDI, 'h-12 pr-11 appearance-none cursor-pointer')}>
+                        <option value="">Konu seçin...</option>
+                        {KONULAR.map((k) => <option key={k} value={k}>{k}</option>)}
+                      </select>
+                      <ChevronDown size={18} aria-hidden="true" className="absolute right-4 top-1/2 -translate-y-1/2 text-metin-2 pointer-events-none" />
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Mesajınız <span className="text-red-500">*</span></label>
-                    <textarea value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} rows={6} placeholder="Mesajınızı buraya yazın..." className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl focus:border-blue-500 outline-none transition-colors resize-none" />
+                    <label htmlFor="il-mesaj" className={ETIKET}>Mesajınız<Zorunlu /></label>
+                    <textarea id="il-mesaj" required aria-required="true" {...alan('message')} rows={6} placeholder="Mesajınızı buraya yazın..." className={birlestir(GIRDI, 'py-3 resize-none leading-relaxed')} />
                   </div>
-                  {error && (
-                    <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-300">{error}</div>
-                  )}
-                  <button type="submit" disabled={sending} className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-bold text-base transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                    {sending ? (<><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />Gönderiliyor...</>) : (<><Send size={18} />Mesaj Gönder</>)}
+                  {error && <Mesaj ton="hata" rol="alert">{error}</Mesaj>}
+                  <button type="submit" disabled={sending} className={dugme('ana', 'w-full')}>
+                    {sending ? (
+                      <><span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" aria-hidden="true" />Gönderiliyor...</>
+                    ) : (
+                      <><Send size={18} aria-hidden="true" />Mesaj gönder</>
+                    )}
                   </button>
-                  <p className="text-xs text-center text-gray-500 dark:text-gray-400">Mesajınız info@qartim.com adresine iletilecektir.</p>
+                  <p className="text-[13px] text-center text-metin-2">
+                    Gönder'e bastığınızda e-posta uygulamanız açılır; mesajınız info@qartim.com adresine gider.
+                  </p>
                 </form>
-              )}
-            </div>
-          </div>
+              </>
+            )}
+          </section>
         </div>
-      </main>
-
-      <footer className="bg-gray-900 text-gray-400 py-6 mt-12">
-        <div className="max-w-6xl mx-auto px-4 text-center text-sm">
-          <p>&copy; 2026 QRtım — Sognare Organizasyon ve Dan. Hiz. Ltd. Şti. Tüm hakları saklıdır.</p>
-        </div>
-      </footer>
-    </div>
+      </div>
+    </SiteKabugu>
   )
 }

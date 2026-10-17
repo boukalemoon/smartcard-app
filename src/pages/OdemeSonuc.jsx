@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { CheckCircle, XCircle, Loader, AlertTriangle } from 'lucide-react'
+import { CheckCircle2, XCircle, Loader2, AlertTriangle } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
+import SiteKabugu from '../site/SiteKabugu'
+import { DurumKarti } from '../site/sayfalar/ortak'
+import { dugme } from '../site/sayfalar/siniflar'
 
 // Banka ödeme sonrası dönüş sayfası.
 //
@@ -26,14 +29,15 @@ export default function OdemeSonuc() {
   const niyetId = params.get('niyet')
   const donenDurum = params.get('durum')
 
-  const [durum, setDurum] = useState('dogrulaniyor')
+  const [yoklananDurum, setDurum] = useState('dogrulaniyor')
   const [detay, setDetay] = useState(null)
 
+  // Niyet kimliği yoksa yoklanacak bir şey yok; sonuç doğrudan adresten
+  // türetilir (eskiden effect içinde set ediliyordu, davranış aynı).
+  const durum = niyetId ? yoklananDurum : (MESAJLAR[donenDurum] ? 'hata' : 'bilinmiyor')
+
   useEffect(() => {
-    if (!niyetId) {
-      setDurum(MESAJLAR[donenDurum] ? 'hata' : 'bilinmiyor')
-      return
-    }
+    if (!niyetId) return
 
     let deneme = 0
     let iptal = false
@@ -64,63 +68,49 @@ export default function OdemeSonuc() {
     ? (detay.tutar_kurus / 100).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })
     : null
 
+  const panelDugmesi = <Link to="/dashboard" className={dugme('ana')}>Panele dön</Link>
+
+  let kart
+  if (durum === 'dogrulaniyor') {
+    kart = (
+      <DurumKarti ikon={Loader2} donen ton="aksan" ust="Ödeme" baslik="Ödemeniz doğrulanıyor">
+        Bankadan onay bekleniyor. Bu sayfayı kapatmayın.
+      </DurumKarti>
+    )
+  } else if (durum === 'odendi') {
+    kart = (
+      <DurumKarti ikon={CheckCircle2} ton="olumlu" ust="Ödeme" baslik="Ödeme tamamlandı" eylemler={panelDugmesi}>
+        {tutar && <>{tutar} tutarındaki ödemeniz alındı. </>}
+        Planınız hesabınıza tanımlandı.
+      </DurumKarti>
+    )
+  } else if (durum === 'hata') {
+    kart = (
+      <DurumKarti ikon={XCircle} ton="hata" ust="Ödeme" baslik="Ödeme tamamlanamadı" eylemler={panelDugmesi}>
+        {MESAJLAR[donenDurum] || MESAJLAR.basarisiz}
+      </DurumKarti>
+    )
+  } else {
+    // gecikti | bilinmiyor | oturum_gerekli
+    const oturum = durum === 'oturum_gerekli'
+    kart = (
+      <DurumKarti
+        ikon={AlertTriangle}
+        ton="uyari"
+        ust="Ödeme"
+        baslik={oturum ? 'Oturum açmanız gerekiyor' : 'Sonuç henüz netleşmedi'}
+        eylemler={panelDugmesi}
+      >
+        {oturum
+          ? 'Ödeme sonucunu görmek için hesabınıza giriş yapın.'
+          : 'Banka onayı gecikiyor. Kartınızdan çekim yapıldıysa planınız birkaç dakika içinde tanımlanır; panelinizden kontrol edebilirsiniz. Lütfen tekrar ödeme yapmayın.'}
+      </DurumKarti>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
-        {durum === 'dogrulaniyor' && (
-          <>
-            <Loader className="mx-auto mb-4 animate-spin text-indigo-500" size={48} />
-            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Ödemeniz doğrulanıyor</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Bankadan onay bekleniyor. Bu sayfayı kapatmayın.
-            </p>
-          </>
-        )}
-
-        {durum === 'odendi' && (
-          <>
-            <CheckCircle className="mx-auto mb-4 text-green-500" size={48} />
-            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Ödeme tamamlandı</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-              {tutar && <>{tutar} tutarındaki ödemeniz alındı. </>}
-              Planınız hesabınıza tanımlandı.
-            </p>
-          </>
-        )}
-
-        {durum === 'hata' && (
-          <>
-            <XCircle className="mx-auto mb-4 text-red-500" size={48} />
-            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Ödeme tamamlanamadı</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-              {MESAJLAR[donenDurum] || MESAJLAR.basarisiz}
-            </p>
-          </>
-        )}
-
-        {(durum === 'gecikti' || durum === 'bilinmiyor' || durum === 'oturum_gerekli') && (
-          <>
-            <AlertTriangle className="mx-auto mb-4 text-amber-500" size={48} />
-            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-              {durum === 'oturum_gerekli' ? 'Oturum açmanız gerekiyor' : 'Sonuç henüz netleşmedi'}
-            </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-              {durum === 'oturum_gerekli'
-                ? 'Ödeme sonucunu görmek için hesabınıza giriş yapın.'
-                : 'Banka onayı gecikiyor. Kartınızdan çekim yapıldıysa planınız birkaç dakika içinde tanımlanır; panelinizden kontrol edebilirsiniz. Lütfen tekrar ödeme yapmayın.'}
-            </p>
-          </>
-        )}
-
-        {durum !== 'dogrulaniyor' && (
-          <Link
-            to="/dashboard"
-            className="inline-block px-6 py-3 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700"
-          >
-            Panele dön
-          </Link>
-        )}
-      </div>
-    </div>
+    <SiteKabugu className="flex items-center">
+      <div className="w-full px-4 py-16 sm:py-24" aria-live="polite">{kart}</div>
+    </SiteKabugu>
   )
 }

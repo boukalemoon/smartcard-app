@@ -1,7 +1,10 @@
-// src/components/AuthConfirm.jsx - YENİ DOSYA OL
+// E-posta doğrulama / kurtarma bağlantısının döndüğü sayfa (/auth/confirm).
+// Görünüm kimlik ekranlarının ortak dilinde (site/giris/parcalar).
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { CircleCheck, CircleX } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
+import { KimlikKarti, KimlikSayfasi, Yukleniyor } from '../site/giris/parcalar'
 
 export default function AuthConfirm() {
   const navigate = useNavigate()
@@ -79,35 +82,35 @@ export default function AuthConfirm() {
   }, [navigate])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
-      <div className="text-center bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full mx-4">
+    <KimlikSayfasi>
+      <KimlikKarti className="items-center text-center" role="status" aria-live="polite">
         {status === 'verifying' && (
           <>
-            <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <h2 className="text-2xl font-bold mb-2">Email Doğrulanıyor...</h2>
-            <p className="text-gray-600">Lütfen bekleyin, yönlendiriliyorsunuz.</p>
+            <Yukleniyor etiket="Doğrulanıyor" />
+            <h1 className="font-baslik text-2xl font-extrabold tracking-[-0.015em]">E-posta doğrulanıyor</h1>
+            <p className="text-metin-2">Lütfen bekleyin, yönlendiriliyorsunuz.</p>
           </>
         )}
         {status === 'success' && (
           <>
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">✅</span>
-            </div>
-            <h2 className="text-2xl font-bold mb-2 text-green-600">Email Doğrulandı!</h2>
-            <p className="text-gray-600">Dashboard'a yönlendiriliyorsunuz...</p>
+            <span className="w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-400/15 text-emerald-700 dark:text-emerald-300 inline-flex items-center justify-center">
+              <CircleCheck size={30} aria-hidden="true" />
+            </span>
+            <h1 className="font-baslik text-2xl font-extrabold tracking-[-0.015em]">Doğrulandı</h1>
+            <p className="text-metin-2">Yönlendiriliyorsunuz…</p>
           </>
         )}
         {status === 'error' && (
           <>
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">❌</span>
-            </div>
-            <h2 className="text-2xl font-bold mb-2 text-red-600">Doğrulama Başarısız</h2>
-            <p className="text-gray-600">{message}</p>
-            <p className="text-sm text-gray-400 mt-2">Giriş sayfasına yönlendiriliyorsunuz...</p>
+            <span className="w-14 h-14 rounded-full bg-red-50 dark:bg-red-500/15 text-red-700 dark:text-red-300 inline-flex items-center justify-center">
+              <CircleX size={30} aria-hidden="true" />
+            </span>
+            <h1 className="font-baslik text-2xl font-extrabold tracking-[-0.015em]">Doğrulama başarısız</h1>
+            <p className="text-metin-2">{message}</p>
+            <p className="text-sm text-metin-2">Giriş sayfasına yönlendiriliyorsunuz…</p>
           </>
         )}
-      </div>
-    </div>
+      </KimlikKarti>
+    </KimlikSayfasi>
   )
 }

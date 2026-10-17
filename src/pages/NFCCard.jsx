@@ -1,107 +1,92 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { ArrowLeft, Lock } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import NFCCardDesigner from '../components/NFCCardDesigner'
-import { ArrowLeft } from 'lucide-react'
 import { useSubscription } from '../hooks/useSubscription'
+import SiteKabugu from '../site/SiteKabugu'
+import { SayfaUst } from '../site/sayfalar/ortak'
+import { dugme, KAP } from '../site/sayfalar/siniflar'
+import { birlestir } from '../panel/bicim'
 
 export default function NFCCard() {
   const navigate = useNavigate()
-  const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const { subscription } = useSubscription(profile?.id)
 
   useEffect(() => {
-    // Check auth
+    const loadProfile = async (userId) => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .single()
+
+        if (error) throw error
+        setProfile(data)
+      } catch (error) {
+        console.error('Profile load error:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    // Oturum yoksa giriş sayfasına; varsa profil yüklenir.
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
       if (session) {
         loadProfile(session.user.id)
       } else {
         navigate('/login')
       }
     })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  const loadProfile = async (userId) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single()
-
-      if (error) throw error
-      setProfile(data)
-    } catch (error) {
-      console.error('Profile load error:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [navigate])
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <SiteKabugu className="flex items-center justify-center">
+        <span className="w-8 h-8 rounded-full border-2 border-cizgi border-t-aksan animate-spin" role="status" aria-label="Yükleniyor" />
+      </SiteKabugu>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-            >
-              <ArrowLeft size={20} />
-              <span>Dashboard'a Dön</span>
-            </button>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              NFC Kart Tasarla
-            </h1>
-            <div className="w-32"></div>
-          </div>
+    <SiteKabugu>
+      <div className={birlestir(KAP, 'py-10 sm:py-14 flex flex-col gap-8')}>
+        <div className="flex flex-col gap-5">
+          <Link to="/dashboard" className="inline-flex items-center gap-2 self-start text-sm font-semibold text-metin-2 hover:text-aksan transition-colors">
+            <ArrowLeft size={16} aria-hidden="true" />
+            Panele dön
+          </Link>
+          <SayfaUst
+            ust="NFC kart"
+            ustTon="vurgu"
+            baslik="NFC kart tasarla"
+            alt="Kart türünü, yüzeyi ve yerleşimi seçin; önizleme anında güncellenir."
+          />
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Ücretsiz Plan Uyarısı - YENİ! */}
-  {subscription?.plan === 'free' && (
-    <div className="mb-6 p-6 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-200 dark:border-yellow-800 rounded-2xl">
-      <div className="flex items-start gap-4">
-        <div className="text-4xl">⚠️</div>
-        <div className="flex-1">
-          <h3 className="text-lg font-bold text-yellow-900 dark:text-yellow-300 mb-2">
-            Premium Özellik
-          </h3>
-          <p className="text-yellow-800 dark:text-yellow-400 mb-4">
-            NFC kart siparişi vermek için Profesyonel veya Kurumsal plana yükseltmeniz gerekiyor.
-          </p>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
-          >
-            Planı Yükselt
-          </button>
-        </div>
-      </div>
-    </div>
-  )}
+        {/* Ücretsiz plan uyarısı */}
+        {subscription?.plan === 'free' && (
+          <div className="rounded-2xl border border-vurgu/40 bg-vurgu-acik px-6 py-5 flex flex-col sm:flex-row sm:items-center gap-4">
+            <span className="w-11 h-11 shrink-0 rounded-xl bg-vurgu text-white dark:text-zemin inline-flex items-center justify-center">
+              <Lock size={20} aria-hidden="true" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <h2 className="font-baslik text-[17px] font-bold text-metin">Premium Özellik</h2>
+              <p className="mt-0.5 text-[15px] text-metin-2">
+                NFC kart siparişi vermek için Profesyonel veya Kurumsal plana yükseltmeniz gerekiyor.
+              </p>
+            </div>
+            <button type="button" onClick={() => navigate('/dashboard')} className={dugme('vurgu', 'shrink-0')}>
+              Planı yükselt
+            </button>
+          </div>
+        )}
+
         <NFCCardDesigner profile={profile} subscription={subscription} />
       </div>
-    </div>
+    </SiteKabugu>
   )
 }

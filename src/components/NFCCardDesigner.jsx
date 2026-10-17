@@ -1,5 +1,34 @@
 import { useState } from 'react'
-import { CreditCard, Check } from 'lucide-react'
+import { CreditCard, Check, Gift, MoveHorizontal, MoveVertical, Minus, Plus } from 'lucide-react'
+import { birlestir } from '../panel/bicim'
+import { NFC_KART_FIYATI } from '../lib/planlar'
+
+// Seçenek düğmesi (segment benzeri): seçili olan aksan çerçeveli.
+function Secenek({ secili, onClick, children, className }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={secili}
+      onClick={onClick}
+      className={birlestir(
+        'min-h-[44px] px-3 py-2.5 rounded-xl border text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aksan',
+        secili ? 'border-aksan bg-aksan-acik text-aksan-koyu dark:text-aksan' : 'border-cizgi bg-yuzey text-metin hover:bg-yuzey-2',
+        className,
+      )}
+    >
+      {children}
+    </button>
+  )
+}
+
+function Grup({ baslik, children }) {
+  return (
+    <fieldset className="min-w-0">
+      <legend className="text-[13px] font-semibold text-metin mb-2.5">{baslik}</legend>
+      {children}
+    </fieldset>
+  )
+}
 
 export default function NFCCardDesigner({ profile, subscription }) {
   const [cardType, setCardType] = useState('pvc')
@@ -18,7 +47,8 @@ export default function NFCCardDesigner({ profile, subscription }) {
   const [companyLogoPosition, setCompanyLogoPosition] = useState('top-right')
 
   const CARD_TYPES = {
-    pvc: { name: 'Renkli PVC Kart', price: 899, description: 'Dayanıklı plastik malzeme' },
+    // PVC bedeli tek kaynaktan (planlar.js); diğerleri orada henüz yok.
+    pvc: { name: 'Renkli PVC Kart', price: NFC_KART_FIYATI, description: 'Dayanıklı plastik malzeme' },
     metal: { name: 'Metal Kart', price: 1499, description: 'Premium metal kart' },
     transparent: { name: 'Şeffaf Kart', price: 1699, description: 'Modern şeffaf tasarım' },
     bamboo: { name: 'Bambu Kart', price: 2299, description: 'Doğa dostu ahşap' }
@@ -32,7 +62,7 @@ export default function NFCCardDesigner({ profile, subscription }) {
   // Doğru kolon: nfc_cards_used.
   const hasFreeCardIncluded = (subscription?.nfc_cards_included || 0) > 0
   const hasOrderedBefore = (subscription?.nfc_cards_used || 0) > 0
-  
+
   const getCardPrice = () => {
     if (hasFreeCardIncluded && !hasOrderedBefore) {
       return 0 // İlk kart ücretsiz
@@ -43,113 +73,95 @@ export default function NFCCardDesigner({ profile, subscription }) {
   const cardPrice = getCardPrice()
   const totalPrice = cardPrice * quantity
 
+  // Kart malzemesinin önizleme rengi (ürünün kendisi; tema ile değişmez).
+  const kartZemini = cardType === 'pvc' ? cardColor
+    : cardType === 'metal' ? '#2A2D33'
+    : cardType === 'transparent' ? 'rgba(255, 255, 255, 0.1)'
+    : '#B07A45'
+
+  const konum = {
+    'center': 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2',
+    'top-right': 'top-4 right-4',
+    'top-left': 'top-4 left-4',
+    'bottom-left': 'bottom-4 left-4',
+    'bottom-right': 'bottom-4 right-4',
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Kart Önizleme - Sticky Container */}
-      <div className="sticky top-4 z-10 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-8 shadow-xl">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-6 text-center">
-          Kart Önizleme
-        </h3>
-        
-        {/* 3D Kart Mockup */}
-        <div className="flex justify-center mb-6">
-          <div 
-            className="w-80 h-48 rounded-xl relative overflow-hidden transition-transform duration-500 ease-out"
-            style={{ 
-              backgroundColor: cardType === 'pvc' ? cardColor : 
-                             cardType === 'metal' ? '#1a1a1a' :
-                             cardType === 'transparent' ? 'rgba(255, 255, 255, 0.1)' :
-                             '#D2691E',
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start">
+      {/* Kart önizleme — masaüstünde yapışkan */}
+      <section aria-labelledby="onizleme-baslik" className="lg:sticky lg:top-[96px] rounded-2xl border border-cizgi bg-yuzey-2 p-6 sm:p-8">
+        <h2 id="onizleme-baslik" className="font-baslik text-[17px] font-bold text-metin text-center mb-6">
+          Kart önizleme
+        </h2>
+
+        {/* 3D kart */}
+        <div className="flex justify-center mb-4 -mx-2 px-2 -mt-4 py-8 overflow-hidden">
+          <div
+            className="w-full max-w-[320px] aspect-[320/192] rounded-xl relative overflow-hidden transition-transform duration-500 ease-out"
+            style={{
+              backgroundColor: kartZemini,
               transform: `perspective(1200px) rotateY(${cardSide === 'back' ? rotateY + 180 : rotateY}deg) rotateX(${rotateX}deg)`,
               transformStyle: 'preserve-3d',
-              backdropFilter: cardType === 'transparent' ? 'blur(20px)' : 'none',
-              border: cardType === 'transparent' ? '2px solid rgba(255, 255, 255, 0.5)' : 
-                      cardType === 'metal' ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
-              boxShadow: cardType === 'metal' ? '0 20px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2)' : 
-                         cardType === 'transparent' ? '0 20px 60px rgba(31, 38, 135, 0.37)' : 
-                         '0 20px 60px rgba(0,0,0,0.3)'
+              border: cardType === 'transparent' ? '2px solid rgba(255, 255, 255, 0.5)'
+                : cardType === 'metal' ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+              boxShadow: '0 12px 24px rgba(14, 23, 51, 0.24)',
             }}
           >
-            {/* Metal Efektler */}
+            {/* Metal: fırçalanmış çelik dokusu */}
             {cardType === 'metal' && (
-              <>
-                <div className="absolute inset-0 bg-gradient-to-br from-gray-300 via-gray-500 to-gray-900 opacity-90" />
-                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent" 
-                     style={{ backgroundSize: '200% 200%' }} />
-                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/20 via-transparent to-transparent opacity-50" />
-              </>
-            )}
-            
-            {/* Bambu Efektler */}
-            {cardType === 'bamboo' && (
-              <>
-                <div 
-                  className="absolute inset-0 opacity-40"
-                  style={{
-                    backgroundImage: `
-                      repeating-linear-gradient(90deg, transparent, transparent 8px, rgba(101, 67, 33, 0.3) 8px, rgba(101, 67, 33, 0.3) 9px),
-                      repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(101, 67, 33, 0.2) 40px, rgba(101, 67, 33, 0.2) 42px)
-                    `
-                  }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-700/30 to-amber-900/30" />
-              </>
-            )}
-            
-            {/* Transparent Efektler */}
-            {cardType === 'transparent' && (
-              <>
-                <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-white/10 to-transparent" />
-                <div className="absolute inset-0 shadow-inner" />
-                <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
-              </>
+              <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #fff 0 1px, transparent 1px 3px)' }} />
             )}
 
-            {/* Glossy Finish */}
-            {cardFinish === 'glossy' && (
-              <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-transparent" />
+            {/* Bambu: lif dokusu */}
+            {cardType === 'bamboo' && (
+              <div
+                className="absolute inset-0 opacity-40"
+                style={{
+                  backgroundImage: `
+                    repeating-linear-gradient(90deg, transparent, transparent 8px, rgba(101, 67, 33, 0.3) 8px, rgba(101, 67, 33, 0.3) 9px),
+                    repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(101, 67, 33, 0.2) 40px, rgba(101, 67, 33, 0.2) 42px)
+                  `
+                }}
+              />
             )}
-            
+
+            {/* Şeffaf: açık yüzey */}
+            {cardType === 'transparent' && <div className="absolute inset-0 bg-lacivert-300/30" />}
+
+            {/* Parlak yüzey: köşeden düşen tek ışık yansıması */}
+            {cardFinish === 'glossy' && (
+              <div className="absolute inset-0 bg-white/15" style={{ clipPath: 'polygon(0 0, 62% 0, 0 78%)' }} />
+            )}
+
             {/* ÖN YÜZ */}
             {cardSide === 'front' && (
               <div className="absolute inset-0 p-6">
                 {/* Logo */}
-                <div className={`absolute transition-all duration-300 ${
-                  logoPosition === 'center' ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' :
-                  logoPosition === 'top-right' ? 'top-4 right-4' :
-                  'bottom-4 left-4'
-                }`}>
+                <div className={birlestir('absolute transition-all duration-300', konum[logoPosition])}>
                   {profile?.avatar_url ? (
-                    <img 
-                      src={profile.avatar_url} 
+                    <img
+                      src={profile.avatar_url}
                       alt="Logo"
-                      className="w-16 h-16 rounded-full border-2 border-white shadow-lg object-cover"
+                      className="w-16 h-16 rounded-full border-2 border-white object-cover"
                     />
                   ) : (
-                    <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                    <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-white text-2xl font-bold font-baslik">
                       {profile?.name?.charAt(0) || '?'}
                     </div>
                   )}
                 </div>
 
                 {/* İsim */}
-                <div className={`absolute text-white drop-shadow-lg transition-all duration-300 ${
-                  namePosition === 'bottom-left' ? 'bottom-4 left-4' :
-                  namePosition === 'bottom-right' ? 'bottom-4 right-4' :
-                  'top-4 left-4'
-                }`}>
-                  <p className="text-lg font-bold">{profile?.name || 'İsim Soyisim'}</p>
+                <div className={birlestir('absolute text-white transition-all duration-300 [text-shadow:0_1px_3px_rgba(0,0,0,0.35)]', konum[namePosition])}>
+                  <p className="text-lg font-bold font-baslik">{profile?.name || 'İsim Soyisim'}</p>
                   <p className="text-xs opacity-75">{profile?.company || 'Şirket Adı'}</p>
                 </div>
 
-                {/* NFC İkonu */}
-                <div className={`absolute transition-all duration-300 ${
-                  nfcIconPosition === 'top-left' ? 'top-4 left-4' :
-                  nfcIconPosition === 'top-right' ? 'top-4 right-4' :
-                  'bottom-4 right-4'
-                }`}>
-                  <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
-                    <CreditCard size={16} className="text-white" />
+                {/* NFC ikonu */}
+                <div className={birlestir('absolute transition-all duration-300', konum[nfcIconPosition])}>
+                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                    <CreditCard size={16} className="text-white" aria-hidden="true" />
                   </div>
                 </div>
               </div>
@@ -158,40 +170,31 @@ export default function NFCCardDesigner({ profile, subscription }) {
             {/* ARKA YÜZ */}
             {cardSide === 'back' && (
               <div className="absolute inset-0 p-6" style={{ transform: 'scaleX(-1)' }}>
-                {/* QR Kod */}
-                <div className={`absolute transition-all duration-300 ${
-                  qrPosition === 'center' ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' :
-                  qrPosition === 'top-right' ? 'top-4 right-4' :
-                  'bottom-4 left-4'
-                }`}>
-                  <div 
-                    className={`bg-white rounded-lg p-2 shadow-lg transition-all duration-300 ${
-                      qrSize === 'small' ? 'w-20 h-20' :
-                      qrSize === 'large' ? 'w-32 h-32' :
-                      'w-24 h-24'
-                    }`}
+                {/* QR kod */}
+                <div className={birlestir('absolute transition-all duration-300', konum[qrPosition])}>
+                  <div
+                    className={birlestir(
+                      'bg-white rounded-lg p-2 transition-all duration-300',
+                      qrSize === 'small' ? 'w-20 h-20' : qrSize === 'large' ? 'w-32 h-32' : 'w-24 h-24',
+                    )}
                   >
-                    <div className="w-full h-full bg-gray-900 rounded flex items-center justify-center text-white text-xs font-bold">
+                    <div className="w-full h-full bg-lacivert-950 rounded flex items-center justify-center text-white text-xs font-bold">
                       QR
                     </div>
                   </div>
                 </div>
 
-                {/* Şirket Logosu (opsiyonel) */}
+                {/* Şirket logosu (isteğe bağlı) */}
                 {showCompanyLogoOnBack && (
-                  <div className={`absolute transition-all duration-300 ${
-                    companyLogoPosition === 'top-right' ? 'top-4 right-4' :
-                    companyLogoPosition === 'top-left' ? 'top-4 left-4' :
-                    'bottom-4 right-4'
-                  }`}>
+                  <div className={birlestir('absolute transition-all duration-300', konum[companyLogoPosition])}>
                     {profile?.avatar_url ? (
-                      <img 
-                        src={profile.avatar_url} 
+                      <img
+                        src={profile.avatar_url}
                         alt="Company Logo"
-                        className="w-12 h-12 rounded-full border-2 border-white shadow-lg object-cover"
+                        className="w-12 h-12 rounded-full border-2 border-white object-cover"
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white font-bold shadow-lg">
+                      <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white font-bold font-baslik">
                         {profile?.company?.charAt(0) || '?'}
                       </div>
                     )}
@@ -202,12 +205,12 @@ export default function NFCCardDesigner({ profile, subscription }) {
           </div>
         </div>
 
-        {/* 3D Kontrol Paneli - Kompakt */}
-        <div className="space-y-3">
-          {/* Yatay Döndürme */}
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 w-32">
-              🔄 Yatay
+        {/* 3D döndürme */}
+        <div className="flex flex-col gap-3">
+          <label className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-2 text-sm font-semibold text-metin w-24 shrink-0">
+              <MoveHorizontal size={16} className="text-metin-2" aria-hidden="true" />
+              Yatay
             </span>
             <input
               type="range"
@@ -215,20 +218,17 @@ export default function NFCCardDesigner({ profile, subscription }) {
               max="180"
               value={rotateY}
               onChange={(e) => setRotateY(parseInt(e.target.value))}
-              className="flex-1 h-2 rounded-lg appearance-none cursor-pointer"
-              style={{
-                background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${((rotateY + 180) / 360) * 100}%, #E5E7EB ${((rotateY + 180) / 360) * 100}%, #E5E7EB 100%)`
-              }}
+              className="flex-1 min-w-0 accent-aksan cursor-pointer"
             />
-            <span className="text-sm font-mono text-gray-600 dark:text-gray-400 w-12 text-right">
+            <span className="text-sm font-mono tabular-nums text-metin-2 w-12 text-right">
               {rotateY}°
             </span>
-          </div>
+          </label>
 
-          {/* Dikey Döndürme */}
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 w-32">
-              ↕️ Dikey
+          <label className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-2 text-sm font-semibold text-metin w-24 shrink-0">
+              <MoveVertical size={16} className="text-metin-2" aria-hidden="true" />
+              Dikey
             </span>
             <input
               type="range"
@@ -236,367 +236,253 @@ export default function NFCCardDesigner({ profile, subscription }) {
               max="180"
               value={rotateX}
               onChange={(e) => setRotateX(parseInt(e.target.value))}
-              className="flex-1 h-2 rounded-lg appearance-none cursor-pointer"
-              style={{
-                background: `linear-gradient(to right, #8B5CF6 0%, #8B5CF6 ${((rotateX + 180) / 360) * 100}%, #E5E7EB ${((rotateX + 180) / 360) * 100}%, #E5E7EB 100%)`
-              }}
+              className="flex-1 min-w-0 accent-aksan cursor-pointer"
             />
-            <span className="text-sm font-mono text-gray-600 dark:text-gray-400 w-12 text-right">
+            <span className="text-sm font-mono tabular-nums text-metin-2 w-12 text-right">
               {rotateX}°
             </span>
-          </div>
-        </div>
-
-        {/* ÖN/ARKA YÜZ SEÇİMİ */}
-        <div className="flex gap-2 mt-4">
-          <button
-            onClick={() => setCardSide('front')}
-            className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all ${
-              cardSide === 'front'
-                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200'
-            }`}
-          >
-            📇 Ön Yüz
-          </button>
-          <button
-            onClick={() => setCardSide('back')}
-            className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all ${
-              cardSide === 'back'
-                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200'
-            }`}
-          >
-            🔲 Arka Yüz
-          </button>
-        </div>
-      </div>
-
-      {/* Özelleştirme Paneli - Scroll Yapılabilir */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 space-y-6">
-        
-        {/* Kart Tipi */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-            Kart Tipi
           </label>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {Object.entries(CARD_TYPES).map(([type, info]) => (
-              <button
-                key={type}
-                onClick={() => setCardType(type)}
-                className={`p-4 rounded-xl border-2 transition-all ${
-                  cardType === type
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">
-                    {info.name}
-                  </span>
-                  {cardType === type && <Check size={16} className="text-blue-500" />}
-                </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                  {info.description}
-                </p>
-                <p className="text-lg font-bold text-blue-600">
-                  ₺{info.price.toLocaleString('tr-TR')}
-                </p>
-              </button>
-            ))}
-          </div>
         </div>
 
-        {/* Renk - Sadece PVC */}
+        {/* Ön / arka yüz */}
+        <div role="group" aria-label="Kart yüzü" className="mt-5 grid grid-cols-2 gap-1 p-1 rounded-xl bg-yuzey border border-cizgi">
+          {[['front', 'Ön Yüz'], ['back', 'Arka Yüz']].map(([deger, ad]) => (
+            <button
+              key={deger}
+              type="button"
+              aria-pressed={cardSide === deger}
+              onClick={() => setCardSide(deger)}
+              className={birlestir(
+                'h-10 rounded-lg text-sm font-semibold transition-colors',
+                cardSide === deger ? 'bg-murekkep text-yuzey' : 'text-metin-2 hover:text-metin',
+              )}
+            >
+              {ad}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Özelleştirme */}
+      <section aria-label="Kart seçenekleri" className="rounded-2xl border border-cizgi bg-yuzey p-6 sm:p-8 flex flex-col gap-7">
+
+        {/* Kart tipi */}
+        <Grup baslik="Kart Tipi">
+          <div className="grid grid-cols-2 gap-3">
+            {Object.entries(CARD_TYPES).map(([type, info]) => {
+              const secili = cardType === type
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  aria-pressed={secili}
+                  onClick={() => setCardType(type)}
+                  className={birlestir(
+                    'p-4 rounded-xl border text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aksan',
+                    secili ? 'border-aksan bg-aksan-acik' : 'border-cizgi bg-yuzey hover:bg-yuzey-2',
+                  )}
+                >
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-sm text-metin">{info.name}</span>
+                    {secili && <Check size={16} strokeWidth={2.5} className="text-aksan shrink-0" aria-hidden="true" />}
+                  </span>
+                  <span className="block mt-1 text-xs text-metin-2">{info.description}</span>
+                  <span className="block mt-2 font-baslik text-lg font-extrabold text-metin tabular-nums">
+                    ₺{info.price.toLocaleString('tr-TR')}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </Grup>
+
+        {/* Renk — yalnız PVC */}
         {cardType === 'pvc' && (
           <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+            <label htmlFor="kart-rengi" className="block text-[13px] font-semibold text-metin mb-2.5">
               Kart Rengi
             </label>
             <div className="flex items-center gap-3">
               <input
+                id="kart-rengi"
                 type="color"
                 value={cardColor}
                 onChange={(e) => setCardColor(e.target.value)}
-                className="w-16 h-10 rounded cursor-pointer border-2 border-gray-300"
+                className="w-16 h-11 rounded-lg cursor-pointer border border-cizgi bg-yuzey p-1"
               />
-              <span className="text-sm font-mono text-gray-600 dark:text-gray-400">
+              <span className="text-sm font-mono text-metin-2">
                 {cardColor}
               </span>
             </div>
           </div>
         )}
 
-        {/* Finish */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-            Yüzey
-          </label>
+        {/* Yüzey */}
+        <Grup baslik="Yüzey">
           <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => setCardFinish('matte')}
-              className={`p-3 rounded-lg border-2 transition-all ${
-                cardFinish === 'matte'
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-gray-200 dark:border-gray-700'
-              }`}
-            >
-              <span className="font-semibold text-sm">Mat</span>
-            </button>
-            <button
-              onClick={() => setCardFinish('glossy')}
-              className={`p-3 rounded-lg border-2 transition-all ${
-                cardFinish === 'glossy'
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-gray-200 dark:border-gray-700'
-              }`}
-            >
-              <span className="font-semibold text-sm">Parlak</span>
-            </button>
+            <Secenek secili={cardFinish === 'matte'} onClick={() => setCardFinish('matte')}>Mat</Secenek>
+            <Secenek secili={cardFinish === 'glossy'} onClick={() => setCardFinish('glossy')}>Parlak</Secenek>
           </div>
-        </div>
+        </Grup>
 
         {/* ÖN YÜZ ÖZELLEŞTİRME */}
         {cardSide === 'front' && (
           <>
-            {/* Logo Pozisyon */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                Logo Pozisyonu
-              </label>
+            <Grup baslik="Logo Pozisyonu">
               <div className="grid grid-cols-3 gap-3">
                 {['center', 'top-right', 'bottom-left'].map((pos) => (
-                  <button
-                    key={pos}
-                    onClick={() => setLogoPosition(pos)}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      logoPosition === pos
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 dark:border-gray-700'
-                    }`}
-                  >
-                    <span className="font-semibold text-sm capitalize">
-                      {pos === 'center' ? 'Orta' : pos === 'top-right' ? 'Sağ Üst' : 'Sol Alt'}
-                    </span>
-                  </button>
+                  <Secenek key={pos} secili={logoPosition === pos} onClick={() => setLogoPosition(pos)}>
+                    {pos === 'center' ? 'Orta' : pos === 'top-right' ? 'Sağ Üst' : 'Sol Alt'}
+                  </Secenek>
                 ))}
               </div>
-            </div>
+            </Grup>
 
-            {/* İsim Pozisyon */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                İsim Pozisyonu
-              </label>
+            <Grup baslik="İsim Pozisyonu">
               <div className="grid grid-cols-3 gap-3">
                 {['bottom-left', 'bottom-right', 'top-left'].map((pos) => (
-                  <button
-                    key={pos}
-                    onClick={() => setNamePosition(pos)}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      namePosition === pos
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 dark:border-gray-700'
-                    }`}
-                  >
-                    <span className="font-semibold text-sm capitalize">
-                      {pos === 'bottom-left' ? 'Sol Alt' : pos === 'bottom-right' ? 'Sağ Alt' : 'Sol Üst'}
-                    </span>
-                  </button>
+                  <Secenek key={pos} secili={namePosition === pos} onClick={() => setNamePosition(pos)}>
+                    {pos === 'bottom-left' ? 'Sol Alt' : pos === 'bottom-right' ? 'Sağ Alt' : 'Sol Üst'}
+                  </Secenek>
                 ))}
               </div>
-            </div>
+            </Grup>
 
-            {/* NFC İkon Pozisyon */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                NFC İkon Pozisyonu
-              </label>
+            <Grup baslik="NFC İkon Pozisyonu">
               <div className="grid grid-cols-3 gap-3">
                 {['top-left', 'top-right', 'bottom-right'].map((pos) => (
-                  <button
-                    key={pos}
-                    onClick={() => setNfcIconPosition(pos)}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      nfcIconPosition === pos
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 dark:border-gray-700'
-                    }`}
-                  >
-                    <span className="font-semibold text-sm capitalize">
-                      {pos === 'top-left' ? 'Sol Üst' : pos === 'top-right' ? 'Sağ Üst' : 'Sağ Alt'}
-                    </span>
-                  </button>
+                  <Secenek key={pos} secili={nfcIconPosition === pos} onClick={() => setNfcIconPosition(pos)}>
+                    {pos === 'top-left' ? 'Sol Üst' : pos === 'top-right' ? 'Sağ Üst' : 'Sağ Alt'}
+                  </Secenek>
                 ))}
               </div>
-            </div>
+            </Grup>
           </>
         )}
 
         {/* ARKA YÜZ ÖZELLEŞTİRME */}
         {cardSide === 'back' && (
           <>
-            {/* QR Pozisyon */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                QR Kod Pozisyonu
-              </label>
+            <Grup baslik="QR Kod Pozisyonu">
               <div className="grid grid-cols-3 gap-3">
                 {['center', 'top-right', 'bottom-left'].map((pos) => (
-                  <button
-                    key={pos}
-                    onClick={() => setQrPosition(pos)}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      qrPosition === pos
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 dark:border-gray-700'
-                    }`}
-                  >
-                    <span className="font-semibold text-sm capitalize">
-                      {pos === 'center' ? 'Orta' : pos === 'top-right' ? 'Sağ Üst' : 'Sol Alt'}
-                    </span>
-                  </button>
+                  <Secenek key={pos} secili={qrPosition === pos} onClick={() => setQrPosition(pos)}>
+                    {pos === 'center' ? 'Orta' : pos === 'top-right' ? 'Sağ Üst' : 'Sol Alt'}
+                  </Secenek>
                 ))}
               </div>
-            </div>
+            </Grup>
 
-            {/* QR Boyut */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                QR Kod Boyutu
-              </label>
+            <Grup baslik="QR Kod Boyutu">
               <div className="grid grid-cols-3 gap-3">
                 {['small', 'medium', 'large'].map((size) => (
-                  <button
-                    key={size}
-                    onClick={() => setQrSize(size)}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      qrSize === size
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 dark:border-gray-700'
-                    }`}
-                  >
-                    <span className="font-semibold text-sm capitalize">
-                      {size === 'small' ? 'Küçük' : size === 'large' ? 'Büyük' : 'Orta'}
-                    </span>
-                  </button>
+                  <Secenek key={size} secili={qrSize === size} onClick={() => setQrSize(size)}>
+                    {size === 'small' ? 'Küçük' : size === 'large' ? 'Büyük' : 'Orta'}
+                  </Secenek>
                 ))}
               </div>
-            </div>
+            </Grup>
 
-            {/* Şirket Logosu Toggle */}
-            <div>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showCompanyLogoOnBack}
-                  onChange={(e) => setShowCompanyLogoOnBack(e.target.checked)}
-                  className="w-5 h-5 rounded border-gray-300"
-                />
-                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  Arka yüzde şirket logosu göster
-                </span>
-              </label>
-            </div>
+            <label className="flex items-center gap-3 cursor-pointer min-h-[44px]">
+              <input
+                type="checkbox"
+                checked={showCompanyLogoOnBack}
+                onChange={(e) => setShowCompanyLogoOnBack(e.target.checked)}
+                className="w-5 h-5 rounded border-cizgi accent-aksan"
+              />
+              <span className="text-sm font-semibold text-metin">
+                Arka yüzde şirket logosu göster
+              </span>
+            </label>
 
-            {/* Şirket Logo Pozisyon (sadece aktifse) */}
             {showCompanyLogoOnBack && (
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                  Şirket Logosu Pozisyonu
-                </label>
+              <Grup baslik="Şirket Logosu Pozisyonu">
                 <div className="grid grid-cols-3 gap-3">
                   {['top-right', 'top-left', 'bottom-right'].map((pos) => (
-                    <button
-                      key={pos}
-                      onClick={() => setCompanyLogoPosition(pos)}
-                      className={`p-3 rounded-lg border-2 transition-all ${
-                        companyLogoPosition === pos
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                          : 'border-gray-200 dark:border-gray-700'
-                      }`}
-                    >
-                      <span className="font-semibold text-sm capitalize">
-                        {pos === 'top-right' ? 'Sağ Üst' : pos === 'top-left' ? 'Sol Üst' : 'Sağ Alt'}
-                      </span>
-                    </button>
+                    <Secenek key={pos} secili={companyLogoPosition === pos} onClick={() => setCompanyLogoPosition(pos)}>
+                      {pos === 'top-right' ? 'Sağ Üst' : pos === 'top-left' ? 'Sol Üst' : 'Sağ Alt'}
+                    </Secenek>
                   ))}
                 </div>
-              </div>
+              </Grup>
             )}
           </>
         )}
 
         {/* Adet */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+          <label htmlFor="kart-adet" className="block text-[13px] font-semibold text-metin mb-2.5">
             Adet
           </label>
-          <div className="flex items-center gap-3">
+          <div className="inline-flex items-center rounded-xl border border-cizgi bg-yuzey overflow-hidden">
             <button
+              type="button"
+              aria-label="Adedi azalt"
               onClick={() => setQuantity(Math.max(1, quantity - 1))}
-              className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 font-bold"
+              className="w-11 h-11 inline-flex items-center justify-center text-metin hover:bg-yuzey-2"
             >
-              -
+              <Minus size={16} aria-hidden="true" />
             </button>
             <input
+              id="kart-adet"
               type="number"
               value={quantity}
               onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-20 text-center px-4 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg"
+              className="w-16 h-11 text-center bg-yuzey text-metin font-semibold tabular-nums border-x border-cizgi focus:outline-none focus:ring-2 focus:ring-inset focus:ring-aksan/40"
             />
             <button
+              type="button"
+              aria-label="Adedi artır"
               onClick={() => setQuantity(quantity + 1)}
-              className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 font-bold"
+              className="w-11 h-11 inline-flex items-center justify-center text-metin hover:bg-yuzey-2"
             >
-              +
+              <Plus size={16} aria-hidden="true" />
             </button>
           </div>
         </div>
 
-        {/* Toplam Fiyat */}
-        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+        {/* Toplam */}
+        <div className="pt-6 border-t border-cizgi flex flex-col gap-4">
           {hasFreeCardIncluded && !hasOrderedBefore && (
-            <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-              <p className="text-sm text-green-800 dark:text-green-300 font-semibold">
-                🎉 İlk kartınız ücretsiz! (Aboneliğinize dahil)
+            <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-400/30 dark:bg-emerald-400/10">
+              <Gift size={18} className="shrink-0 text-emerald-700 dark:text-emerald-300" aria-hidden="true" />
+              <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+                İlk kartınız ücretsiz! (Aboneliğinize dahil)
               </p>
             </div>
           )}
-          
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+
+          <div className="flex items-center justify-between">
+            <span className="text-[15px] font-semibold text-metin">
               Toplam:
             </span>
-            <div className="text-right">
-              {totalPrice === 0 ? (
-                <span className="text-2xl font-bold text-green-600">
-                  ÜCRETSİZ
-                </span>
-              ) : (
-                <span className="text-2xl font-bold text-blue-600">
-                  ₺{totalPrice.toLocaleString('tr-TR')}
-                </span>
-              )}
-            </div>
+            {totalPrice === 0 ? (
+              <span className="font-baslik text-[26px] font-extrabold text-emerald-700 dark:text-emerald-300">
+                ÜCRETSİZ
+              </span>
+            ) : (
+              <span className="font-baslik text-[26px] font-extrabold text-metin tabular-nums">
+                ₺{totalPrice.toLocaleString('tr-TR')}
+              </span>
+            )}
           </div>
-          
+
           {/* Sipariş akışı ödeme entegrasyonuna bağlı; hazır olmayan bir
               düğmeyi "Sipariş Ver" diye göstermek yerine durum açıkça yazılıyor. */}
           <button
+            type="button"
             disabled
             title="Kart siparişi ödeme altyapısı tamamlanınca açılacak"
-            className="w-full py-3 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-xl font-bold cursor-not-allowed"
+            className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-xl border border-cizgi bg-yuzey-2 text-[15px] font-semibold text-metin-2 cursor-not-allowed"
           >
             Sipariş yakında
           </button>
-          <p className="mt-2 text-xs text-center text-gray-500 dark:text-gray-400">
+          <p className="text-[13px] text-center text-metin-2">
             Tasarımınızı şimdi hazırlayabilirsiniz; sipariş alma açıldığında
             buradan devam edeceksiniz.
           </p>
         </div>
-      </div>
+      </section>
     </div>
   )
 }

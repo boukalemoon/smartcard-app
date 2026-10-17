@@ -1,90 +1,91 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
+import { Users } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import PublicApplicationForm from '../components/PublicApplicationForm'
-import { ArrowLeft } from 'lucide-react'
+import SiteKabugu from '../site/SiteKabugu'
+import { KurumBasligi, KurumBulunamadi, KurumYukleniyor } from '../site/sayfalar/KurumBasligi'
+import { dugme, KAP, UST_ETIKET } from '../site/sayfalar/siniflar'
+import { birlestir } from '../panel/bicim'
+
+const ADIMLAR = [
+  ['Formu doldurun', 'Ad, e-posta ve isterseniz kısa bir not yeterli.'],
+  ['Yönetici inceler', 'Başvurunuz organizasyon yöneticisine iletilir.'],
+  ['Üyeliğiniz tanımlanır', 'Onaylandığında üyeliğiniz QRtım hesabınıza tanımlanır.'],
+]
 
 export default function PublicApplicationPage() {
   const { orgSlug } = useParams() // URL'den organizasyon slug'ı
-  const navigate = useNavigate()
-  const [organization, setOrganization] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  // Sonuç hangi adres için alındıysa onunla saklanır; adres değişince
+  // "yükleniyor" kendiliğinden döner (effect içinde senkron set yok).
+  const [sonuc, setSonuc] = useState({ slug: null, organization: null, error: null })
+  const loading = sonuc.slug !== orgSlug
+  const { organization, error } = sonuc
 
   useEffect(() => {
+    let iptal = false
+    const loadOrganization = async () => {
+      try {
+        // Kurum künyesi ve başvuruya açıklık kararı SUNUCUDA veriliyor (bulgu Y-2).
+        const { data, error } = await supabase
+          .rpc('get_public_organization', { p_org_id: orgSlug })
+
+        if (error) throw error
+        if (iptal) return
+
+        if (!data) {
+          setSonuc({ slug: orgSlug, organization: null, error: 'Bu organizasyon başvuru kabul etmiyor.' })
+          return
+        }
+
+        setSonuc({ slug: orgSlug, organization: data, error: null })
+      } catch (err) {
+        console.error('Error loading organization:', err)
+        if (!iptal) setSonuc({ slug: orgSlug, organization: null, error: 'Organizasyon bulunamadı.' })
+      }
+    }
     loadOrganization()
+    return () => { iptal = true }
   }, [orgSlug])
 
-  const loadOrganization = async () => {
-    try {
-      setLoading(true)
-      
-      // Kurum künyesi ve başvuruya açıklık kararı SUNUCUDA veriliyor (bulgu Y-2).
-      const { data, error } = await supabase
-        .rpc('get_public_organization', { p_org_id: orgSlug })
-
-      if (error) throw error
-
-      if (!data) {
-        setError('Bu organizasyon başvuru kabul etmiyor.')
-        return
-      }
-
-      setOrganization(data)
-    } catch (err) {
-      console.error('Error loading organization:', err)
-      setError('Organizasyon bulunamadı.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    )
-  }
-
-  if (error || !organization) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 text-center">
-          <div className="text-6xl mb-4">❌</div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            {error || 'Organizasyon Bulunamadı'}
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Lütfen doğru linki kullandığınızdan emin olun.
-          </p>
-          <button
-            onClick={() => navigate('/')}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Ana Sayfaya Dön
-          </button>
-        </div>
-      </div>
-    )
-  }
+  if (loading) return <KurumYukleniyor />
+  if (error || !organization) return <KurumBulunamadi mesaj={error} />
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4">
-      <div className="max-w-2xl mx-auto">
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mb-6"
-        >
-          <ArrowLeft size={20} />
-          Ana Sayfaya Dön
-        </button>
+    <SiteKabugu>
+      <div className={birlestir(KAP, 'py-12 sm:py-16 flex flex-col gap-8')}>
+        <KurumBasligi kurum={organization} ust="Üye başvurusu">
+          {organization.allow_public_directory && (
+            <Link to={`/org/${orgSlug}/members`} className={dugme('ikincil')}>
+              <Users size={18} aria-hidden="true" />
+              Üye dizini
+            </Link>
+          )}
+        </KurumBasligi>
 
-        <PublicApplicationForm
-          organizationId={organization.id}
-          organizationName={organization.name}
-        />
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] items-start">
+          <PublicApplicationForm
+            organizationId={organization.id}
+            organizationName={organization.name}
+          />
+
+          <aside aria-labelledby="surec-baslik" className="rounded-2xl border border-cizgi bg-yuzey p-6">
+            <span className={birlestir(UST_ETIKET, 'text-metin-2')}>Süreç</span>
+            <h2 id="surec-baslik" className="mt-2 font-baslik text-[19px] font-bold text-metin">Başvuru nasıl işler?</h2>
+            <ol className="mt-5 flex flex-col gap-5">
+              {ADIMLAR.map(([baslik, metin], i) => (
+                <li key={baslik} className="flex items-start gap-3.5">
+                  <span className="w-8 h-8 shrink-0 rounded-lg bg-aksan-acik text-aksan font-baslik text-sm font-extrabold inline-flex items-center justify-center">{i + 1}</span>
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-semibold text-metin">{baslik}</p>
+                    <p className="mt-0.5 text-sm leading-relaxed text-metin-2">{metin}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </aside>
+        </div>
       </div>
-    </div>
+    </SiteKabugu>
   )
 }

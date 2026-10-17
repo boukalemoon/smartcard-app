@@ -25,6 +25,7 @@ import OdemeSonuc from './pages/OdemeSonuc'
 import SifreYenile from './pages/SifreYenile'
 import { ShieldAuthSaglayici } from './contexts/ShieldAuthContext'
 import MfaKapisi from './components/MfaKapisi'
+import Bulunamadi from './site/sayfalar/Bulunamadi'
 
 function App() {
   const [session, setSession] = useState(null)
@@ -52,11 +53,20 @@ function App() {
   }, [])
 
   if (loading) {
+    // Oturum okunurken: logo + ince dönen gösterge. ThemeProvider bu ekranı
+    // henüz sarmalamadığı için html'de .dark sınıfı yok; koyu tema seçmiş
+    // kişiye beyaz ekran parlamasın diye tercih burada okunup sarmalayıcıya
+    // .dark verilir (renk değişkenleri .dark altında tanımlı).
+    let koyu = false
+    try { koyu = (localStorage.getItem('qrtim-theme') || localStorage.getItem('Qartim-theme')) === 'dark' } catch { /* depolama kapalı */ }
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-xl font-semibold text-gray-600">Yükleniyor...</p>
+      <div className={`${koyu ? 'dark ' : ''}min-h-screen flex items-center justify-center bg-zemin`} role="status" aria-live="polite">
+        <div className="flex flex-col items-center gap-6">
+          <span className="inline-flex rounded-lg dark:bg-white dark:px-2 dark:py-1">
+            <img src="/qrtim-logo.png" alt="QRtım" width="240" height="68" className="h-10 w-auto" />
+          </span>
+          <span className="w-6 h-6 rounded-full border-2 border-cizgi border-t-aksan animate-spin" aria-hidden="true" />
+          <span className="sr-only">Yükleniyor…</span>
         </div>
       </div>
     )
@@ -124,6 +134,9 @@ function App() {
 />
 
 <Route path="/iletisim" element={<Iletisim />} />
+
+            {/* Tanımsız adresler: 404 (yalnız ana alan adı rota grubu) */}
+            <Route path="*" element={<Bulunamadi />} />
           </Routes>
             )}
         </Router>

@@ -1,14 +1,23 @@
-﻿import { useState, useEffect } from 'react'
+﻿import { useState, useEffect, useId } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ShieldCheck } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useToast } from './Toast'
 import { checkLoginRateLimit, checkSignupRateLimit } from '../utils/rateLimiting'
 import { useAdimAtlama } from '../hooks/useAdimAtlama'
 import { SITE_URL } from '../lib/siteUrl'
+import { birlestir } from '../panel/bicim'
+import { TemaDugmesi } from '../site/SiteKabugu'
+import SolPanel from '../site/giris/SolPanel'
+import PartnerOnay from '../site/giris/PartnerOnay'
+import SifirlamaIstegi from '../site/giris/SifirlamaIstegi'
+import { BilgiKutusu, Dugme, GirisAlani, METIN_BAGLANTI, SifreAlani, SifreGucuCubugu } from '../site/giris/parcalar'
+import { MIN_SIFRE } from '../site/giris/kurallar'
 
-// Şifre asgari uzunluğu. Supabase panelinden de aynı değere çekilmeli
-// (Authentication → Policies), aksi halde bu yalnızca arayüz kontrolü kalır.
-const MIN_PASSWORD_LENGTH = 8
+// Şifre asgari uzunluğu (tek kaynak: site/giris/kurallar.js). Supabase
+// panelinden de aynı değere çekilmeli (Authentication → Policies), aksi halde
+// bu yalnızca arayüz kontrolü kalır.
+const MIN_PASSWORD_LENGTH = MIN_SIFRE
 
 // Ham `error.message` kullanıcıya gösterilmez: teknik ayrıntı sızdırır ve
 // saldırgana sistemin iç durumunu anlatır (bulgu O-8). Bilinen durumlar
@@ -81,10 +90,12 @@ function isSafeCallback(url) {
 // kimliğini sessizce bir uygulamaya bağlatabiliyordu. Artık kişi hangi
 // uygulamanın hangi bilgilerini alacağını görür ve kendisi onaylar.
 // Alan listesi arku-link / tinga-link'in döndürdüğü alanlarla aynı olmalı.
+// kisa: uygulama simgesindeki harfler; donus / adaDonus: Türkçe yönelme eki
+// ("İzin ver ve Arku'ya dön", "Arku Remote'a dönülür").
 const PARTNER_BILGI = {
-  arku: { ad: 'Arku Remote' },
-  ilgezdi: { ad: 'İlgezdi' },
-  tinga: { ad: 'Tınga' },
+  arku: { ad: 'Arku Remote', kisa: 'AR', donus: "Arku'ya", adaDonus: "Arku Remote'a" },
+  ilgezdi: { ad: 'İlgezdi', kisa: 'İL', donus: "İlgezdi'ye", adaDonus: "İlgezdi'ye" },
+  tinga: { ad: 'Tınga', kisa: 'TI', donus: "Tınga'ya", adaDonus: "Tınga'ya" },
 }
 const PAYLASILAN_ALANLAR = [
   'Ad soyad ve kullanıcı adı',
@@ -93,6 +104,10 @@ const PAYLASILAN_ALANLAR = [
   'Profil fotoğrafı',
   'Abonelik planı',
 ]
+
+function partnerBilgisi(ad) {
+  return PARTNER_BILGI[ad] ?? { ad, kisa: String(ad).slice(0, 2).toUpperCase(), donus: 'uygulamaya', adaDonus: 'Uygulamaya' }
+}
 
 // Kullanıcı onay vermediğinde partnere boş elle dönülür; partner bilinmeyen
 // parametreyi yok sayarsa "giriş yapılmadı" görünür.
@@ -137,51 +152,57 @@ async function requestPartnerToken(partnerName, session) {
   }
 }
 
+// İlk açılışta adres çubuğu / tarayıcı deposundan okunan değerler.
+// (Eskiden effect içinde setState ile kuruluyordu; aynı sonuç, ilk çizimde.)
+function ilkCallback() {
+  const cb = new URLSearchParams(window.location.search).get('callback')
+  if (cb && isSafeCallback(cb)) return cb
+  const saved = sessionStorage.getItem('partner_callback')
+  return saved && isSafeCallback(saved) ? saved : null
+}
+
+function ilkDavetKodu() {
+  const ref = new URLSearchParams(window.location.search).get('ref')
+  if (ref) return ref
+  // Eski ad altında saklanmış kod hâlâ okunur: marka adı değişti diye
+  // elinde davet kodu olan kişinin kodu düşmesin.
+  return localStorage.getItem('qrtim_referral_code')
+    || localStorage.getItem('qartim_referral_code')
+    || null
+}
+
 export default function Auth({ initialMode = 'signup' }) {
   const navigate = useNavigate()
   const { showToast } = useToast()
   const { adimAtla } = useAdimAtlama()
+  const id = useId()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
-  const [mode, setMode] = useState(initialMode)
-  const [referralCode, setReferralCode] = useState(null)
-  const [arkuCallback, setArkuCallback] = useState(null)
+  // Mod rotadan gelir (/login | /signup). Eski kodda ?ref= modu 'signup'a
+  // çekiyordu ama hemen ardından çalışan effect onu yeniden initialMode'a
+  // eşitliyordu; görünen davranış hep "rotanın modu"ydu. Aynısı korunur.
+  const mode = initialMode
+  const [referralCode] = useState(ilkDavetKodu)
+  const [arkuCallback] = useState(ilkCallback)
   // Partner onay ekranı: { partnerName, cb, session }
   const [onay, setOnay] = useState(null)
   // "Şifremi unuttum": null | 'form' | 'gonderildi'
-  const [sifirlama, setSifirlama] = useState(null)
+  // /login?sifre=unuttum doğrudan forma açar (süresi dolmuş yenileme
+  // bağlantısından "yeni bağlantı iste" ile gelinir).
+  const [sifirlama, setSifirlama] = useState(() =>
+    new URLSearchParams(window.location.search).get('sifre') === 'unuttum' ? 'form' : null)
 
+  // Adres çubuğundaki güvenli callback, kişi giriş/kayıt arasında gezinirken
+  // kaybolmasın diye oturum deposuna yazılır.
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const ref = urlParams.get('ref')
-    if (ref) {
-      setReferralCode(ref)
-      setMode('signup')
-    }
-
-    const cb = urlParams.get('callback')
-    if (cb && isSafeCallback(cb)) {
-      setArkuCallback(cb)
-      sessionStorage.setItem('partner_callback', cb)
-    } else {
-      const saved = sessionStorage.getItem('partner_callback')
-      if (saved && isSafeCallback(saved)) setArkuCallback(saved)
-    }
-
-    // Eski ad altında saklanmış kod hâlâ okunur: marka adı değişti diye
-    // elinde davet kodu olan kişinin kodu düşmesin.
-    const savedRef = localStorage.getItem('qrtim_referral_code')
-      || localStorage.getItem('qartim_referral_code')
-    if (savedRef && !ref) {
-      setReferralCode(savedRef)
-      if (initialMode === 'signup') setMode('signup')
-    }
+    const cb = new URLSearchParams(window.location.search).get('callback')
+    if (cb && isSafeCallback(cb)) sessionStorage.setItem('partner_callback', cb)
   }, [])
 
   // Kullanıcı zaten giriş yapmışsa ve partner bağlama akışındaysa (callback varsa),
-  // yeniden giriş istemeden token üretip partner uygulamaya geri yönlendir.
+  // yeniden giriş istemeden onay ekranını göster.
   useEffect(() => {
     const autoLinkIfLoggedIn = async () => {
       const urlParams = new URLSearchParams(window.location.search)
@@ -226,6 +247,22 @@ export default function Auth({ initialMode = 'signup' }) {
     reddiPartnereBildir(onay.cb)
   }
 
+  // "Hesap değiştir": yalnızca BU tarayıcının oturumu kapanır (scope: local;
+  // kişinin diğer cihazlarına dokunulmaz). Callback oturum deposunda kalır:
+  // başka hesapla giriş yapılınca onay ekranı o hesap için yeniden gelir.
+  const hesapDegistir = async () => {
+    setLoading(true)
+    try {
+      await supabase.auth.signOut({ scope: 'local' })
+    } finally {
+      setOnay(null)
+      setEmail('')
+      setPassword('')
+      setLoading(false)
+      navigate('/login')
+    }
+  }
+
   const sifirlamaIste = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -242,10 +279,6 @@ export default function Auth({ initialMode = 'signup' }) {
       setLoading(false)
     }
   }
-
-  useEffect(() => {
-  setMode(initialMode)
-}, [initialMode])
 
   useEffect(() => {
     if (referralCode) {
@@ -332,193 +365,138 @@ export default function Auth({ initialMode = 'signup' }) {
     }
   }
 
-  const switchMode = () => {
+  const modaGec = (hedef) => {
+    if (hedef === mode) return
     setName('')
     setEmail('')
     setPassword('')
-    if (mode === 'login') {
-      navigate('/signup')
-    } else {
-      navigate('/login')
-    }
+    navigate(hedef === 'login' ? '/login' : '/signup')
   }
 
   if (onay) {
-    const partnerAdi = PARTNER_BILGI[onay.partnerName]?.ad ?? onay.partnerName
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-          <h1 className="text-xl font-bold text-gray-900 text-center mb-2">
-            {partnerAdi} QRtım hesabınızla giriş yapmak istiyor
-          </h1>
-          <p className="text-sm text-gray-600 text-center mb-6">
-            <span className="font-semibold">{onay.session.user?.email}</span> olarak giriş yapılacak.
-          </p>
-          <p className="text-sm font-semibold text-gray-700 mb-2">{partnerAdi} şu bilgileri alacak:</p>
-          <ul className="text-sm text-gray-700 space-y-1 mb-6 list-disc pl-5">
-            {PAYLASILAN_ALANLAR.map((a) => <li key={a}>{a}</li>)}
-          </ul>
-          <div className="flex gap-3">
-            <button
-              type="button" onClick={partneriReddet} disabled={loading}
-              className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 disabled:opacity-50"
-            >
-              Vazgeç
-            </button>
-            <button
-              type="button" onClick={partnereGonder} disabled={loading}
-              className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-semibold hover:shadow-lg disabled:opacity-50"
-            >
-              {loading ? 'Yönlendiriliyor...' : 'İzin ver'}
-            </button>
-          </div>
-          <p className="mt-4 text-xs text-gray-500 text-center">
-            Bu isteği siz başlatmadıysanız Vazgeç'e basın.
-          </p>
-        </div>
-      </div>
+      <PartnerOnay
+        partnerAnahtari={onay.partnerName}
+        bilgi={partnerBilgisi(onay.partnerName)}
+        cb={onay.cb}
+        kullanici={onay.session.user}
+        alanlar={PAYLASILAN_ALANLAR}
+        mesgul={loading}
+        onIzin={partnereGonder}
+        onReddet={partneriReddet}
+        onHesapDegistir={hesapDegistir}
+      />
     )
   }
 
   if (sifirlama) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-          <h1 className="text-xl font-bold text-gray-900 text-center mb-6">Şifremi unuttum</h1>
-          {sifirlama === 'gonderildi' ? (
-            <p className="text-sm text-gray-700 text-center">
-              Bu adres kayıtlıysa parola sıfırlama bağlantısı gönderdik. E-postanızı (ve spam klasörünü) kontrol edin.
-            </p>
-          ) : (
-            <form onSubmit={sifirlamaIste} className="space-y-4">
-              <input
-                type="email" required autoComplete="email"
-                value={email} onChange={(e) => setEmail(e.target.value)}
-                placeholder="ornek@email.com"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
-              />
-              <button
-                type="submit" disabled={loading}
-                className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50"
-              >
-                {loading ? 'Gönderiliyor...' : 'Sıfırlama bağlantısı gönder'}
-              </button>
-            </form>
-          )}
-          <div className="mt-6 text-center">
-            <button onClick={() => setSifirlama(null)} className="text-blue-600 hover:underline text-sm font-medium">
-              Giriş ekranına dön
-            </button>
-          </div>
-        </div>
-      </div>
+      <SifirlamaIstegi
+        email={email}
+        setEmail={setEmail}
+        durum={sifirlama}
+        mesgul={loading}
+        onGonder={sifirlamaIste}
+        onGeri={() => setSifirlama(null)}
+      />
     )
   }
 
+  const giris = mode === 'login'
+  const gelenPartner = arkuCallback ? partnerBilgisi(detectPartnerSource(arkuCallback)) : null
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            QRtım
-          </h1>
-          <p className="text-gray-600">
-            {mode === 'login' ? 'Hesabınıza giriş yapın' : 'Yeni hesap oluşturun'}
-          </p>
-        </div>
+    <div className="min-h-screen flex flex-col lg:flex-row bg-zemin text-metin">
+      <SolPanel />
 
-        {arkuCallback && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
-            <p className="text-sm text-blue-800 font-medium">
-              Giriş yaptıktan sonra uygulamaya yönlendirileceksiniz.
+      <main className="relative flex-1 min-w-0 flex items-start lg:items-center justify-center px-4 sm:px-6 pt-6 pb-10 lg:py-12">
+        <TemaDugmesi className="absolute top-3 right-3 sm:top-5 sm:right-5" />
+        <form onSubmit={handleAuth} aria-labelledby={`${id}-baslik`} className="w-full max-w-[420px] flex flex-col gap-5">
+          <div role="group" aria-label="Giriş veya kayıt" className="flex bg-yuzey-2 rounded-xl p-1 mr-12 sm:mr-0">
+            {[['login', 'Giriş yap'], ['signup', 'Kayıt ol']].map(([m, ad]) => (
+              <button
+                key={m}
+                type="button"
+                aria-pressed={mode === m}
+                onClick={() => modaGec(m)}
+                disabled={loading}
+                className={birlestir(
+                  'flex-1 h-10 rounded-[9px] text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-aksan',
+                  mode === m ? 'bg-yuzey text-metin shadow-sm' : 'text-metin-2 hover:text-metin',
+                )}
+              >
+                {ad}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <h1 id={`${id}-baslik`} className="font-baslik text-[28px] font-extrabold leading-tight tracking-[-0.015em]">
+              {giris ? 'Tekrar hoş geldiniz' : 'Ücretsiz hesap oluşturun'}
+            </h1>
+            <p className="text-metin-2">
+              {giris
+                ? 'Panelinize ve kartlarınıza erişmek için giriş yapın.'
+                : 'Dijital kartınızı ve kimliğinizi tek hesaptan yönetin.'}
             </p>
           </div>
-        )}
 
-        {referralCode && mode === 'signup' && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-center">
-            <p className="text-sm text-green-800 font-medium">
-              🎉 Referans kod ile kayıt oluyorsunuz!
-            </p>
-          </div>
-        )}
-
-        <form onSubmit={handleAuth} className="space-y-4">
-          {mode === 'signup' && (
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Ad Soyad
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
-                placeholder="Ahmet Yılmaz"
-                required
-              />
-            </div>
+          {referralCode && !giris && (
+            <BilgiKutusu ton="olumlu">
+              Davet koduyla kayıt oluyorsunuz: <b className="font-semibold tracking-wide">{String(referralCode).slice(0, 40)}</b>
+            </BilgiKutusu>
           )}
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
-              placeholder="ornek@email.com"
-              required
+          {!giris && (
+            <GirisAlani
+              id={`${id}-ad`} etiket="Ad soyad" type="text" required autoComplete="name"
+              value={name} onChange={(e) => setName(e.target.value)} placeholder="Adınız ve soyadınız"
             />
-          </div>
+          )}
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Şifre
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
-              placeholder={`En az ${MIN_PASSWORD_LENGTH} karakter`}
-              required
-              minLength={mode === 'signup' ? MIN_PASSWORD_LENGTH : undefined}
-              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-            />
-            {mode === 'login' && (
-              <div className="mt-2 text-right">
-                <button
-                  type="button" onClick={() => setSifirlama('form')}
-                  className="text-sm text-blue-600 hover:underline"
-                >
-                  Şifremi unuttum
-                </button>
-              </div>
+          <GirisAlani
+            id={`${id}-eposta`} etiket="E-posta" type="email" required autoComplete={giris ? 'username' : 'email'}
+            value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ad@ornek.com"
+          />
+
+          <SifreAlani
+            id={`${id}-sifre`}
+            etiket="Şifre"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder={giris ? undefined : `En az ${MIN_PASSWORD_LENGTH} karakter`}
+            required
+            minLength={giris ? undefined : MIN_PASSWORD_LENGTH}
+            autoComplete={giris ? 'current-password' : 'new-password'}
+            sag={giris && (
+              <button type="button" onClick={() => setSifirlama('form')} className={METIN_BAGLANTI}>
+                Şifremi unuttum
+              </button>
             )}
-          </div>
+            alt={!giris && <SifreGucuCubugu sifre={password} />}
+          />
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50"
-          >
-            {loading ? 'Yükleniyor...' : (mode === 'login' ? 'Giriş Yap' : 'Kayıt Ol')}
-          </button>
+          <Dugme type="submit" disabled={loading}>
+            {loading ? 'Yükleniyor…' : (giris ? 'Giriş yap' : 'Kayıt ol')}
+          </Dugme>
+
+          <p className="text-[13px] text-metin-2 text-center">
+            {giris ? 'Hesabınız yok mu? ' : 'Zaten hesabınız var mı? '}
+            <button type="button" onClick={() => modaGec(giris ? 'signup' : 'login')} disabled={loading} className={METIN_BAGLANTI}>
+              {giris ? 'Ücretsiz kayıt olun' : 'Giriş yapın'}
+            </button>
+          </p>
+
+          <BilgiKutusu ikon={ShieldCheck}>
+            {gelenPartner
+              ? <>
+                  <b className="text-metin">{gelenPartner.ad} uygulamasından geldiniz.</b> Giriş yaptıktan sonra hangi
+                  bilgilerin paylaşılacağını soran bir onay ekranı gösterilir; kararınızdan sonra uygulamaya dönersiniz.
+                </>
+              : 'Bir partner uygulamadan (Arku, İlgezdi, Tınga) yönlendirildiyseniz girişten sonra size hangi bilgilerin paylaşılacağını soran bir onay ekranı gösterilir.'}
+          </BilgiKutusu>
         </form>
-
-        <div className="mt-6 text-center">
-          <button
-            onClick={switchMode}
-            className="text-blue-600 hover:underline text-sm font-medium"
-            disabled={loading}
-          >
-            {mode === 'login' ? 'Hesabınız yok mu? Kayıt olun' : 'Zaten hesabınız var mı? Giriş yapın'}
-          </button>
-        </div>
-      </div>
+      </main>
     </div>
   )
 }

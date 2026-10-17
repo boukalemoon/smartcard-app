@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useId } from 'react'
+import { CircleCheck } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAdimAtlama } from '../hooks/useAdimAtlama'
+import { birlestir, saat } from '../panel/bicim'
+import { BilgiKutusu, Dugme, GirisAlani, KimlikSayfasi, SifreAlani, Yukleniyor } from '../site/giris/parcalar'
 
 /**
- * İlgezdi tarayyıcısı QR girişi onay sayfası.
+ * İlgezdi tarayıcısı QR girişi onay sayfası (tasarım panosu: CihazGiris).
  *
  * İlgezdi, QR koduna `https://www.qrtim.com.tr/browser-login?token=<session_token>`
  * gömer. Bu sayfa:
@@ -17,16 +20,34 @@ import { useAdimAtlama } from '../hooks/useAdimAtlama'
  * SALDIRGANIN tarayıcısında açılır. Tek savunma, onaylayan kişinin isteğin
  * kendi cihazından geldiğini görebilmesidir. Bu yüzden onaydan önce istek
  * incelenir (action: inspect) ve cihaz etiketi ile zaman gösterilir.
+ *
+ * Tabloda yalnızca sunucunun gerçekten döndürdüğü alanlar var
+ * (requester_label, created_at, expires_at, same_network). İşletim sistemi,
+ * sürüm ve konum bilgisi sunucuda yok; gösterilmez. Sayı eşleştirme yalnızca
+ * sunucu `match_options` döndürürse (İlgezdi QR v2) görünür.
+ *
+ * "Bu ben değilim": sunucuda reddetme işlemi yok; QR onaylanmazsa süresi
+ * dolunca kendiliğinden geçersiz olur. Düğme pencereyi kapatmayı dener,
+ * kapanmazsa kişiye bunu söyler.
  */
+const SATIR = 'flex justify-between gap-3 py-2.5 text-[13px] border-b border-cizgi last:border-0'
+
+function onceMetni(sn) {
+  if (sn < 60) return `${sn} sn önce`
+  return `${Math.floor(sn / 60)} dk önce`
+}
+
 export default function BrowserLogin() {
+  const id = useId()
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(false)
+  const [vazgecildi, setVazgecildi] = useState(false)
   const [error, setError] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [istek, setIstek] = useState(null) // { requester_label, created_at, expires_at, same_network, match_options? }
+  const [istek, setIstek] = useState(null) // { requester_label, created_at, expires_at, same_network, match_options?, _alindi }
   // Sayı eşleştirme (v2 İlgezdi): kişinin seçtiği sayı
   const [secilenSayi, setSecilenSayi] = useState(null)
   const { adimAtla } = useAdimAtlama()
@@ -54,7 +75,8 @@ export default function BrowserLogin() {
       .then(r => r.json().then(d => ({ ok: r.ok, d })))
       .then(({ ok, d }) => {
         if (iptal) return
-        if (ok) setIstek(d)
+        // _alindi: "kaç sn önce" metni için yanıtın geldiği an (çizimde saat okunmaz).
+        if (ok) setIstek({ ...d, _alindi: Date.now() })
         else if (d.error === 'not_found_or_expired') setError('QR kodun süresi dolmuş. İlgezdi tarayıcısında QR kodu yenileyip tekrar okutun.')
       })
       .catch(() => {})
@@ -115,33 +137,39 @@ export default function BrowserLogin() {
     setBusy(false)
   }
 
-  const card = (children) => (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
-        <div className="text-center mb-6">
-          <img src="/qrtım-logo.png" alt="Qrtım" className="w-14 h-14 mx-auto mb-3 object-contain" />
-          <h1 className="text-xl font-bold text-gray-800">İlgezdi Tarayıcı Girişi</h1>
-        </div>
-        {children}
-        {error && <p className="mt-4 text-sm text-red-600 text-center">{error}</p>}
-      </div>
+  const vazgec = () => {
+    setVazgecildi(true)
+    window.close()
+  }
+
+  const ust = (baslik, aciklama) => (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs font-semibold tracking-[0.08em] uppercase text-aksan">İlgezdi tarayıcı girişi</span>
+      <h1 id={`${id}-b`} className="font-baslik text-2xl font-extrabold leading-tight tracking-[-0.015em]">{baslik}</h1>
+      {aciklama && <p className="text-sm text-metin-2">{aciklama}</p>}
     </div>
   )
 
+  const hataKutusu = error && <BilgiKutusu ton="tehlike" rol="alert">{error}</BilgiKutusu>
+
+  const sayfa = (icerik) => <KimlikSayfasi genislik="max-w-[440px]">{icerik}</KimlikSayfasi>
+
   if (!token) {
-    return card(<p className="text-center text-gray-600">Geçersiz bağlantı — QR kodu İlgezdi tarayıcısından yeniden okutun.</p>)
+    return sayfa(ust('Geçersiz bağlantı', 'QR kodu İlgezdi tarayıcısından yeniden okutun.'))
   }
 
   if (loading) {
-    return card(<p className="text-center text-gray-500">Yükleniyor...</p>)
+    return sayfa(<>{ust('Bir bilgisayar hesabınıza girmek istiyor')}<Yukleniyor /></>)
   }
 
   if (done) {
-    return card(
-      <div className="text-center">
-        <div className="text-5xl mb-4">✅</div>
-        <p className="text-gray-800 font-semibold mb-2">Giriş onaylandı!</p>
-        <p className="text-gray-500 text-sm">
+    return sayfa(
+      <div className="flex flex-col items-center text-center gap-4 bg-yuzey border border-cizgi rounded-2xl p-6" role="status">
+        <span className="w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-400/15 text-emerald-700 dark:text-emerald-300 inline-flex items-center justify-center">
+          <CircleCheck size={30} aria-hidden="true" />
+        </span>
+        <h1 className="font-baslik text-xl font-extrabold">Giriş onaylandı</h1>
+        <p className="text-sm text-metin-2">
           İlgezdi tarayıcısına dönebilirsiniz — oturumunuz otomatik açılacak,
           ayarlarınız ve yer imleriniz senkronize edilecek.
         </p>
@@ -150,102 +178,115 @@ export default function BrowserLogin() {
   }
 
   if (!session) {
-    return card(
-      <form onSubmit={handleLogin} className="space-y-4">
-        <p className="text-sm text-gray-600 text-center mb-2">
-          Tarayıcı girişini onaylamak için Qrtım hesabınızla giriş yapın.
-        </p>
-        <input
-          type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-          placeholder="E-posta"
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    return sayfa(
+      <form onSubmit={handleLogin} aria-labelledby={`${id}-b`} className="flex flex-col gap-5">
+        {ust('Onaylamak için giriş yapın', 'Tarayıcı girişini onaylamak için QRtım hesabınızla giriş yapın.')}
+        <GirisAlani
+          id={`${id}-e`} etiket="E-posta" type="email" required autoComplete="username"
+          value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ad@ornek.com"
         />
-        <input
-          type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-          placeholder="Şifre"
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        <SifreAlani
+          id={`${id}-s`} etiket="Şifre" required autoComplete="current-password"
+          value={password} onChange={(e) => setPassword(e.target.value)}
         />
-        <button
-          type="submit" disabled={busy}
-          className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold rounded-lg transition"
-        >
-          {busy ? 'Giriş yapılıyor...' : 'Giriş Yap'}
-        </button>
+        {hataKutusu}
+        <Dugme type="submit" disabled={busy}>{busy ? 'Giriş yapılıyor…' : 'Giriş yap'}</Dugme>
       </form>
     )
   }
 
-  return card(
-    <div className="text-center">
-      <p className="text-gray-700 mb-1">
-        <span className="font-semibold">{session.user?.email}</span> hesabıyla
-      </p>
-      <p className="text-gray-600 mb-4">İlgezdi tarayıcısında oturum açılsın mı?</p>
+  if (vazgecildi) {
+    return sayfa(
+      ust('Onay verilmedi', 'Bilgisayarda oturum açılmadı. Bu QR kod kullanılmazsa kısa süre içinde kendiliğinden geçersiz olur; bu sekmeyi kapatabilirsiniz.'),
+    )
+  }
+
+  const ad = session.user?.user_metadata?.name
+  const gecen = istek?.created_at ? Math.max(0, Math.round((istek._alindi - new Date(istek.created_at).getTime()) / 1000)) : null
+
+  return sayfa(
+    <>
+      {ust(
+        'Bir bilgisayar hesabınıza girmek istiyor',
+        <>
+          Giriş <b className="text-metin">{ad || session.user?.email}</b>
+          {ad && session.user?.email ? ` (${session.user.email})` : ''} olarak yapılacak. Onaylamadan önce
+          ekrandaki bilgileri bilgisayarınızla karşılaştırın.
+        </>,
+      )}
+
       {istek && (
-        <div className="mb-6 p-3 bg-gray-50 border border-gray-200 rounded-lg text-left text-sm">
+        <dl className="bg-yuzey border border-cizgi rounded-2xl px-4 py-1">
           {/* Cihaz adı QR'ı üreten programın KENDİ beyanı; saldırgan istediğini
               yazabilir (denetim G-04). Bu yüzden öyle etiketleniyor ve yanında
               sunucunun kendi gözlemi (aynı ağ mı) gösteriliyor. */}
-          <div className="text-gray-500">Cihazın kendi bildirdiği ad</div>
-          <div className="font-semibold text-gray-800">{istek.requester_label}</div>
-          <div className="text-gray-500 mt-1">
-            {new Date(istek.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} itibarıyla bekliyor
-          </div>
-          {istek.same_network === true && (
-            <div className="mt-2 text-green-700">
-              İstek, şu an bağlı olduğunuz ağdan geliyor.
+          {istek.requester_label && (
+            <div className={SATIR}><dt className="text-metin-2">Cihazın bildirdiği ad</dt><dd className="font-semibold text-right break-all">{istek.requester_label}</dd></div>
+          )}
+          {istek.created_at && (
+            <div className={SATIR}><dt className="text-metin-2">QR oluşturuldu</dt><dd className="font-semibold text-right tabular-nums">{saat(istek.created_at)}{gecen !== null && ` · ${onceMetni(gecen)}`}</dd></div>
+          )}
+          {istek.expires_at && (
+            <div className={SATIR}><dt className="text-metin-2">Son geçerlilik</dt><dd className="font-semibold text-right tabular-nums">{saat(istek.expires_at)}</dd></div>
+          )}
+          {typeof istek.same_network === 'boolean' && (
+            <div className={SATIR}>
+              <dt className="text-metin-2">Ağ</dt>
+              <dd className={birlestir('font-semibold text-right', istek.same_network ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-300')}>
+                {istek.same_network ? 'Sizinle aynı ağ' : 'Farklı ağ'}
+              </dd>
             </div>
           )}
-          {istek.same_network === false && (
-            <div className="mt-2 p-2 rounded bg-amber-50 border border-amber-200 text-amber-800">
-              <strong>Dikkat:</strong> Bu istek sizinle aynı ağdan gelmiyor. Telefonunuz mobil
-              veride, bilgisayarınız Wi-Fi'da ise bu normal olabilir. QR kodu size biri
-              gönderdiyse onaylamayın.
-            </div>
-          )}
-        </div>
+        </dl>
       )}
+
+      {istek?.same_network === false && (
+        <BilgiKutusu ton="dikkat">
+          <b>Bu istek sizinle aynı ağdan gelmiyor.</b> Telefonunuz mobil veride, bilgisayarınız Wi-Fi'da ise bu
+          normal olabilir. QR kodu size biri gönderdiyse onaylamayın.
+        </BilgiKutusu>
+      )}
+
       {istek?.match_options && (
-        <div className="mb-6 text-left">
-          <p className="text-sm font-semibold text-gray-800 mb-2">
-            İlgezdi'nin ekranında, QR kodun yanında hangi sayı yazıyor?
-          </p>
-          <div className="flex gap-3">
+        <div className="flex flex-col gap-2.5">
+          <b id={`${id}-sayi`} className="text-sm">Bilgisayar ekranındaki sayıyı seçin</b>
+          <div role="group" aria-labelledby={`${id}-sayi`} className="grid grid-cols-3 gap-2.5">
             {istek.match_options.map((n) => (
               <button
-                key={n} type="button" onClick={() => setSecilenSayi(n)}
-                className={`flex-1 py-3 text-xl font-bold rounded-lg border-2 transition ${
-                  secilenSayi === n ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-800 hover:bg-gray-50'
-                }`}
+                key={n} type="button" onClick={() => setSecilenSayi(n)} aria-pressed={secilenSayi === n}
+                className={birlestir(
+                  'h-[72px] rounded-[14px] border-2 font-baslik text-[28px] font-bold tabular-nums transition-colors',
+                  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aksan',
+                  secilenSayi === n ? 'border-aksan bg-aksan-acik text-aksan-koyu dark:text-aksan' : 'border-cizgi bg-yuzey text-metin hover:bg-yuzey-2',
+                )}
               >
                 {n}
               </button>
             ))}
           </div>
-          <p className="mt-2 text-xs text-gray-500">
-            Sayıyı göremiyorsanız QR size başkası tarafından gönderilmiştir; onaylamayın.
+          <p className="text-xs text-metin-2">
+            Yanlış sayı seçilirse bu QR güvenlik için iptal edilir; bilgisayarda yeni QR oluşturulur. Sayıyı
+            göremiyorsanız QR size başkası tarafından gönderilmiştir; onaylamayın.
           </p>
         </div>
       )}
-      <div className="flex gap-3">
-        <button
-          onClick={() => window.close()}
-          className="flex-1 py-3 border border-gray-300 text-gray-600 font-semibold rounded-lg hover:bg-gray-50 transition"
-        >
-          Vazgeç
-        </button>
-        <button
-          onClick={() => handleApprove()} disabled={busy || (istek?.match_options && secilenSayi === null)}
-          className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold rounded-lg transition"
-        >
-          {busy ? 'Onaylanıyor...' : 'Onayla'}
-        </button>
+
+      <BilgiKutusu ton="uyari">
+        Yalnızca QR kodu <b>şu an kendi bilgisayarınızın ekranında</b> görüyorsanız onaylayın. Birisi size bu
+        bağlantıyı gönderdiyse onaylamayın: onay, oturumu QR'ı üreten cihazda açar.
+      </BilgiKutusu>
+
+      {hataKutusu}
+
+      <div className="flex flex-col gap-2.5">
+        <Dugme className="h-[52px] rounded-[14px]" onClick={() => handleApprove()} disabled={busy || (istek?.match_options && secilenSayi === null)}>
+          {busy ? 'Onaylanıyor…' : 'Girişi onayla'}
+        </Dugme>
+        <Dugme tur="ikincil" className="h-[52px] rounded-[14px]" onClick={vazgec} disabled={busy}>
+          Bu ben değilim, vazgeç
+        </Dugme>
+        <p className="text-xs text-metin-2 text-center">QR kod 5 dakika içinde geçersiz olur.</p>
       </div>
-      <p className="mt-4 text-xs text-gray-500">
-        <strong>Yalnızca QR kodu şu an KENDİ bilgisayarınızın ekranında görüyorsanız onaylayın.</strong>{' '}
-        Birisi size bir QR kod gönderip "bunu okut" dediyse onaylamayın: onay, oturumu
-        QR'ı üreten cihazda açar. QR kod 5 dakika içinde geçersiz olur.
-      </p>
-    </div>
+    </>
   )
 }

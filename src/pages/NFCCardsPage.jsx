@@ -1,482 +1,291 @@
-import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../contexts/ThemeContext';
-import {
-  CreditCard, Sparkles, Zap, ArrowRight,
-  CheckCircle, Mail, Moon, Sun, Wifi, Check, Clock
-} from 'lucide-react';
+import { Link } from 'react-router-dom'
+import { ArrowRight, Check, Clock, CreditCard, Mail, PenTool, Gift, Smartphone } from 'lucide-react'
+import SiteKabugu from '../site/SiteKabugu'
+import { refliAdres } from '../site/yardim'
+import { NfcKartGorseli, QrMotif, SayfaUst } from '../site/sayfalar/ortak'
+import { dugme, KAP, UST_ETIKET } from '../site/sayfalar/siniflar'
+import { birlestir } from '../panel/bicim'
+import { NFC_KART_FIYATI } from '../lib/planlar'
+
+// Fiyatlar: standart PVC kart bedeli tek kaynaktan (src/lib/planlar.js) okunur.
+// Diğer kart türlerinin bedeli orada henüz tanımlı değil; mevcut sabitler
+// olduğu gibi duruyor (yeni rakam yazılmadı).
+const cardTypes = [
+  {
+    id: 'pvc',
+    name: 'Standart PVC Kart',
+    tagline: 'Uygun Fiyatlı & Dayanıklı',
+    price: `₺${NFC_KART_FIYATI.toLocaleString('tr-TR')}`,
+    comingSoon: false,
+    features: ['Su geçirmez PVC malzeme', 'Canlı renkli baskı', 'Çizilmeye dayanıklı', 'NFC çip dahil', 'QR kod baskısı', '3-5 iş günü teslimat'],
+    specs: [
+      { label: 'Malzeme', value: 'PVC Plastik' },
+      { label: 'Boyut', value: '85.6×54 mm' },
+      { label: 'Kalınlık', value: '0.76 mm' },
+    ],
+  },
+  {
+    id: 'metal',
+    name: 'Premium Metal Kart',
+    tagline: 'Prestij & Lüks',
+    price: '₺1.490',
+    comingSoon: false,
+    metal: true,
+    features: ['Paslanmaz çelik malzeme', 'Lazer gravür baskı', 'Ağır ve kaliteli his', 'NFC çip dahil', 'Mat veya parlak yüzey', '5-7 iş günü teslimat'],
+    specs: [
+      { label: 'Malzeme', value: 'Paslanmaz Çelik' },
+      { label: 'Boyut', value: '85.6×54 mm' },
+      { label: 'Kalınlık', value: '0.8 mm' },
+    ],
+  },
+  {
+    id: 'transparent',
+    name: 'Şeffaf Kart',
+    tagline: 'Modern & Dikkat Çekici',
+    price: '₺999',
+    comingSoon: true,
+    features: ['Şeffaf PVC malzeme', 'Benzersiz görünüm', 'Hafif yapı', 'NFC çip dahil', 'Dikkat çekici tasarım', 'Kargo ücretsiz'],
+  },
+  {
+    id: 'bamboo',
+    name: 'Bambu Kart',
+    tagline: 'Çevre Dostu & Doğal',
+    price: '₺1.290',
+    comingSoon: true,
+    features: ['Doğal bambu malzeme', 'Çevre dostu üretim', 'Organik doku', 'NFC çip dahil', 'Sürdürülebilir', 'Kargo ücretsiz'],
+  },
+  {
+    id: 'custom',
+    name: 'Özel Tasarım',
+    tagline: 'Tamamen Size Özel',
+    price: 'Fiyat Teklifi',
+    comingSoon: true,
+    features: ['İstediğiniz malzeme', 'Logo ve marka baskısı', 'Özel renk & tasarım', 'NFC çip dahil', 'Kurumsal sipariş', 'Proje bazlı fiyat'],
+  },
+]
+
+const faqs = [
+  { q: 'NFC kartlar nasıl çalışır?', a: 'NFC kartlar, telefonla dokunduğunuzda otomatik olarak dijital kartvizitinizi açar. QR kod taramaya gerek kalmaz.' },
+  { q: 'Tüm telefonlarla uyumlu mu?', a: 'Evet! NFC özelliği olan tüm akıllı telefonlar (iPhone, Android) ile uyumludur. NFC olmayan telefonlarda QR kod ile kullanılabilir.' },
+  { q: 'Kart bilgilerini güncelleyebilir miyim?', a: 'Evet! Kartınızdaki bilgiler dijital olduğu için istediğiniz zaman QRtım panelinden güncelleyebilirsiniz. Yeni kart bastırmaya gerek yok!' },
+  { q: 'Teslimat süresi ne kadar?', a: 'PVC kartlar 3-5 iş günü, metal kartlar 5-7 iş günü içinde kargoya verilir. Kargo ücretsizdir.' },
+  { q: 'Yıllık abonelikte kart hediye mi geliyor?', a: 'Evet! Profesyonel yıllık abonelikte 1 PVC kart, STK yıllık abonelikte 6 kart, Kurumsal yıllık abonelikte 10 kart ücretsiz gönderilir.' },
+]
+
+const ADIMLAR = [
+  { icon: CreditCard, title: 'Kart seç, sipariş ver', desc: 'İstediğin kart türünü seçin, siparişinizi oluşturun.' },
+  { icon: PenTool, title: 'Tasarımını özelleştir', desc: 'QRtım panelinden profilinizi güncelleyin, kart hazırlanır.' },
+  { icon: Smartphone, title: 'Dokunuşla paylaş', desc: 'Kartvizitinizi telefona dokundurarak anında paylaşın.' },
+]
+
+// Küçük kart görseli: PVC marka mavisi, metal koyu lacivert + fırçalanmış
+// çizgi dokusu; yakında gelenler soluk yüzey. Hepsi dekor (aria-hidden).
+function KucukKart({ card, soluk }) {
+  const zemin = soluk ? 'bg-yuzey-2 text-metin-2 border border-dashed border-cizgi' : card.metal ? 'bg-lacivert-950 dark:bg-lacivert-900 dark:ring-1 dark:ring-inset dark:ring-white/10 text-white' : 'bg-marka text-white'
+  return (
+    <div aria-hidden="true" className={birlestir('relative w-full aspect-[85.6/54] max-w-[300px] mx-auto rounded-2xl p-5 flex flex-col justify-between overflow-hidden', zemin)}>
+      {card.metal && (
+        <span className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #fff 0 1px, transparent 1px 4px)' }} />
+      )}
+      {!soluk && <QrMotif className="absolute -right-10 -bottom-10 text-white/10" boyut={170} />}
+      <div className="relative flex items-center justify-between">
+        <span className={birlestir('text-xs font-semibold', soluk ? 'text-metin-2' : 'text-white/70')}>QRtım</span>
+        <span className={birlestir('w-8 h-6 rounded-[5px]', soluk ? 'bg-cizgi' : 'bg-vurgu')} />
+      </div>
+      <div className="relative">
+        <div className={birlestir('font-baslik font-bold text-[15px]', soluk ? 'text-metin-2' : 'text-white')}>{soluk ? card.name : 'Ad Soyad'}</div>
+        <div className={birlestir('text-xs', soluk ? 'text-metin-2/80' : 'text-white/70')}>{soluk ? 'Hazırlanıyor' : 'qrtim.com.tr/profil'}</div>
+      </div>
+    </div>
+  )
+}
+
+function Ozellik({ children, kucuk }) {
+  return (
+    <li className={birlestir('flex items-start gap-2.5', kucuk ? 'text-[13.5px] text-metin-2' : 'text-[15px] text-metin')}>
+      <Check size={kucuk ? 14 : 16} strokeWidth={2.5} className="shrink-0 mt-[3px] text-aksan" aria-hidden="true" />
+      <span>{children}</span>
+    </li>
+  )
+}
 
 export default function NFCCardsPage() {
-  const navigate = useNavigate();
-  const { theme, toggleTheme } = useTheme();
-
-  const cardTypes = [
-    {
-      id: 'pvc',
-      name: 'Standart PVC Kart',
-      tagline: 'Uygun Fiyatlı & Dayanıklı',
-      gradient: 'from-blue-500 via-blue-600 to-purple-600',
-      bgGradient: 'from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20',
-      borderColor: 'border-blue-200 dark:border-blue-800',
-      price: '₺799',
-      badge: null,
-      comingSoon: false,
-      cardBg: 'from-blue-500 to-purple-600',
-      metal: false,
-      features: [
-        'Su geçirmez PVC malzeme',
-        'Canlı renkli baskı',
-        'Çizilmeye dayanıklı',
-        'NFC çip dahil',
-        'QR kod baskısı',
-        '3-5 iş günü teslimat'
-      ],
-      specs: [
-        { label: 'Malzeme', value: 'PVC Plastik' },
-        { label: 'Boyut', value: '85.6×54 mm' },
-        { label: 'Kalınlık', value: '0.76 mm' }
-      ]
-    },
-    {
-      id: 'metal',
-      name: 'Premium Metal Kart',
-      tagline: 'Prestij & Lüks',
-      gradient: 'from-gray-600 via-gray-700 to-gray-900',
-      bgGradient: 'from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-900/50',
-      borderColor: 'border-gray-300 dark:border-gray-600',
-      price: '₺1.490',
-      badge: 'Popüler',
-      comingSoon: false,
-      cardBg: 'from-gray-600 to-gray-900',
-      metal: true,
-      features: [
-        'Paslanmaz çelik malzeme',
-        'Lazer gravür baskı',
-        'Ağır ve kaliteli his',
-        'NFC çip dahil',
-        'Mat veya parlak yüzey',
-        '5-7 iş günü teslimat'
-      ],
-      specs: [
-        { label: 'Malzeme', value: 'Paslanmaz Çelik' },
-        { label: 'Boyut', value: '85.6×54 mm' },
-        { label: 'Kalınlık', value: '0.8 mm' }
-      ]
-    },
-    {
-      id: 'transparent',
-      name: 'Şeffaf Kart',
-      tagline: 'Modern & Dikkat Çekici',
-      gradient: 'from-cyan-400 to-blue-500',
-      bgGradient: 'from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20',
-      borderColor: 'border-cyan-200 dark:border-cyan-800',
-      price: '₺999',
-      badge: null,
-      comingSoon: true,
-      cardBg: 'from-cyan-400 to-blue-500',
-      metal: false,
-      features: [
-        'Şeffaf PVC malzeme',
-        'Benzersiz görünüm',
-        'Hafif yapı',
-        'NFC çip dahil',
-        'Dikkat çekici tasarım',
-        'Kargo ücretsiz'
-      ],
-      specs: [
-        { label: 'Malzeme', value: 'Şeffaf PVC' },
-        { label: 'Boyut', value: '85.6×54 mm' },
-        { label: 'Kalınlık', value: '0.76 mm' }
-      ]
-    },
-    {
-      id: 'bamboo',
-      name: 'Bambu Kart',
-      tagline: 'Çevre Dostu & Doğal',
-      gradient: 'from-green-600 to-emerald-700',
-      bgGradient: 'from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20',
-      borderColor: 'border-green-200 dark:border-green-800',
-      price: '₺1.290',
-      badge: null,
-      comingSoon: true,
-      cardBg: 'from-green-600 to-emerald-700',
-      metal: false,
-      features: [
-        'Doğal bambu malzeme',
-        'Çevre dostu üretim',
-        'Organik doku',
-        'NFC çip dahil',
-        'Sürdürülebilir',
-        'Kargo ücretsiz'
-      ],
-      specs: [
-        { label: 'Malzeme', value: 'Bambu' },
-        { label: 'Boyut', value: '85.6×54 mm' },
-        { label: 'Kalınlık', value: '1.0 mm' }
-      ]
-    },
-    {
-      id: 'custom',
-      name: 'Özel Tasarım',
-      tagline: 'Tamamen Size Özel',
-      gradient: 'from-orange-500 to-red-600',
-      bgGradient: 'from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20',
-      borderColor: 'border-orange-200 dark:border-orange-800',
-      price: 'Fiyat Teklifi',
-      badge: null,
-      comingSoon: true,
-      cardBg: 'from-orange-500 to-red-600',
-      metal: false,
-      features: [
-        'İstediğiniz malzeme',
-        'Logo ve marka baskısı',
-        'Özel renk & tasarım',
-        'NFC çip dahil',
-        'Kurumsal sipariş',
-        'Proje bazlı fiyat'
-      ],
-      specs: [
-        { label: 'Malzeme', value: 'Seçime göre' },
-        { label: 'Adet', value: 'Min. 10 adet' },
-        { label: 'Süre', value: '10-15 gün' }
-      ]
-    }
-  ];
-
-  const faqs = [
-    {
-      q: 'NFC kartlar nasıl çalışır?',
-      a: 'NFC kartlar, telefonla dokunduğunuzda otomatik olarak dijital kartvizitinizi açar. QR kod taramaya gerek kalmaz.'
-    },
-    {
-      q: 'Tüm telefonlarla uyumlu mu?',
-      a: 'Evet! NFC özelliği olan tüm akıllı telefonlar (iPhone, Android) ile uyumludur. NFC olmayan telefonlarda QR kod ile kullanılabilir.'
-    },
-    {
-      q: 'Kart bilgilerini güncelleyebilir miyim?',
-      a: 'Evet! Kartınızdaki bilgiler dijital olduğu için istediğiniz zaman QRtım panelinden güncelleyebilirsiniz. Yeni kart bastırmaya gerek yok!'
-    },
-    {
-      q: 'Teslimat süresi ne kadar?',
-      a: 'PVC kartlar 3-5 iş günü, metal kartlar 5-7 iş günü içinde kargoya verilir. Kargo ücretsizdir.'
-    },
-    {
-      q: 'Yıllık abonelikte kart hediye mi geliyor?',
-      a: 'Evet! Profesyonel yıllık abonelikte 1 PVC kart, STK yıllık abonelikte 6 kart, Kurumsal yıllık abonelikte 10 kart ücretsiz gönderilir.'
-    }
-  ];
-
-  const activeCards = cardTypes.filter(c => !c.comingSoon);
-  const comingSoonCards = cardTypes.filter(c => c.comingSoon);
+  const activeCards = cardTypes.filter((c) => !c.comingSoon)
+  const comingSoonCards = cardTypes.filter((c) => c.comingSoon)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
-
-      {/* Header */}
-      <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <button onClick={() => navigate('/')} className="flex items-center gap-2">
-              <img src="/qrtım-logo.png" alt="QRtım Logo" className="h-12 w-auto" />
-            </button>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={toggleTheme}
-                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              >
-                {theme === 'light' ? (
-                  <Moon size={20} className="text-gray-700" />
-                ) : (
-                  <Sun size={20} className="text-yellow-400" />
-                )}
-              </button>
-              <button
-                onClick={() => navigate('/login')}
-                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
-              >
-                Giriş Yap
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Hero */}
-      <section className="pt-20 pb-12 px-4">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full mb-6">
-            <Sparkles size={16} />
-            <span className="text-sm font-medium">Fiziksel + Dijital Kartvizit</span>
-          </div>
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
-            NFC Kartınızı
-            <br />
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Seçin & Sipariş Verin
-            </span>
-          </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-6 max-w-3xl mx-auto">
-            Dijital kartvizitinizi fiziksel bir karta dönüştürün.
-            Dokunuşla paylaşın, anında etki bırakın.
-          </p>
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">
-            <CheckCircle size={16} />
-            <span className="text-sm font-medium">Yıllık aboneliklerde kart hediye!</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Aktif Kartlar */}
-      <section className="py-8 px-4">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-2">
-            Şu An Sipariş Verebilirsiniz
-          </h2>
-          <p className="text-center text-gray-500 dark:text-gray-400 text-sm mb-10">
-            Stokta mevcut, hızlı teslimat
-          </p>
-
-          <div className="grid md:grid-cols-2 gap-10">
-            {activeCards.map((card) => (
-              <div
-                key={card.id}
-                className={`relative bg-gradient-to-br ${card.bgGradient} rounded-3xl p-8 border-2 ${card.borderColor} hover:shadow-2xl transition-all`}
-              >
-                {card.badge && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-1.5 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-sm font-bold rounded-full shadow-lg">
-                    ⭐ {card.badge}
-                  </div>
-                )}
-
-                {/* Kart Görseli */}
-                <div className="mb-8 flex justify-center">
-                  <div className="relative">
-                    <div className={`w-64 h-40 bg-gradient-to-br ${card.cardBg} rounded-2xl shadow-2xl flex flex-col justify-between p-5 relative overflow-hidden`}>
-                      <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/20 rounded-2xl" />
-                      {card.metal && (
-                        <div className="absolute inset-0 opacity-10 rounded-2xl"
-                          style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(255,255,255,0.3) 2px, rgba(255,255,255,0.3) 4px)' }}
-                        />
-                      )}
-                      <div className="relative z-10 flex justify-between items-start">
-                        <div>
-                          <div className="text-white/60 text-xs font-medium mb-0.5">QRtım</div>
-                          <div className="text-white font-bold text-sm">Ad Soyad</div>
-                          <div className="text-white/70 text-xs">Ünvan</div>
-                        </div>
-                        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                          <Wifi size={16} className="text-white" />
-                        </div>
-                      </div>
-                      <div className="relative z-10 flex justify-between items-end">
-                        <div className="text-white/50 text-xs">qrtim.com.tr/profil</div>
-                        <div className="w-8 h-8 bg-white/90 rounded-md p-1">
-                          <div className="w-full h-full grid grid-cols-3 gap-px">
-                            {[...Array(9)].map((_, i) => (
-                              <div key={i} className={`${[0,2,4,6,8].includes(i) ? 'bg-gray-800' : 'bg-transparent'} rounded-sm`} />
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className={`absolute -bottom-2 -right-2 w-64 h-40 bg-gradient-to-br ${card.cardBg} rounded-2xl opacity-25 -z-10`} />
-                  </div>
-                </div>
-
-                <div className="text-center mb-5">
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{card.name}</h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">{card.tagline}</p>
-                </div>
-
-                <div className="space-y-2 mb-5">
-                  {card.features.map((feature, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                      <CheckCircle size={15} className="text-green-500 flex-shrink-0" />
-                      <span>{feature}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 mb-5 p-3 bg-white/50 dark:bg-gray-800/50 rounded-xl">
-                  {card.specs.map((spec, i) => (
-                    <div key={i} className="text-center">
-                      <div className="text-xs text-gray-500 dark:text-gray-400">{spec.label}</div>
-                      <div className="text-xs font-semibold text-gray-800 dark:text-gray-200 mt-0.5">{spec.value}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-5">
-                  <div className="flex items-baseline justify-between mb-4">
-                    <div>
-                      <span className="text-3xl font-bold text-gray-900 dark:text-white">{card.price}</span>
-                      <span className="text-sm text-gray-500 ml-1">/adet</span>
-                    </div>
-                    <span className="text-xs text-green-600 dark:text-green-400 font-medium">Kargo ücretsiz</span>
-                  </div>
-                  <button
-                    onClick={() => navigate('/signup')}
-                    className={`w-full py-3 bg-gradient-to-r ${card.gradient} text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2`}
-                  >
-                    Sipariş Ver
-                    <ArrowRight size={18} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Yakında Gelecek Kartlar */}
-      <section className="py-12 px-4">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <Clock size={20} className="text-orange-500" />
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Yakında Geliyor</h2>
-          </div>
-          <p className="text-center text-gray-500 dark:text-gray-400 text-sm mb-10">
-            Hazırlık aşamasındaki kartlarımızı keşfedin
-          </p>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {comingSoonCards.map((card) => (
-              <div
-                key={card.id}
-                className={`relative bg-gradient-to-br ${card.bgGradient} rounded-2xl p-6 border-2 ${card.borderColor} opacity-75`}
-              >
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-orange-400 to-yellow-500 text-white text-xs font-bold rounded-full shadow">
-                  🔜 Yakında
-                </div>
-
-                <div className="mb-5 flex justify-center">
-                  <div className={`w-full h-24 bg-gradient-to-br ${card.cardBg} rounded-xl shadow-lg flex items-center justify-center relative overflow-hidden`}>
-                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/20" />
-                    <div className="relative z-10 text-center">
-                      <div className="text-white font-bold text-sm">QRtım</div>
-                      <div className="text-white/70 text-xs mt-0.5">{card.name}</div>
-                    </div>
-                    <div className="absolute bottom-2 right-2">
-                      <Wifi size={14} className="text-white/40" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="text-center mb-4">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{card.name}</h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-xs">{card.tagline}</p>
-                </div>
-
-                <div className="space-y-1.5 mb-4">
-                  {card.features.slice(0, 4).map((feature, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                      <Check size={12} className="text-green-500 flex-shrink-0" />
-                      <span>{feature}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                  <div className="flex items-baseline justify-between mb-3">
-                    <span className="text-xl font-bold text-gray-700 dark:text-gray-300">{card.price}</span>
-                    {card.price.includes('₺') && <span className="text-xs text-gray-400">/adet</span>}
-                  </div>
-                  <button
-                    disabled
-                    className="w-full py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-xl font-semibold text-sm cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    <Clock size={14} />
-                    Yakında Açılacak
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Toplu Sipariş */}
-      <section className="py-8 px-4">
-        <div className="max-w-5xl mx-auto">
-          <div className="p-6 bg-gradient-to-r from-gray-800 to-gray-900 rounded-2xl text-white text-center">
-            <Zap className="mx-auto mb-3 text-yellow-400" size={32} />
-            <h3 className="text-xl font-bold mb-2">Toplu Sipariş & Kurumsal</h3>
-            <p className="text-gray-300 text-sm mb-4">
-              10+ kart siparişlerinde özel fiyatlandırma. Şirket logolu özel tasarım seçenekleri.
-            </p>
-            <a
-              href="mailto:info@qartim.com"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-white text-gray-900 rounded-xl font-semibold hover:shadow-xl transition-all"
-            >
-              <Mail size={18} />
-              Teklif Al
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* Nasıl Çalışır */}
-      <section className="py-16 px-4 bg-white dark:bg-gray-900">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-12">Nasıl Çalışır?</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { step: '1', icon: CreditCard, title: 'Kart Seç & Sipariş Ver', desc: 'İstediğin kart türünü seçin, siparişinizi oluşturun.' },
-              { step: '2', icon: Sparkles, title: 'Tasarımını Özelleştir', desc: 'QRtım panelinden profilinizi güncelleyin, kart hazırlanır.' },
-              { step: '3', icon: Wifi, title: 'Dokunuşla Paylaş', desc: 'Kartvizitinizi telefona dokundurarak anında paylaşın.' }
-            ].map((item) => {
-              const Icon = item.icon;
-              return (
-                <div key={item.step} className="text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                    <Icon className="text-white" size={28} />
-                  </div>
-                  <div className="text-xs font-bold text-blue-600 dark:text-blue-400 mb-2">ADIM {item.step}</div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{item.title}</h3>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">{item.desc}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="py-16 px-4 bg-gray-50 dark:bg-gray-800">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-10">Sık Sorulan Sorular</h2>
-          <div className="space-y-4">
-            {faqs.map((faq, index) => (
-              <div key={index} className="p-5 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700">
-                <h3 className="text-base font-bold text-gray-900 dark:text-white mb-2">{faq.q}</h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">{faq.a}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* İletişim */}
-      <section className="py-16 px-4 bg-gradient-to-r from-blue-600 to-purple-600">
-        <div className="max-w-4xl mx-auto text-center text-white">
-          <h2 className="text-3xl font-bold mb-4">Sorunuz mu var?</h2>
-          <p className="text-blue-100 mb-8">Hemen iletişime geçin, size yardımcı olalım.</p>
-          <a
-            href="mailto:info@qartim.com"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-white text-blue-600 rounded-xl font-semibold hover:shadow-2xl transition-all"
+    <SiteKabugu>
+      {/* Başlık: Landing NFC bölümünün dili — solda metin, sağda koyu kart. */}
+      <section className={birlestir(KAP, 'pt-12 sm:pt-20 pb-14 sm:pb-20')}>
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-center">
+          <SayfaUst
+            ust="NFC kart"
+            ustTon="vurgu"
+            baslik="NFC kartınızı seçin, sipariş verin"
+            alt="Dijital kartvizitinizi fiziksel bir karta dönüştürün. Dokunuşla paylaşın, anında etki bırakın."
           >
-            <Mail size={20} />
-            info@qartim.com
+            <div className="mt-3 flex flex-wrap gap-3">
+              <Link to="/nfc-designer" className={dugme('vurgu')}>Kart tasarla</Link>
+              <a href="#kartlar" className={dugme('ikincil')}>Kartları incele</a>
+            </div>
+            <p className="mt-2 inline-flex items-center gap-2 text-sm text-metin-2">
+              <Gift size={16} className="text-vurgu" aria-hidden="true" />
+              Yıllık aboneliklerde kart hediye!
+            </p>
+          </SayfaUst>
+          <NfcKartGorseli className="min-h-[260px] lg:min-h-[320px]" />
+        </div>
+      </section>
+
+      {/* Şu an sipariş verilebilen kartlar */}
+      <section id="kartlar" aria-labelledby="aktif-baslik" className="scroll-mt-20 bg-yuzey border-y border-cizgi py-16 sm:py-20">
+        <div className={KAP}>
+          <div className="flex flex-col gap-3 max-w-[640px]">
+            <span className={birlestir(UST_ETIKET, 'text-aksan')}>Stokta mevcut, hızlı teslimat</span>
+            <h2 id="aktif-baslik" className="font-baslik text-[30px] sm:text-[36px] leading-tight font-extrabold tracking-[-0.02em] text-metin">Şu an sipariş verebilirsiniz</h2>
+          </div>
+
+          <div className="mt-10 grid gap-6 md:grid-cols-2">
+            {activeCards.map((card) => (
+              <article key={card.id} className="rounded-2xl border border-cizgi bg-zemin p-6 sm:p-8 flex flex-col gap-6">
+                <KucukKart card={card} />
+                <div>
+                  <h3 className="font-baslik text-[22px] font-bold text-metin">{card.name}</h3>
+                  <p className="mt-1 text-sm text-metin-2">{card.tagline}</p>
+                </div>
+                <ul className="grid sm:grid-cols-2 gap-x-4 gap-y-2.5">
+                  {card.features.map((f) => <Ozellik key={f}>{f}</Ozellik>)}
+                </ul>
+                <dl className="grid grid-cols-3 rounded-xl border border-cizgi bg-yuzey divide-x divide-cizgi">
+                  {card.specs.map((spec) => (
+                    <div key={spec.label} className="px-3 py-3 text-center">
+                      <dt className="text-xs text-metin-2">{spec.label}</dt>
+                      <dd className="mt-0.5 text-[13px] font-semibold text-metin">{spec.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <div className="mt-auto pt-6 border-t border-cizgi flex flex-wrap items-end justify-between gap-4">
+                  <div>
+                    <p className="flex items-baseline gap-1">
+                      <span className="font-baslik text-[32px] font-extrabold tracking-tight text-metin tabular-nums">{card.price}</span>
+                      <span className="text-sm text-metin-2">/adet</span>
+                    </p>
+                    <p className="text-[13px] font-semibold text-emerald-700 dark:text-emerald-300">Kargo ücretsiz</p>
+                  </div>
+                  <Link to={refliAdres('/signup')} className={dugme('vurgu', 'w-full sm:w-auto')}>
+                    Sipariş ver
+                    <ArrowRight size={18} aria-hidden="true" />
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Yakında gelen kartlar: devre dışı, "Yakında" rozetli */}
+      <section aria-labelledby="yakinda-baslik" className={birlestir(KAP, 'py-16 sm:py-20')}>
+        <div className="flex flex-col gap-3 max-w-[640px]">
+          <span className={birlestir(UST_ETIKET, 'text-metin-2')}>Hazırlık aşamasında</span>
+          <h2 id="yakinda-baslik" className="font-baslik text-[30px] sm:text-[36px] leading-tight font-extrabold tracking-[-0.02em] text-metin">Yakında geliyor</h2>
+          <p className="text-[17px] text-metin-2">Hazırlık aşamasındaki kartlarımızı keşfedin</p>
+        </div>
+        <div className="mt-10 grid gap-5 md:grid-cols-3">
+          {comingSoonCards.map((card) => (
+            <article key={card.id} className="rounded-2xl border border-dashed border-cizgi bg-yuzey p-6 flex flex-col gap-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-baslik text-[18px] font-bold text-metin">{card.name}</h3>
+                  <p className="mt-0.5 text-[13px] text-metin-2">{card.tagline}</p>
+                </div>
+                <span className="inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-xs font-semibold bg-vurgu-acik text-vurgu whitespace-nowrap">
+                  <Clock size={12} strokeWidth={2.5} aria-hidden="true" />
+                  Yakında
+                </span>
+              </div>
+              <ul className="flex flex-col gap-2">
+                {card.features.slice(0, 4).map((f) => <Ozellik key={f} kucuk>{f}</Ozellik>)}
+              </ul>
+              <div className="mt-auto pt-5 border-t border-cizgi flex items-center justify-between gap-3">
+                <p className="flex items-baseline gap-1">
+                  <span className="font-baslik text-[20px] font-extrabold text-metin-2 tabular-nums">{card.price}</span>
+                  {card.price.includes('₺') && <span className="text-xs text-metin-2">/adet</span>}
+                </p>
+                <button type="button" disabled className="inline-flex items-center gap-1.5 h-10 px-4 rounded-[10px] border border-cizgi bg-yuzey-2 text-sm font-semibold text-metin-2 cursor-not-allowed">
+                  Yakında açılacak
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* Toplu sipariş: her iki temada koyu lacivert bant */}
+      <section aria-labelledby="toplu-baslik" className={birlestir(KAP, 'pb-16 sm:pb-20')}>
+        <div className="relative overflow-hidden rounded-3xl bg-lacivert-950 dark:bg-lacivert-900 text-white px-6 py-10 sm:px-12 sm:py-12 grid gap-6 md:grid-cols-[minmax(0,1fr)_auto] items-center dark:border dark:border-cizgi">
+          <QrMotif className="absolute -left-16 -bottom-24 text-white/[0.07]" boyut={260} />
+          <div className="relative flex flex-col gap-3 max-w-[620px]">
+            <span className={birlestir(UST_ETIKET, 'text-vurgu')}>Kurumsal</span>
+            <h2 id="toplu-baslik" className="font-baslik text-[28px] sm:text-[32px] leading-tight font-extrabold tracking-[-0.02em] text-white">Toplu sipariş ve kurumsal</h2>
+            <p className="text-[16px] leading-relaxed text-lacivert-200">10+ kart siparişlerinde özel fiyatlandırma. Şirket logolu özel tasarım seçenekleri.</p>
+          </div>
+          <a href="mailto:info@qartim.com" className={dugme('beyaz', 'relative')}>
+            <Mail size={18} aria-hidden="true" />
+            Teklif al
           </a>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-gray-400 py-10 px-4">
-        <div className="max-w-7xl mx-auto text-center">
-          <img src="/qrtım-logo.png" alt="QRtım" className="h-10 w-auto mx-auto mb-4" />
-          <p className="text-sm">&copy; 2026 QRtım. Tüm hakları saklıdır.</p>
+      {/* Nasıl çalışır */}
+      <section aria-labelledby="nasil-baslik" className="bg-yuzey border-y border-cizgi py-16 sm:py-20">
+        <div className={KAP}>
+          <div className="flex flex-col gap-3 max-w-[640px]">
+            <span className={birlestir(UST_ETIKET, 'text-aksan')}>Nasıl çalışır</span>
+            <h2 id="nasil-baslik" className="font-baslik text-[30px] sm:text-[36px] leading-tight font-extrabold tracking-[-0.02em] text-metin">Üç adımda kartınız elinizde</h2>
+          </div>
+          <ol className="mt-10 grid gap-5 md:grid-cols-3">
+            {ADIMLAR.map((item, i) => {
+              const Icon = item.icon
+              return (
+                <li key={item.title} className="rounded-2xl bg-zemin p-7 flex flex-col gap-3.5">
+                  <span className="font-baslik text-[13px] font-extrabold tracking-[.08em] text-vurgu">{String(i + 1).padStart(2, '0')}</span>
+                  <span className={birlestir('w-12 h-12 rounded-xl inline-flex items-center justify-center', i === 1 ? 'bg-vurgu-acik text-vurgu' : 'bg-aksan-acik text-aksan')}>
+                    <Icon size={22} aria-hidden="true" />
+                  </span>
+                  <h3 className="font-baslik text-[20px] font-bold text-metin">{item.title}</h3>
+                  <p className="text-[15px] leading-relaxed text-metin-2">{item.desc}</p>
+                </li>
+              )
+            })}
+          </ol>
         </div>
-      </footer>
-    </div>
-  );
+      </section>
+
+      {/* SSS + iletişim */}
+      <section aria-labelledby="sss-baslik" className={birlestir(KAP, 'py-16 sm:py-20 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]')}>
+        <div className="flex flex-col gap-3">
+          <span className={birlestir(UST_ETIKET, 'text-aksan')}>SSS</span>
+          <h2 id="sss-baslik" className="font-baslik text-[30px] sm:text-[36px] leading-tight font-extrabold tracking-[-0.02em] text-metin">Sık sorulan sorular</h2>
+          <p className="text-[16px] text-metin-2">Sorunuz mu var? Hemen iletişime geçin, size yardımcı olalım.</p>
+          <div className="mt-2 flex flex-wrap gap-3">
+            <a href="mailto:info@qartim.com" className={dugme('ikincil')}>
+              <Mail size={18} aria-hidden="true" />
+              info@qartim.com
+            </a>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-cizgi bg-yuzey divide-y divide-cizgi">
+          {faqs.map((faq) => (
+            <details key={faq.q} className="group px-6 py-5">
+              <summary className="flex items-center justify-between gap-4 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                <h3 className="font-baslik text-[16px] font-bold text-metin">{faq.q}</h3>
+                <span className="w-8 h-8 shrink-0 rounded-lg bg-yuzey-2 text-metin-2 inline-flex items-center justify-center text-lg leading-none transition-transform group-open:rotate-45" aria-hidden="true">+</span>
+              </summary>
+              <p className="mt-3 text-[15px] leading-relaxed text-metin-2">{faq.a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+    </SiteKabugu>
+  )
 }

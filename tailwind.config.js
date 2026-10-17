@@ -29,6 +29,10 @@ export default {
           500: '#2B6FD6', 600: '#0A52B0', 700: '#0A4594', 800: '#0B3A7A', 900: '#162349', 950: '#0E1733',
         },
         indigo: lacivert, purple: lacivert, violet: lacivert, fuchsia: lacivert, lacivert,
+        // Tema ile DEĞİŞMEYEN marka mavisi: logo mavisi zeminli büyük bloklar (giriş
+        // sol paneli, partner bandı, kart başlığı). Koyu temada da aynı kalır; üstünde
+        // beyaz yazı 6:1 kontrast verir. Tema ile değişen aksan için `aksan` kullanılır.
+        marka: { DEFAULT: '#0A52B0', koyu: '#0A4594', acik: '#E3ECFA' },
         zemin: v('zemin'),
         yuzey: { DEFAULT: v('yuzey'), 2: v('yuzey-2') },
         cizgi: v('cizgi'),

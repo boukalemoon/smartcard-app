@@ -1,10 +1,17 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useId, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { CircleCheck } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { mfaDurumum } from '../lib/shieldauth'
+import { MFA_AKTIF } from '../lib/mfaAyari'
 import { useAdimAtlama } from '../hooks/useAdimAtlama'
+import {
+  AdimGostergesi, BilgiKutusu, Dugme, KimlikKarti, KimlikSayfasi, METIN_BAGLANTI, SifreAlani, SifreGucuCubugu, Yukleniyor,
+} from '../site/giris/parcalar'
+import { MIN_SIFRE, SIFRE_ADIMLARI } from '../site/giris/kurallar'
 
 // PAROLA YENİLEME — "Şifremi unuttum" e-postasındaki bağlantının indiği sayfa
+// (2. adım; 1. adım giriş ekranında, bkz. site/giris/SifirlamaIstegi).
 //
 // Bağlantı Supabase'in kurtarma oturumunu açar (adres çubuğundaki belirteç ya
 // da /auth/confirm üzerinden token_hash). Bu sayfa yalnızca oturum varsa yeni
@@ -19,11 +26,16 @@ import { useAdimAtlama } from '../hooks/useAdimAtlama'
 // çağrılabilir. Parola değişse bile saldırgan kimlik verisine YAZAMAZ
 // (veritabanı kapısı, denetim G-01) ama gerçek sahibi parolasıyla giremez.
 // Kalıcı çözüm Supabase'in yerleşik MFA seviyesi (aal2) — Faz 2.
-const MIN_PAROLA = 8
+//
+// Kurallar listesi yalnızca GERÇEKTEN uygulanan kuralları yazar: uzunluk
+// (burada ve Supabase'de) ve "eskisinden farklı" (Supabase reddeder).
+// Diğer cihazlardaki oturumlar bu işlemle KAPANMAZ; bu yüzden öyle yazılmaz.
+const MIN_PAROLA = MIN_SIFRE
 
 export default function SifreYenile() {
   const navigate = useNavigate()
   const { adimAtla } = useAdimAtlama()
+  const id = useId()
   const [oturum, setOturum] = useState(undefined)
   const [parola, setParola] = useState('')
   const [tekrar, setTekrar] = useState('')
@@ -68,53 +80,79 @@ export default function SifreYenile() {
     }
   }
 
-  const kutu = (icerik) => (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
-        <h1 className="text-xl font-bold text-gray-800 text-center mb-6">Yeni parola belirleyin</h1>
-        {icerik}
-        {hata && <p className="mt-4 text-sm text-red-600 text-center">{hata}</p>}
-      </div>
-    </div>
+  const baslik = (metin, hid) => (
+    <h1 id={hid} className="font-baslik text-[26px] font-extrabold leading-tight tracking-[-0.015em]">{metin}</h1>
   )
 
-  if (oturum === undefined) return kutu(<p className="text-center text-gray-500">Yükleniyor...</p>)
-
-  if (!oturum) {
-    return kutu(
-      <div className="text-center space-y-4">
-        <p className="text-gray-600">
-          Bağlantı geçersiz ya da süresi dolmuş. Giriş ekranından yeniden "Şifremi unuttum" isteyin.
-        </p>
-        <button onClick={() => navigate('/login')} className="text-blue-600 hover:underline text-sm font-medium">
-          Giriş ekranına dön
-        </button>
-      </div>
+  if (oturum === undefined) {
+    return (
+      <KimlikSayfasi>
+        <KimlikKarti>
+          <AdimGostergesi adimlar={SIFRE_ADIMLARI} aktif={2} />
+          {baslik('Yeni şifrenizi belirleyin')}
+          <Yukleniyor />
+        </KimlikKarti>
+      </KimlikSayfasi>
     )
   }
 
-  if (bitti) return kutu(<p className="text-center text-gray-700">Parolanız değiştirildi. Panele yönlendiriliyorsunuz...</p>)
+  if (!oturum) {
+    return (
+      <KimlikSayfasi>
+        <KimlikKarti>
+          <AdimGostergesi adimlar={SIFRE_ADIMLARI} aktif={2} />
+          <div className="flex flex-col gap-1.5">
+            {baslik('Bağlantı geçersiz')}
+            <p className="text-metin-2">
+              Bağlantı geçersiz ya da süresi dolmuş. Giriş ekranından yeniden "Şifremi unuttum" isteyin.
+            </p>
+          </div>
+          <Dugme onClick={() => navigate('/login?sifre=unuttum')}>Yeni bağlantı iste</Dugme>
+          <Link to="/login" className={`${METIN_BAGLANTI} self-start text-sm`}>Giriş ekranına dön</Link>
+        </KimlikKarti>
+      </KimlikSayfasi>
+    )
+  }
 
-  return kutu(
-    <form onSubmit={gonder} className="space-y-4">
-      <input
-        type="password" required minLength={MIN_PAROLA} autoComplete="new-password"
-        value={parola} onChange={(e) => setParola(e.target.value)}
-        placeholder={`Yeni parola (en az ${MIN_PAROLA} karakter)`}
-        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 outline-none"
-      />
-      <input
-        type="password" required minLength={MIN_PAROLA} autoComplete="new-password"
-        value={tekrar} onChange={(e) => setTekrar(e.target.value)}
-        placeholder="Yeni parola (tekrar)"
-        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 outline-none"
-      />
-      <button
-        type="submit" disabled={mesgul}
-        className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold rounded-xl"
-      >
-        {mesgul ? 'Kaydediliyor...' : 'Parolayı değiştir'}
-      </button>
-    </form>
+  if (bitti) {
+    return (
+      <KimlikSayfasi>
+        <KimlikKarti>
+          <AdimGostergesi adimlar={SIFRE_ADIMLARI} aktif={2} />
+          {baslik('Şifreniz değiştirildi')}
+          <BilgiKutusu ton="olumlu" ikon={CircleCheck} rol="status">Panele yönlendiriliyorsunuz…</BilgiKutusu>
+        </KimlikKarti>
+      </KimlikSayfasi>
+    )
+  }
+
+  return (
+    <KimlikSayfasi>
+      <KimlikKarti as="form" onSubmit={gonder} aria-labelledby={`${id}-b`}>
+        <AdimGostergesi adimlar={SIFRE_ADIMLARI} aktif={2} />
+        <div className="flex flex-col gap-1.5">
+          {baslik('Yeni şifrenizi belirleyin', `${id}-b`)}
+          {oturum.user?.email && (
+            <p className="text-metin-2"><b className="text-metin">{oturum.user.email}</b> hesabı için.</p>
+          )}
+        </div>
+        <SifreAlani
+          id={`${id}-yeni`} etiket="Yeni şifre" required minLength={MIN_PAROLA} autoComplete="new-password"
+          value={parola} onChange={(e) => setParola(e.target.value)} placeholder={`En az ${MIN_PAROLA} karakter`}
+          alt={<SifreGucuCubugu sifre={parola} />}
+        />
+        <SifreAlani
+          id={`${id}-tekrar`} etiket="Yeni şifre (tekrar)" required minLength={MIN_PAROLA} autoComplete="new-password"
+          value={tekrar} onChange={(e) => setTekrar(e.target.value)}
+        />
+        {hata && <BilgiKutusu ton="tehlike" rol="alert">{hata}</BilgiKutusu>}
+        <Dugme type="submit" disabled={mesgul}>{mesgul ? 'Kaydediliyor…' : 'Şifreyi kaydet'}</Dugme>
+        <ul className="list-disc pl-[18px] text-[13px] text-metin-2 flex flex-col gap-0.5">
+          <li>En az {MIN_PAROLA} karakter</li>
+          <li>Eski şifrenizden farklı olmalı</li>
+          {MFA_AKTIF && <li>Doğrulama uygulaması kurduysanız kaydetmeden önce kod istenir</li>}
+        </ul>
+      </KimlikKarti>
+    </KimlikSayfasi>
   )
 }
