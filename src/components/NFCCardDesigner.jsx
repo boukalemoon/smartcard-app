@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { CreditCard, Check, Gift, MoveHorizontal, MoveVertical, Minus, Plus } from 'lucide-react'
 import { birlestir } from '../panel/bicim'
-import { NFC_KART_FIYATI } from '../lib/planlar'
+import { KART_FIYATLARI } from '../lib/planlar'
 
 // Seçenek düğmesi (segment benzeri): seçili olan aksan çerçeveli.
 function Secenek({ secili, onClick, children, className }) {
@@ -48,10 +48,13 @@ export default function NFCCardDesigner({ profile, subscription }) {
 
   const CARD_TYPES = {
     // PVC bedeli tek kaynaktan (planlar.js); diğerleri orada henüz yok.
-    pvc: { name: 'Renkli PVC Kart', price: NFC_KART_FIYATI, description: 'Dayanıklı plastik malzeme' },
-    metal: { name: 'Metal Kart', price: 1499, description: 'Premium metal kart' },
-    transparent: { name: 'Şeffaf Kart', price: 1699, description: 'Modern şeffaf tasarım' },
-    bamboo: { name: 'Bambu Kart', price: 2299, description: 'Doğa dostu ahşap' }
+    // Fiyatlar lib/planlar.js'deki KART_FIYATLARI'ndan gelir; burada elle
+    // yazılmaz. Eskiden yazılıydı ve NFCCardsPage ile ayrışmıştı (metal
+    // burada 1.499 ₺, orada 1.490 ₺ görünüyordu).
+    pvc: { name: 'Renkli PVC Kart', price: KART_FIYATLARI.pvc, description: 'Dayanıklı plastik malzeme' },
+    metal: { name: 'Metal Kart', price: KART_FIYATLARI.metal, description: 'Premium metal kart' },
+    transparent: { name: 'Şeffaf Kart', price: KART_FIYATLARI.seffaf, description: 'Modern şeffaf tasarım' },
+    bamboo: { name: 'Bambu Kart', price: KART_FIYATLARI.bambu, description: 'Doğa dostu ahşap' }
   }
 
   // Fiyat hesaplama

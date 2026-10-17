@@ -176,6 +176,61 @@ const KITLELER = [
 ]
 
 // Her iki temada koyu kalan bant (sabit lacivert).
+// ------------------------------------------------- Bağlı uygulamalar
+// ÜCRETLİ PLAN TEŞVİKİ. Metinler sunucudaki gerçek davranışa bağlı:
+//   • plan_features.sync_passwords = (plan <> 'free') → şifre senkronu HER
+//     ücretli planda, öğrenci dahil.
+//   • plan_features.sync_max_devices: ücretsiz 1 cihaz.
+//   • Yer imleri user_sync_data'da (namespace 'bookmarks') merkezde durur.
+//   • tinga_listeler: "gizli" olmayan listeyi anon okuyabilir → paylaşılabilir
+//     bağlantı gerçekten çalışır.
+// YAZMADIĞIMIZ: QRtım site şifresi SAKLAMIYOR, kasa yok, uçtan uca şifreleme
+// kapsamda değil (bkz. 20260912180000_identity_sync_and_audit.sql). Bu yüzden
+// "şifreleriniz bizde güvende" denmez; hak ücretli planda açılır, şifrenin
+// kendisi QRtım'a gelmez. Arku için VERİ SENKRONU İDDİA EDİLMEZ: yok.
+const UYGULAMALAR = [
+  {
+    ikon: BaglantiIkon, ton: IKON_AKSAN, baslik: 'İlgezdi · yer imleri ve şifreler',
+    metin: 'Yer imleriniz QRtım hesabınızda durur, kurduğunuz her cihazda aynı. Şifre senkronu ücretli planlarda açılır ve şifrenizin kendisi QRtım tarafına geçmez. Ücretsiz planda senkron tek cihazla sınırlıdır.',
+  },
+  {
+    ikon: Share2, ton: IKON_VURGU, baslik: 'Tınga · çalma listeleri',
+    metin: 'Listenizi açık işaretleyin, bağlantıyı arkadaşlarınıza gönderin. Açtıkları sayfada hesap açmaları ya da uygulama kurmaları gerekmez.',
+  },
+  {
+    ikon: ShieldCheck, ton: IKON_AKSAN, baslik: 'Arku Remote · tek hesap',
+    metin: 'QRtım hesabınızla girin; ayrı şifre tutmanız gerekmez. Hangi uygulamanın neye eriştiğini Hesap bölümünden görür, dilediğinizde bağlantıyı kesersiniz.',
+  },
+]
+
+export function BagliUygulamalar() {
+  return (
+    <section id="uygulamalar" className={`${BOLUM_KAYMA} py-16 lg:py-[88px]`}>
+      <div className={`${KAP} flex flex-col gap-10`}>
+        <BolumBasligi
+          ust="Bağlı uygulamalar"
+          baslik="Tek hesap, taşıdığınız veri"
+          aciklama="QRtım hesabınız İlgezdi, Tınga ve Arku Remote'ta da sizsiniz. Ücretli planlar senkronu çok cihaza ve şifrelere açar."
+        />
+        <ul className="grid md:grid-cols-3 gap-4 lg:gap-5">
+          {UYGULAMALAR.map((u) => {
+            const Ikon = u.ikon
+            return (
+              <li key={u.baslik} className="flex flex-col gap-2.5 p-6 rounded-2xl bg-yuzey border border-cizgi">
+                <span className={birlestir('w-10 h-10 rounded-[10px] inline-flex items-center justify-center', u.ton)}>
+                  <Ikon size={20} aria-hidden="true" />
+                </span>
+                <h3 className="font-baslik text-[17px] font-bold leading-tight text-metin">{u.baslik}</h3>
+                <p className="text-sm leading-relaxed text-metin-2">{u.metin}</p>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
+    </section>
+  )
+}
+
 export function KimlerIcin() {
   return (
     <section id="kimler" className={`${BOLUM_KAYMA} bg-lacivert-950 text-white py-16 lg:py-[88px] dark:border-y dark:border-white/10`}>

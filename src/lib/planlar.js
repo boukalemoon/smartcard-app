@@ -14,16 +14,26 @@
 // Sınırlar sunucudaki public.plan_features tablosundan (my_plan_limits) alındı;
 // sunucu bu sınırları kendisi uygular. Burada yalnız gösterim için yazılır.
 
-// Ayrı sipariş edilen PVC NFC kart bedeli. PaymentModal ve NFCCardDesigner
-// buradan okur; kendi sabitlerini TUTMAZLAR (eskiden PaymentModal'da ayrı bir
-// NFC_PRICE ve ayrı bir plan fiyat tablosu vardı, ayrışmaya açıktı).
-export const NFC_KART_FIYATI = 249
+// FİZİKSEL KART FİYATLARI — tek kaynak.
+// NFCCardsPage, NFCCardDesigner ve PaymentModal buradan okur; kendi
+// sabitlerini TUTMAZLAR. Eskiden üç yerde elle yazılıydı ve ayrışmıştı:
+// aynı metal kart bir sayfada 1.490 ₺, diğerinde 1.499 ₺ görünüyordu.
+export const KART_FIYATLARI = {
+  pvc:   249,
+  metal: 599,
+  seffaf: 699,
+  bambu: 1399,
+}
+
+// Ayrı sipariş edilen PVC NFC kart bedeli (kartın varsayılan kademesi).
+export const NFC_KART_FIYATI = KART_FIYATLARI.pvc
 
 // Yıllık + kart paketi = yıllık ücret + (pakete dahil kart adedi × kart bedeli).
-// ÖNCEKİ HÂLİ: fark her planda sabit 799 ₺'ydi, yani 1 kart ile 10 kart aynı
-// parayı ediyordu. Artık adede göre ölçekleniyor.
-// Tutarlar plan_prices ile birebir olmalı; biri değişirse diğeri de
-// (supabase/migrations/20261017120000_fiyat_guncellemesi.sql deseniyle).
+// Yalnız TEK kartlı planlarda var. Çok adetli alım STK ve kurumsal tarafta
+// yoğunlaştığı için o planlarda paket fiyatı yazılmaz: kart tarafı TEKLİFLE
+// yürür (kartTeklif). Önceki hâlde fark her planda sabit 799 ₺'ydi, yani
+// 1 kart ile 10 kart aynı parayı ediyordu.
+// Tutarlar plan_prices ile birebir olmalı; biri değişirse diğeri de.
 export const PLANLAR = [
   {
     anahtar: 'free',
@@ -39,21 +49,28 @@ export const PLANLAR = [
       { metin: '3 sosyal bağlantı · 2 kurum yönetimi' },
       { metin: 'Temel QR' },
       { metin: 'Yalnızca toplam görüntülenme; ayrıntılı veri yok', yok: true },
-      { metin: 'Uygulama senkronu tek cihaz, şifreler hariç', yok: true },
+      { metin: 'Bağlı uygulama senkronu tek cihazla sınırlı', yok: true },
+      { metin: 'Yer imi ve şifre senkronu yok', yok: true },
     ],
   },
   {
     anahtar: 'student',
     ad: 'Öğrenci',
     alt: '.edu doğrulamalı',
-    fiyat: { aylik: 49, yillik: 490, yillikKartli: 739 },
-    kartHediyesi: { adet: 1, tur: 'PVC' },
+    // Öğrenci planı KART İÇERMEZ: amaç üniversite öğrencisine en düşük
+    // fiyatı vermek. Kart isteyen mevcut kart fiyatlarından ayrıca sipariş
+    // eder. Bu yüzden yillikKartli ve kartHediyesi yok.
+    fiyat: { aylik: 49, yillik: 490, yillikKartli: null },
+    kartHediyesi: null,
     sinir: { profil: 3, sosyal: null, kurum: 2 },
     dugme: 'Öğrenci planı',
     maddeler: [
       { metin: '3 profil · sınırsız sosyal bağlantı' },
       { metin: 'Ayrıntılı veri (nereden, hangi kanal)' },
-      { metin: 'Yıllıkta 1 PVC kart', kart: true },
+      { metin: 'İlgezdi yer imi ve şifre senkronu' },
+      { metin: 'Tınga çalma listelerine paylaşılabilir bağlantı' },
+      { metin: 'Arkadaşını getir, hak ediş kazan' },
+      { metin: 'Fiziksel kart dahil değil; ayrıca sipariş edilir', yok: true },
     ],
   },
   {
@@ -68,7 +85,8 @@ export const PLANLAR = [
     maddeler: [
       { metin: '5 profil, sınırsız bağlantı ve kurum' },
       { metin: 'Tam veri erişimi ve CSV dışa aktarım' },
-      { metin: 'Bağlı uygulamalarda şifre dahil senkron' },
+      { metin: 'İlgezdi yer imi ve şifre senkronu, çok cihaz' },
+      { metin: 'Tınga çalma listelerine paylaşılabilir bağlantı' },
       { metin: 'Özel QR tasarımı, öncelikli destek' },
       { metin: 'Yıllıkta 1 PVC kart', kart: true },
     ],
@@ -77,23 +95,27 @@ export const PLANLAR = [
     anahtar: 'stk',
     ad: 'STK Özel',
     alt: 'Dernek, sendika, topluluk',
-    fiyat: { aylik: 279, yillik: 2790, yillikKartli: 4284 },
-    kartHediyesi: { adet: 6, tur: 'PVC' },
+    fiyat: { aylik: 279, yillik: 2790, yillikKartli: null },
+    kartHediyesi: null,
+    // Toplu kart alımı burada yoğunlaşıyor: adet ve malzeme değiştiği için
+    // sabit paket fiyatı yazmak yanıltıcı olurdu.
+    kartTeklif: true,
     sinir: { profil: 10, sosyal: null, kurum: null },
     dugme: 'STK planına geç',
     maddeler: [
       { metin: 'Sınırsız üye, başvuru sistemi' },
       { metin: 'Kurum ölçümü, üye bazlı veri' },
       { metin: 'Herkese açık üye dizini' },
-      { metin: 'Yıllıkta 6 PVC kart', kart: true },
+      { metin: 'Toplu kart için teklif alın', kart: true },
     ],
   },
   {
     anahtar: 'business',
     ad: 'Kurumsal',
     alt: 'Şirketler için',
-    fiyat: { aylik: 549, yillik: 5490, yillikKartli: 7980 },
-    kartHediyesi: { adet: 10, tur: 'NFC' },
+    fiyat: { aylik: 549, yillik: 5490, yillikKartli: null },
+    kartHediyesi: null,
+    kartTeklif: true,
     sinir: { profil: 10, sosyal: null, kurum: null },
     koyu: true,
     // Kurumsal satış görüşmeyle başlar; düğme iletişim sayfasına gider.
@@ -103,7 +125,7 @@ export const PLANLAR = [
       { metin: 'Üye analitiği ve dışa aktarım' },
       { metin: 'Dedike destek ve SLA' },
       { metin: 'Özel entegrasyon, kurumsal fatura' },
-      { metin: 'Yıllıkta 10 NFC kart', kart: true },
+      { metin: 'Toplu kart için teklif alın', kart: true },
     ],
   },
 ]

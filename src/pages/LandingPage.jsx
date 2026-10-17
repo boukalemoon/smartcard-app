@@ -8,7 +8,7 @@ import { useLocation } from 'react-router-dom'
 import { SiteAlti, SiteUstu } from '../site/SiteKabugu'
 import { refKodu } from '../site/yardim'
 import Hero from '../site/acilis/Hero'
-import { Bloklar, KimlerIcin, KimlikKatmani, NasilCalisir } from '../site/acilis/Bolumler'
+import { BagliUygulamalar, Bloklar, KimlerIcin, KimlikKatmani, NasilCalisir } from '../site/acilis/Bolumler'
 import Planlar from '../site/acilis/Planlar'
 import Sorular from '../site/acilis/Sorular'
 import { CtaBandi, NfcKart, PartnerBandi, Rakamlar } from '../site/acilis/Bantlar'
@@ -41,6 +41,7 @@ export default function LandingPage() {
         <NasilCalisir />
         <Bloklar />
         <KimlikKatmani />
+        <BagliUygulamalar />
         <KimlerIcin />
         <Planlar />
         <PartnerBandi />

@@ -152,6 +152,7 @@ const ALT_SUTUNLAR = [
       { ad: 'Bloklar', href: '/#bloklar' },
       { ad: 'Planlar', href: '/#planlar' },
       { ad: 'NFC kart', to: '/nfc-cards' },
+      { ad: 'Bağlı uygulamalar', href: '/#uygulamalar' },
       { ad: 'Sıkça sorulanlar', href: '/#sorular' },
       { ad: 'Partner programı', href: '/#partner' },
     ],

@@ -5,17 +5,20 @@ import { refliAdres } from '../site/yardim'
 import { NfcKartGorseli, QrMotif, SayfaUst } from '../site/sayfalar/ortak'
 import { dugme, KAP, UST_ETIKET } from '../site/sayfalar/siniflar'
 import { birlestir } from '../panel/bicim'
-import { NFC_KART_FIYATI } from '../lib/planlar'
+import { KART_FIYATLARI } from '../lib/planlar'
 
 // Fiyatlar: standart PVC kart bedeli tek kaynaktan (src/lib/planlar.js) okunur.
 // Diğer kart türlerinin bedeli orada henüz tanımlı değil; mevcut sabitler
 // olduğu gibi duruyor (yeni rakam yazılmadı).
+// Fiyatlar KART_FIYATLARI'ndan gelir; bu sayfada elle yazılmaz.
+const tl = (n) => `₺${n.toLocaleString('tr-TR')}`
+
 const cardTypes = [
   {
     id: 'pvc',
     name: 'Standart PVC Kart',
     tagline: 'Uygun Fiyatlı & Dayanıklı',
-    price: `₺${NFC_KART_FIYATI.toLocaleString('tr-TR')}`,
+    price: tl(KART_FIYATLARI.pvc),
     comingSoon: false,
     features: ['Su geçirmez PVC malzeme', 'Canlı renkli baskı', 'Çizilmeye dayanıklı', 'NFC çip dahil', 'QR kod baskısı', '3-5 iş günü teslimat'],
     specs: [
@@ -28,7 +31,7 @@ const cardTypes = [
     id: 'metal',
     name: 'Premium Metal Kart',
     tagline: 'Prestij & Lüks',
-    price: '₺1.490',
+    price: tl(KART_FIYATLARI.metal),
     comingSoon: false,
     metal: true,
     features: ['Paslanmaz çelik malzeme', 'Lazer gravür baskı', 'Ağır ve kaliteli his', 'NFC çip dahil', 'Mat veya parlak yüzey', '5-7 iş günü teslimat'],
@@ -42,7 +45,7 @@ const cardTypes = [
     id: 'transparent',
     name: 'Şeffaf Kart',
     tagline: 'Modern & Dikkat Çekici',
-    price: '₺999',
+    price: tl(KART_FIYATLARI.seffaf),
     comingSoon: true,
     features: ['Şeffaf PVC malzeme', 'Benzersiz görünüm', 'Hafif yapı', 'NFC çip dahil', 'Dikkat çekici tasarım', 'Kargo ücretsiz'],
   },
@@ -50,7 +53,7 @@ const cardTypes = [
     id: 'bamboo',
     name: 'Bambu Kart',
     tagline: 'Çevre Dostu & Doğal',
-    price: '₺1.290',
+    price: tl(KART_FIYATLARI.bambu),
     comingSoon: true,
     features: ['Doğal bambu malzeme', 'Çevre dostu üretim', 'Organik doku', 'NFC çip dahil', 'Sürdürülebilir', 'Kargo ücretsiz'],
   },
