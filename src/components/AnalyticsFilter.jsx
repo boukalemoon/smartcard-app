@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Calendar, Download } from 'lucide-react'
 
+import { bildir } from '../lib/bildirim'
 export default function AnalyticsFilter({ onFilterChange, onExport, isPremium }) {
   const [filterType, setFilterType] = useState('monthly') // monthly | range | yearly
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -21,7 +22,7 @@ export default function AnalyticsFilter({ onFilterChange, onExport, isPremium })
     } else if (filterType === 'yearly') {
       filter = { type: 'yearly', year: selectedYear }
     } else if (filterType === 'range') {
-      if (!startDate || !endDate) { alert('Başlangıç ve bitiş tarihi seçin'); return }
+      if (!startDate || !endDate) { bildir('Başlangıç ve bitiş tarihi seçin'); return }
       filter = { type: 'range', startDate, endDate }
     }
     onFilterChange(filter)
@@ -118,10 +119,10 @@ export default function AnalyticsFilter({ onFilterChange, onExport, isPremium })
         {onExport && (
           <button
             onClick={onExport}
-            className="px-4 py-1.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-all flex items-center gap-1"
+            className="px-4 py-1.5 inline-flex items-center gap-1.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
-            <Download size={14} />
-            Export
+            <Download size={14} aria-hidden="true" />
+            Dışa aktar
           </button>
         )}
       </div>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { Upload, X, Loader } from 'lucide-react'
 
+import { bildir } from '../lib/bildirim'
 const IZINLI_TURLER = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 export default function ImageUpload({ 
@@ -23,7 +24,7 @@ export default function ImageUpload({
 
       // Dosya boyutu kontrolü
       if (file.size > maxSize * 1024 * 1024) {
-        alert(`Dosya boyutu ${maxSize}MB'dan küçük olmalı!`)
+        bildir(`Dosya boyutu ${maxSize}MB'dan küçük olmalı!`)
         return
       }
 
@@ -31,7 +32,7 @@ export default function ImageUpload({
       // SVG kabul edilmez: içinde betik taşıyabilir. Kova da aynı listeyi
       // uyguluyor (migration 20261008102000); bu kontrol yalnızca erken uyarı.
       if (!IZINLI_TURLER.includes(file.type)) {
-        alert('Yalnızca JPG, PNG, WebP veya GIF yüklenebilir.')
+        bildir('Yalnızca JPG, PNG, WebP veya GIF yüklenebilir.')
         return
       }
 
@@ -69,7 +70,7 @@ export default function ImageUpload({
 
     } catch (error) {
       console.error('Upload error:', error)
-      alert('Yükleme hatası: ' + error.message)
+      bildir('Yükleme hatası: ' + error.message)
     } finally {
       setUploading(false)
     }
@@ -91,7 +92,7 @@ export default function ImageUpload({
       onUploadSuccess(null)
     } catch (error) {
       console.error('Remove error:', error)
-      alert('Silme hatası: ' + error.message)
+      bildir('Silme hatası: ' + error.message)
     }
   }
 

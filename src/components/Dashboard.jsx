@@ -41,6 +41,8 @@ import DashboardNav from './DashboardNav'
 import { gecerliBolum } from '../lib/dashboardBolumler'
 import { guvenliUrl } from '../utils/guvenliUrl'
 
+import { Check, Pencil, Trash2, LogOut, ShieldCheck } from 'lucide-react'
+
 // plan_features'ta 999 "sınırsız" anlamına gelir; kullanıcıya sayı olarak
 // göstermek yerine kelimeyle yazılır.
 function sinirYazi(deger) {
@@ -74,6 +76,9 @@ export default function Dashboard({ session }) {
   // Dönem seçimi: eskiden panel HER ZAMAN tüm zamanları gösteriyordu.
   const [analizAralik, setAnalizAralik] = useState({ from: null, to: null })
   const [orgCount, setOrgCount] = useState(0)
+  // Kurum sayısı sunucudan gelmeden yetki kararı verilmez: aksi hâlde sayfa
+  // her yenilendiğinde kurumsal moddaki kişi bireysele geri atılıyordu.
+  const [orgSayisiGeldi, setOrgSayisiGeldi] = useState(false)
   // Plan sınırları TEK kaynaktan (my_plan_limits): eskiden aynı sayı üç ayrı
   // yerde farklı yazıyordu ve kullanıcıya yanlış gösteriliyordu.
   const [planBilgisi, setPlanBilgisi] = useState(null)
@@ -119,8 +124,9 @@ export default function Dashboard({ session }) {
   // yöneticisi). Yetki yoksa kayıtlı mod bireysele çekilir; aksi hâlde
   // kullanıcı panele erişemeden kilitli kalıyordu.
   useEffect(() => {
+    if (!profile?.id || !orgSayisiGeldi) return
     ensureAllowed(orgCount > 0 || ['admin', 'superadmin'].includes(profile?.role))
-  }, [orgCount, profile?.role])
+  }, [orgCount, orgSayisiGeldi, profile?.id, profile?.role])
 
   const loadProfile = async () => {
     try {
@@ -224,6 +230,7 @@ export default function Dashboard({ session }) {
       const { data } = await supabase.from('members').select('organization_id').eq('profile_id', profile.id)
       setOrgCount(new Set(data?.map(m => m.organization_id) || []).size)
     } catch (error) { console.error('Error counting organizations:', error) }
+    finally { setOrgSayisiGeldi(true) }
   }
 
   const saveProfile = async () => {
@@ -310,14 +317,14 @@ export default function Dashboard({ session }) {
   return (
     <>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 sticky top-0 z-10">
-          <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-200 dark:border-gray-800 sticky top-0 z-10">
+          <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between">
-              <img src="/qrtım-logo.png" alt="QRtım" className="h-16 w-auto cursor-pointer" onClick={() => navigate('/')} />
-              <div className="flex items-center gap-3">
+              <button type="button" onClick={() => navigate('/')} aria-label="QRtım ana sayfa" className="shrink-0 rounded-md dark:bg-white dark:px-2 dark:py-1"><img src="/qrtim-logo.png" alt="QRtım" className="h-9 sm:h-11 w-auto" /></button>
+              <div className="flex items-center gap-2 sm:gap-3">
                 <DashboardModeToggle hasOrganizations={orgCount > 0} profile={profile} />
                 <ThemeToggle />
-                <button onClick={async () => { await supabase.auth.signOut(); navigate('/') }} className="px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-all">Çıkış Yap</button>
+                <button onClick={async () => { await supabase.auth.signOut(); navigate('/') }} aria-label="Çıkış yap" className="inline-flex items-center gap-2 h-10 px-3 sm:px-4 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 rounded-lg font-semibold text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"><LogOut size={16} aria-hidden="true" /><span className="hidden sm:inline">Çıkış</span></button>
               </div>
             </div>
           </div>
@@ -325,14 +332,14 @@ export default function Dashboard({ session }) {
 
         <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
           {subscription && (
-            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <div className="flex items-center justify-between">
+            <div className="mb-6 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="font-bold text-blue-900 dark:text-blue-100">📊 {limits?.name || subscription.plan} {isCorporate && '- Kurumsal Mod'}</h3>
+                  <h3 className="font-bold text-lacivert-900 dark:text-white">{limits?.name || subscription.plan} {isCorporate && '- Kurumsal Mod'}</h3>
                   {/* Sayılar plan_features'tan gelir (my_plan_limits); daha önce
                       abonelik satırındaki kolonlar gösteriliyordu ve sunucunun
                       uyguladığı kuralla çelişiyordu. */}
-                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
                     {planBilgisi ? (
                       <>
                         Profiller: {planBilgisi.kullanim.profil}/{sinirYazi(planBilgisi.sinir.profil)}
@@ -343,20 +350,23 @@ export default function Dashboard({ session }) {
                   </p>
                 </div>
                 {subscription.plan === 'free' && (
-                  <button onClick={() => { setSelectedPlan({ plan: 'professional', billingCycle: 'yearly' }); setShowPayment(true) }} className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all text-sm">Planı Yükselt</button>
+                  <button onClick={() => { setSelectedPlan({ plan: 'professional', billingCycle: 'yearly' }); setShowPayment(true) }} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm">Planı Yükselt</button>
                 )}
               </div>
             </div>
           )}
 
           {isAdmin && (
-            <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-bold text-red-900 dark:text-red-100">🔐 Admin Yetkisi</h3>
-                  <p className="text-sm text-red-700 dark:text-red-300">Tüm kullanıcıları ve ödemeleri yönetin</p>
+            <div className="mb-6 p-4 bg-lacivert-900 dark:bg-lacivert-950 border border-lacivert-800 rounded-xl text-white">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <ShieldCheck size={22} className="text-blue-300 shrink-0" aria-hidden="true" />
+                  <div>
+                    <h3 className="text-base font-bold">Platform yöneticisi</h3>
+                    <p className="text-sm text-lacivert-200">Kullanıcıları, abonelikleri ve ödemeleri yönetin</p>
+                  </div>
                 </div>
-                <button onClick={() => window.location.href = '/admin'} className="px-6 py-3 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all">Admin Paneline Git →</button>
+                <button onClick={() => window.location.href = '/admin'} className="px-4 py-2 bg-white text-lacivert-900 rounded-lg font-semibold text-sm hover:bg-lacivert-50 transition-colors">Yönetici paneli →</button>
               </div>
             </div>
           )}
@@ -364,7 +374,7 @@ export default function Dashboard({ session }) {
           {davetler.length > 0 && (
             <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-800 rounded-xl">
               <h3 className="text-lg font-bold text-amber-900 dark:text-amber-100 mb-1">
-                ✉️ Organizasyon daveti{davetler.length > 1 ? ` (${davetler.length})` : ''}
+                Organizasyon daveti{davetler.length > 1 ? ` (${davetler.length})` : ''}
               </h3>
               <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
                 Kabul ederseniz üyeliğiniz başlar ve kart hareketleriniz (görüntülenme,
@@ -406,10 +416,10 @@ export default function Dashboard({ session }) {
           {isCorporate ? (
             <CorporateDashboard profile={profile} />
           ) : (
-            <>
+            <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-8">
             <DashboardNav aktif={bolum} onChange={bolumDegistir} />
-            <div className={sagSutunVar ? 'grid lg:grid-cols-3 gap-6' : 'space-y-6'}>
-              <div className={sagSutunVar ? 'lg:col-span-2 space-y-6' : 'space-y-6'}>
+            <div className={sagSutunVar ? 'grid xl:grid-cols-3 gap-6 min-w-0' : 'space-y-6 min-w-0'}>
+              <div className={sagSutunVar ? 'xl:col-span-2 space-y-6 min-w-0' : 'space-y-6 min-w-0'}>
                 {bolum === 'kartim' && (
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
                   <div className="flex items-center justify-between mb-6">
@@ -428,13 +438,13 @@ export default function Dashboard({ session }) {
                     {/* Profil Fotoğrafı */}
                     <div className="flex flex-col items-center pb-4 border-b border-gray-200 dark:border-gray-700">
                       <ImageUpload currentImageUrl={profile?.avatar_url} onUploadSuccess={updateAvatar} bucket="avatars" label="Profil Fotoğrafı" maxSize={2} />
-                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">📐 Önerilen: 400×400px (kare) — Maks 2MB — JPG/PNG</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">Önerilen: 400×400px (kare) — Maks 2MB — JPG/PNG</p>
                     </div>
 
                     {/* Tema Rengi */}
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">🎨 Tema Rengi</label>
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Tema Rengi</label>
                        {themeColor !== profile?.theme_color && (
                           <button onClick={async () => {
                             try {
@@ -459,7 +469,7 @@ export default function Dashboard({ session }) {
                         <input type="color" value={themeColor} onChange={(e) => setThemeColor(e.target.value)} className="w-16 h-10 rounded cursor-pointer border-2 border-gray-300" />
                         <span className="text-sm font-mono text-gray-600 dark:text-gray-400">{themeColor}</span>
                       </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center">{themeColor !== profile?.theme_color ? '⚠️ Değişiklikler kaydedilmedi!' : '✅ Kaydedildi'}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center">{themeColor !== profile?.theme_color ? 'Değişiklikler kaydedilmedi!' : 'Kaydedildi'}</p>
                     </div>
 
                     {/* Önizleme */}
@@ -468,7 +478,7 @@ export default function Dashboard({ session }) {
                     {/* Arka Plan */}
                     <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
                       <div className="flex items-center justify-between">
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">🖼️ Arka Plan Resmi</label>
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Arka Plan Resmi</label>
                         {profile?.background_image_url && (
                           <button onClick={() => setConfirmDialog({
                             isOpen: true,
@@ -485,7 +495,7 @@ export default function Dashboard({ session }) {
                                 showToast('Hata: ' + error.message, 'error')
                               }
                             }
-                          })} className="px-3 py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-xs font-semibold hover:bg-red-100 transition-colors">🗑️ Resmi Kaldır</button>
+                          })} className="px-3 py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-xs font-semibold hover:bg-red-100 transition-colors">Resmi Kaldır</button>
                         )}
                       </div>
                       {profile?.background_image_url && (
@@ -630,7 +640,7 @@ export default function Dashboard({ session }) {
                 {bolum === 'kartim' && profile && <SocialLinksManager profileId={profile.id} />}
                 {bolum === 'kimlik' && profile && <OrganizationManager profileId={profile.id} />}
                 {bolum === 'hesap' && profile && MFA_AKTIF && <GuvenlikKarti />}
-                {bolum === 'hesap' && profile && <ReferralDashboard profile={profile} />}
+                {bolum === 'partner' && profile && <ReferralDashboard profile={profile} />}
               </div>
 
               <div className="space-y-6">
@@ -639,7 +649,7 @@ export default function Dashboard({ session }) {
                     {bolum === 'kartim' && (<>
                     {/* Katalog */}
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">📁 Katalog & Dokümanlar</h3>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Katalog & Dokümanlar</h3>
                       <div className="space-y-3 mb-4">
                         {(profile.catalog_links || []).map((link, index) => (
                           <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -660,7 +670,7 @@ export default function Dashboard({ session }) {
                                 className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                                 title="Düzenle"
                               >
-                                ✏️
+                                <Pencil size={16} aria-hidden="true" />
                               </button>
                               <button
                                 onClick={() => setConfirmDialog({
@@ -688,7 +698,7 @@ export default function Dashboard({ session }) {
                                 className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                                 title="Sil"
                               >
-                                🗑️
+                                <Trash2 size={16} aria-hidden="true" />
                               </button>
                             </div>
                           </div>
@@ -700,12 +710,12 @@ export default function Dashboard({ session }) {
                       >
                         + Doküman Ekle
                       </button>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">💡 Google Drive, Dropbox veya kendi web sitenizden link ekleyin</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Google Drive, Dropbox veya kendi web sitenizden link ekleyin</p>
                     </div>
 
                     {/* Banka Hesapları */}
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">🏦 Banka Hesapları</h3>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Banka Hesapları</h3>
                       <label className="flex items-center gap-2 mb-4 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
                         <input type="checkbox" checked={profile.show_bank_accounts ?? false} onChange={async (e) => {
                           const v = e.target.checked
@@ -730,7 +740,7 @@ export default function Dashboard({ session }) {
                                   className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                                   title="Düzenle"
                                 >
-                                  ✏️
+                                  <Pencil size={16} aria-hidden="true" />
                                 </button>
                                 <button
                                   onClick={() => setConfirmDialog({
@@ -754,7 +764,7 @@ export default function Dashboard({ session }) {
                                   className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                                   title="Sil"
                                 >
-                                  🗑️
+                                  <Trash2 size={16} aria-hidden="true" />
                                 </button>
                               </div>
                             </div>
@@ -767,12 +777,12 @@ export default function Dashboard({ session }) {
                       >
                         + Banka Hesabı Ekle
                       </button>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">💡 IBAN'larınız kartvizitinizde görünür ve tek tık ile kopyalanabilir.</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">IBAN'larınız kartvizitinizde görünür ve tek tık ile kopyalanabilir.</p>
                     </div>
 
                     {/* Fatura Bilgileri */}
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">📋 Fatura Bilgileri</h3>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Fatura Bilgileri</h3>
                       <label className="flex items-center gap-2 mb-4 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
                         <input type="checkbox" checked={profile.show_billing_info ?? false} onChange={async (e) => {
                           const v = e.target.checked
@@ -822,7 +832,7 @@ export default function Dashboard({ session }) {
                               onClick={() => setBillingModal({ isOpen: true })}
                               className="flex-1 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
                             >
-                              ✏️ Düzenle
+                              Düzenle
                             </button>
 
                             <button
@@ -845,7 +855,7 @@ export default function Dashboard({ session }) {
                               })}
                               className="px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
                             >
-                              🗑️ Sil
+                              Sil
                             </button>
                           </div>
                         </div>
@@ -863,7 +873,7 @@ export default function Dashboard({ session }) {
                           </button>
 
                           <p className="text-xs text-gray-500 dark:text-gray-400">
-                            💡 Bu bilgiler kartvizitinizde görünür ve müşterileriniz tek tık ile kopyalayabilir.
+                            Bu bilgiler kartvizitinizde görünür ve müşterileriniz tek tık ile kopyalayabilir.
                           </p>
                         </div>
                       )}
@@ -871,7 +881,7 @@ export default function Dashboard({ session }) {
 
                     {/* Hizmetler */}
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">🛍️ Hizmetlerim</h3>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Hizmetlerim</h3>
                       <div className="space-y-3 mb-4">
                         {(profile.services || []).map((service, index) => (
                           <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -886,7 +896,7 @@ export default function Dashboard({ session }) {
                                   className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                                   title="Düzenle"
                                 >
-                                  ✏️
+                                  <Pencil size={16} aria-hidden="true" />
                                 </button>
                                 <button
                                   onClick={() => setConfirmDialog({
@@ -914,13 +924,13 @@ export default function Dashboard({ session }) {
                                   className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                                   title="Sil"
                                 >
-                                  🗑️
+                                  <Trash2 size={16} aria-hidden="true" />
                                 </button>
                               </div>
                             </div>
                             <div className="flex items-center gap-4 text-sm">
                               <span className="font-bold text-blue-600 dark:text-blue-400">₺{service.price}</span>
-                              {service.delivery_time && <span className="text-gray-500 dark:text-gray-400">⏱️ {service.delivery_time}</span>}
+                              {service.delivery_time && <span className="text-gray-500 dark:text-gray-400">{service.delivery_time}</span>}
                             </div>
                           </div>
                         ))}
@@ -931,12 +941,12 @@ export default function Dashboard({ session }) {
                       >
                         + Hizmet Ekle
                       </button>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">💡 Freelance hizmetlerinizi ekleyin ve profilinizde sergileyin</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Freelance hizmetlerinizi ekleyin ve profilinizde sergileyin</p>
                     </div>
 
                     {/* Google Yorumlar */}
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">⭐ Google Yorumlar</h3>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Google Yorumlar</h3>
                       {profile.google_review_link ? (
                         <div className="space-y-3">
                           <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -980,7 +990,7 @@ export default function Dashboard({ session }) {
                               .catch((e) => showToast('Hata: ' + e.message, 'error'))
                           }} className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors text-sm">+ Google Yorum Linki Ekle</button>
                           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
-                            <p className="text-xs text-blue-800 dark:text-blue-200">💡 <strong>Nasıl bulunur?</strong><br />1. Google'da işletmenizi arayın<br />2. "Yorum yaz" butonuna tıklayın<br />3. Açılan sayfanın linkini kopyalayın</p>
+                            <p className="text-xs text-blue-800 dark:text-blue-200"><strong>Nasıl bulunur?</strong><br />1. Google'da işletmenizi arayın<br />2. "Yorum yaz" butonuna tıklayın<br />3. Açılan sayfanın linkini kopyalayın</p>
                           </div>
                         </div>
                       )}
@@ -990,7 +1000,7 @@ export default function Dashboard({ session }) {
 
                     {bolum === 'paylasim' && (<>
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">🎨 QR Kod Özelleştirme</h3>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">QR Kod Özelleştirme</h3>
                       <div className="space-y-4">
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">QR Kod Rengi</label>
@@ -1011,7 +1021,7 @@ export default function Dashboard({ session }) {
                             <input type="checkbox" checked={profile.qr_logo_enabled || false} onChange={async (e) => { const enabled = e.target.checked; try { await profilAlaniKaydet({ qr_logo_enabled: enabled }); setProfile(prev => ({ ...prev, qr_logo_enabled: enabled })) } catch (error) { console.error(error) } }} className="w-5 h-5 rounded border-gray-300" />
                             <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">QR Kod ortasına profil fotoğrafı ekle</span>
                           </label>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-8">{subscription?.plan === 'free' ? 'QR kodun ortasında profil fotoğrafınız görünür' : '✅ Profil fotoğrafınız QR kodun ortasında gösterilecek'}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-8">{subscription?.plan === 'free' ? 'QR kodun ortasında profil fotoğrafınız görünür' : 'Profil fotoğrafınız QR kodun ortasında gösterilecek'}</p>
                         </div>
                       </div>
                     </div>
@@ -1020,14 +1030,14 @@ export default function Dashboard({ session }) {
                     <NFCWriter username={profile.username} cardCode={profile.card_code} />
 
                     {subscription?.plan === 'free' ? (
-                      <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg p-6 text-white">
-                        <h2 className="text-xl font-semibold mb-2">💳 NFC Kart</h2>
+                      <div className="bg-purple-500 rounded-2xl shadow-lg p-6 text-white">
+                        <h2 className="text-xl font-semibold mb-2">NFC Kart</h2>
                         <p className="text-purple-100 text-sm mb-4">Yıllık profesyonel abonelikte NFC kart pakete dahil</p>
                         <button onClick={() => { setSelectedPlan({ plan: 'professional', billingCycle: 'yearly' }); setShowPayment(true) }} className="w-full py-3 bg-white text-purple-600 rounded-xl font-semibold hover:shadow-xl transition-all">Planı Yükselt</button>
                       </div>
                     ) : (
-                      <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg p-6 text-white">
-                        <h2 className="text-xl font-semibold mb-2">💳 NFC Kartınız</h2>
+                      <div className="bg-purple-500 rounded-2xl shadow-lg p-6 text-white">
+                        <h2 className="text-xl font-semibold mb-2">NFC Kartınız</h2>
                         <p className="text-purple-100 text-sm mb-4">Dijital kartvizitinizi fiziksel karta dönüştürün</p>
                         <button onClick={() => window.location.href = '/nfc-designer'} className="w-full py-3 bg-white text-purple-600 rounded-xl font-semibold hover:shadow-xl transition-all">Kart Tasarla</button>
                       </div>
@@ -1038,25 +1048,25 @@ export default function Dashboard({ session }) {
 
                 {!profile?.username && (
                   <div className="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-200 dark:border-yellow-800 rounded-2xl p-6">
-                    <h3 className="text-lg font-bold text-yellow-900 dark:text-yellow-300 mb-2">⚠️ Kullanıcı adı gerekli</h3>
+                    <h3 className="text-lg font-bold text-yellow-900 dark:text-yellow-300 mb-2">Kullanıcı adı gerekli</h3>
                     <p className="text-sm text-yellow-800 dark:text-yellow-400">QR kod ve NFC özelliklerini kullanmak için bir kullanıcı adı belirlemeniz gerekiyor.</p>
                   </div>
                 )}
 
                 {bolum === 'hesap' && (
-                <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg p-6 text-white">
+                <div className="bg-blue-500 rounded-2xl shadow-lg p-6 text-white">
                   <h3 className="text-xl font-bold mb-2">Abonelik</h3>
                   {subLoading ? <p className="text-blue-100 text-sm">Yükleniyor...</p> : (
                     <>
                       <p className="text-blue-100 text-sm mb-1 font-semibold">
-                        {subscription?.plan === 'professional' ? '⭐ Profesyonel Plan' : subscription?.plan === 'stk' ? '🏢 STK Özel Plan' : subscription?.plan === 'business' ? '🚀 Kurumsal Plan' : '🆓 Başlangıç Planı'}
+                        {subscription?.plan === 'professional' ? 'Profesyonel Plan' : subscription?.plan === 'stk' ? 'STK Özel Plan' : subscription?.plan === 'business' ? 'Kurumsal Plan' : '🆓 Başlangıç Planı'}
                       </p>
                       <div className="space-y-2 text-sm mt-3">
-                        <div className="flex items-center gap-2"><span>✓</span><span>{sinirYazi(planBilgisi?.sinir?.profil ?? 2)} profil</span></div>
-                        <div className="flex items-center gap-2"><span>✓</span><span>{sinirYazi(planBilgisi?.sinir?.organizasyon ?? 2)} organizasyon</span></div>
-                        <div className="flex items-center gap-2"><span>✓</span><span>{sinirYazi(planBilgisi?.sinir?.sosyal_medya ?? 3)} sosyal medya</span></div>
+                        <div className="flex items-center gap-2"><Check size={14} aria-hidden="true" className="shrink-0" /><span>{sinirYazi(planBilgisi?.sinir?.profil ?? 2)} profil</span></div>
+                        <div className="flex items-center gap-2"><Check size={14} aria-hidden="true" className="shrink-0" /><span>{sinirYazi(planBilgisi?.sinir?.organizasyon ?? 2)} organizasyon</span></div>
+                        <div className="flex items-center gap-2"><Check size={14} aria-hidden="true" className="shrink-0" /><span>{sinirYazi(planBilgisi?.sinir?.sosyal_medya ?? 3)} sosyal medya</span></div>
                         {(planBilgisi?.sinir?.nfc_yillik ?? 0) > 0 && (
-                          <div className="flex items-center gap-2"><span>✓</span><span>Yıllık abonelikte {planBilgisi.sinir.nfc_yillik} NFC kart</span></div>
+                          <div className="flex items-center gap-2"><Check size={14} aria-hidden="true" className="shrink-0" /><span>Yıllık abonelikte {planBilgisi.sinir.nfc_yillik} NFC kart</span></div>
                         )}
                       </div>
                       {planBilgisi?.expires_at && (
@@ -1073,7 +1083,7 @@ export default function Dashboard({ session }) {
                 )}
               </div>
             </div>
-            </>
+            </div>
           )}
         </div>
       </div>

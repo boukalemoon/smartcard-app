@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Check, X, AlertCircle, Loader } from 'lucide-react';
 import { SITE_URL } from '../lib/siteUrl';
 
+import { bildir } from '../lib/bildirim'
 export default function UsernameEditor({ currentUsername, profileId, onUpdate }) {
   const [editing, setEditing] = useState(false);
   const [username, setUsername] = useState(currentUsername || '');
@@ -106,11 +107,11 @@ export default function UsernameEditor({ currentUsername, profileId, onUpdate })
 
       if (updateError) throw updateError;
       if (!data || data.length === 0) {
-        alert('Kullanıcı adı güncellenemedi: bu işlem için yetkiniz yok.');
+        bildir('Kullanıcı adı güncellenemedi: bu işlem için yetkiniz yok.');
         return;
       }
 
-      alert(
+      bildir(
         `Kullanıcı adınız güncellendi.
 
 Basılı QR ve NFC kartlarınız çalışmaya devam eder; eski adresiniz de yeni profilinize yönlenir.`
@@ -118,7 +119,7 @@ Basılı QR ve NFC kartlarınız çalışmaya devam eder; eski adresiniz de yeni
       setEditing(false);
       if (onUpdate) onUpdate(username);
     } catch (err) {
-      alert('Hata: ' + err.message);
+      bildir('Hata: ' + err.message);
     } finally {
       setSaving(false);
     }

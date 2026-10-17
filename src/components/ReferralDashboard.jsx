@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { Users, TrendingUp, Gift, Copy, Check, RefreshCw } from 'lucide-react'
 import { signupUrl } from '../lib/siteUrl'
 
+import { bildir } from '../lib/bildirim'
 export default function ReferralDashboard({ profile }) {
   const [referralCode, setReferralCode] = useState(null)
   const [referrals, setReferrals] = useState([])
@@ -63,7 +64,7 @@ export default function ReferralDashboard({ profile }) {
       if (!data?.ok) throw new Error(data?.hata || 'kod oluşturulamadı')
       setReferralCode(data)
     } catch (error) {
-      alert('Kod oluşturulamadı: ' + error.message)
+      bildir('Kod oluşturulamadı: ' + error.message)
     } finally {
       setGenerating(false)
     }
@@ -95,10 +96,10 @@ export default function ReferralDashboard({ profile }) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-6 text-white">
-        <h2 className="text-2xl font-bold mb-2">🎁 Referral Programı</h2>
-        <p className="text-blue-100">
-          Arkadaşlarını QRtım'a davet et, davetlerini buradan takip et.
+      <div className="bg-lacivert-900 rounded-2xl p-6 text-white">
+        <h2 className="text-2xl font-bold mb-2">Partner programı</h2>
+        <p className="text-lacivert-100">
+          Referans kodunuzla gelen kişi ve kurumları buradan takip edin. Ücretli pakete geçtiklerinde hak edişiniz burada görünür.
         </p>
       </div>
 
@@ -134,16 +135,16 @@ export default function ReferralDashboard({ profile }) {
       {/* Referral Kodu */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
         <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
-          Referral Kodunuz
+          Referans kodunuz
         </h3>
 
         {referralCode ? (
           <div className="space-y-4">
             {/* Kişiye özel kod */}
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Referral Kodunuz</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Referans kodunuz</p>
               <div className="flex gap-3">
-                <div className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-2 border-blue-200 dark:border-blue-700 rounded-lg">
+                <div className="flex-1 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-700 rounded-lg">
                   <span className="font-mono font-bold text-blue-700 dark:text-blue-300 text-lg tracking-wider">
                     {referralCode.code}
                   </span>
@@ -182,7 +183,7 @@ export default function ReferralDashboard({ profile }) {
 
             {/* Kullanım istatistiği */}
             <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-gray-700">
-              <span>📊 Kullanım: <strong>{referralCode.usage_count || 0}</strong></span>
+              <span>Kullanım: <strong>{referralCode.usage_count || 0}</strong></span>
               {/* 'total_earnings' kolonu hiçbir zaman güncellenmiyordu: gerçek
                   hakediş olsa bile ₺0 gösteriyordu. Doğru toplam yukarıdaki
                   kartta davetlerden hesaplanıyor. */}
@@ -191,17 +192,17 @@ export default function ReferralDashboard({ profile }) {
         ) : (
           <div className="text-center py-6">
             <p className="text-gray-500 dark:text-gray-400 mb-4">
-              Henüz referral kodunuz yok. Kişiye özel kodunuzu oluşturun!
+              Henüz referans kodunuz yok. Kişiye özel kodunuzu oluşturun.
             </p>
             <button
               onClick={generateReferralCode}
               disabled={generating}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-2 mx-auto"
+              className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-2 mx-auto"
             >
               {generating ? (
                 <><RefreshCw size={18} className="animate-spin" /> Oluşturuluyor...</>
               ) : (
-                <><Gift size={18} /> Referral Kodu Oluştur</>
+                <><Gift size={18} aria-hidden="true" /> Referans kodu oluştur</>
               )}
             </button>
           </div>
@@ -221,7 +222,7 @@ export default function ReferralDashboard({ profile }) {
                 className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                  <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
                     {referral.davetli_adi?.charAt(0) || '?'}
                   </div>
                   <div>
@@ -238,7 +239,7 @@ export default function ReferralDashboard({ profile }) {
                     ₺{(referral.commission_amount || 0).toLocaleString('tr-TR')}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {referral.status === 'active' ? '✅ Aktif' : '⏳ Beklemede'}
+                    {referral.status === 'active' ? 'Aktif' : 'Beklemede'}
                   </p>
                 </div>
               </div>

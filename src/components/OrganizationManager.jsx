@@ -6,6 +6,7 @@ import {
   ChevronLeft, UserPlus, UserMinus
 } from 'lucide-react';
 
+import { bildir } from '../lib/bildirim'
 // Organizasyon sınırı artık kod içinde SABİT DEĞİL: plan_features tablosundan
 // (my_plan_limits) okunur. Eski harita sunucudaki kuralla çelişiyordu ve
 // öğrenci planına ücretsizden az hak veriyordu.
@@ -114,9 +115,9 @@ export default function OrganizationManager({ profileId }) {
 
   const UYE_EKLEME_HATALARI = {
     yetkisiz: 'Bu organizasyona davet göndermek için yönetici olmanız gerekiyor.',
-    kullanici_bulunamadi: '❌ Bu e-posta adresiyle doğrulanmış bir QRtım hesabı bulunamadı.\n\nKişinin önce hesap oluşturup e-postasını doğrulaması gerekiyor.',
-    zaten_uye: '⚠️ Bu kişi zaten organizasyon üyesi.',
-    davet_zaten_gonderildi: '⏳ Bu kişiye davet zaten gönderilmiş, yanıtı bekleniyor.',
+    kullanici_bulunamadi: 'Bu e-posta adresiyle doğrulanmış bir QRtım hesabı bulunamadı.\n\nKişinin önce hesap oluşturup e-postasını doğrulaması gerekiyor.',
+    zaten_uye: 'Bu kişi zaten organizasyon üyesi.',
+    davet_zaten_gonderildi: 'Bu kişiye davet zaten gönderilmiş, yanıtı bekleniyor.',
     cok_fazla_deneme: 'Çok fazla deneme yaptınız. Lütfen bir saat sonra tekrar deneyin.',
   };
 
@@ -133,18 +134,18 @@ export default function OrganizationManager({ profileId }) {
       });
       if (error) throw error;
       if (!data?.ok) {
-        alert(UYE_EKLEME_HATALARI[data?.hata] || 'Üye eklenemedi.');
+        bildir(UYE_EKLEME_HATALARI[data?.hata] || 'Üye eklenemedi.');
         return;
       }
 
       const ad = data.ad || inviteEmail.trim();
       // Üyelik artık kişinin onayıyla başlıyor; "eklendi" demek yanlış olurdu.
-      alert(`✉️ ${ad} kişisine davet gönderildi.\n\nKişi kendi panelinden kabul ettiğinde üye olacak.`);
+      bildir(`${ad} kişisine davet gönderildi.\n\nKişi kendi panelinden kabul ettiğinde üye olacak.`);
 
       setInviteEmail('');
       loadMembers(selectedOrg.id);
     } catch (error) {
-      alert('Hata: ' + error.message);
+      bildir('Hata: ' + error.message);
     } finally {
       setInviting(false);
     }
@@ -156,12 +157,12 @@ export default function OrganizationManager({ profileId }) {
       const { data, error } = await supabase.from('members').delete().eq('id', memberId).select('id');
       if (error) throw error;
       if (!data || data.length === 0) {
-        alert('Üye çıkarılamadı. Yönetici olmanız gerekiyor; son yönetici ise önce başka bir yönetici atayın.');
+        bildir('Üye çıkarılamadı. Yönetici olmanız gerekiyor; son yönetici ise önce başka bir yönetici atayın.');
         return;
       }
       loadMembers(selectedOrg.id);
     } catch (error) {
-      alert('Hata: ' + error.message);
+      bildir('Hata: ' + error.message);
     }
   };
 
@@ -170,12 +171,12 @@ export default function OrganizationManager({ profileId }) {
       const { data, error } = await supabase.from('members').update({ role: newRole }).eq('id', memberId).select('id');
       if (error) throw error;
       if (!data || data.length === 0) {
-        alert('Rol değiştirilemedi. Yönetici olmanız gerekiyor; son yöneticiyi düşüremezsiniz.');
+        bildir('Rol değiştirilemedi. Yönetici olmanız gerekiyor; son yöneticiyi düşüremezsiniz.');
         return;
       }
       loadMembers(selectedOrg.id);
     } catch (error) {
-      alert('Hata: ' + error.message);
+      bildir('Hata: ' + error.message);
     }
   };
 
@@ -188,7 +189,7 @@ export default function OrganizationManager({ profileId }) {
   };
 
   const createOrganization = async () => {
-    if (!newOrg.name) { alert('Organizasyon adı zorunludur'); return; }
+    if (!newOrg.name) { bildir('Organizasyon adı zorunludur'); return; }
     if (!canAddMore) { setShowUpgrade(true); return; }
 
     try {
@@ -213,17 +214,17 @@ export default function OrganizationManager({ profileId }) {
 
       if (!data?.ok) {
         if (data?.hata === 'limit_asildi') { setShowUpgrade(true); return; }
-        alert(KURUM_HATALARI[data?.hata] ?? 'Organizasyon oluşturulamadı.');
+        bildir(KURUM_HATALARI[data?.hata] ?? 'Organizasyon oluşturulamadı.');
         return;
       }
 
       setNewOrg({ name: '', type: 'company', description: '', website: '', email: '', phone: '' });
       setCreating(false);
       loadOrganizations();
-      alert('✅ Organizasyon oluşturuldu!');
+      bildir('Organizasyon oluşturuldu!');
     } catch (error) {
       console.error('Organizasyon oluşturma hatası:', error);
-      alert('Organizasyon oluşturulamadı. Lütfen tekrar deneyin.');
+      bildir('Organizasyon oluşturulamadı. Lütfen tekrar deneyin.');
     } finally {
       setLoading(false);
     }
@@ -263,10 +264,10 @@ export default function OrganizationManager({ profileId }) {
       org.id === orgId ? { ...org, ...editForm } : org
     ))
     setEditingOrg(null)
-    alert('✅ Organizasyon güncellendi!')
+    bildir('Organizasyon güncellendi!')
   } catch (error) {
     console.error('Save error:', error)
-    alert('Hata: ' + error.message)
+    bildir('Hata: ' + error.message)
   }
 }
 
@@ -277,18 +278,18 @@ export default function OrganizationManager({ profileId }) {
       if (error) throw error;
       loadOrganizations();
     } catch (error) {
-      alert('Hata: ' + error.message);
+      bildir('Hata: ' + error.message);
     }
   };
 
   const getOrgTypeLabel = (type) => {
     const types = {
-      company: '🏢 Şirket',
-      chamber: '🏪 Esnaf Odası',
-      association: '👥 Dernek',
-      community: '🌐 Topluluk',
-      foundation: '🏛️ Vakıf',
-      union: '🤝 Sendika'
+      company: 'Şirket',
+      chamber: 'Esnaf Odası',
+      association: 'Dernek',
+      community: 'Topluluk',
+      foundation: 'Vakıf',
+      union: 'Sendika'
     };
     return types[type] || type;
   };
@@ -386,7 +387,7 @@ export default function OrganizationManager({ profileId }) {
               const isCurrentUser = member.is_me;
               return (
                 <div key={member.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-xl">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                  <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                     {member.name?.charAt(0) || member.email?.charAt(0) || '?'}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -455,7 +456,7 @@ export default function OrganizationManager({ profileId }) {
 
       {/* Upgrade uyarısı */}
       {showUpgrade && (
-        <div className="mb-6 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border-2 border-yellow-300 dark:border-yellow-700 rounded-xl">
+        <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-300 dark:border-yellow-700 rounded-xl">
           <div className="flex items-start gap-3">
             <Crown className="text-yellow-600 dark:text-yellow-400 mt-1" size={24} />
             <div className="flex-1">
@@ -562,7 +563,7 @@ export default function OrganizationManager({ profileId }) {
                   </div>
                 ) : (
                   <div className="flex items-start gap-4">
-                    <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl flex-shrink-0">
+                    <div className="w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl flex-shrink-0">
                       {org.name?.charAt(0) || '?'}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -603,7 +604,7 @@ export default function OrganizationManager({ profileId }) {
       {!canAddMore && orgLimit !== 999 && (
         <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
           <p className="text-sm text-yellow-800 dark:text-yellow-300">
-            ⚠️ Plan limitine ulaştınız ({orgLimit} organizasyon). Daha fazlası için planınızı yükseltin.
+            Plan limitine ulaştınız ({orgLimit} organizasyon). Daha fazlası için planınızı yükseltin.
           </p>
         </div>
       )}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { UserPlus, Edit2, Trash2, X, Save, Mail, Phone, User, Shield } from 'lucide-react'
 
+import { bildir } from '../lib/bildirim'
 export default function MemberManager({ organizationId, onClose }) {
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -32,7 +33,7 @@ export default function MemberManager({ organizationId, onClose }) {
       setMembers(data || [])
     } catch (error) {
       console.error('Üyeler yüklenemedi:', error)
-      alert('Üyeler yüklenirken hata: ' + error.message)
+      bildir('Üyeler yüklenirken hata: ' + error.message)
     } finally {
       setLoading(false)
     }
@@ -40,7 +41,7 @@ export default function MemberManager({ organizationId, onClose }) {
 
   const handleAdd = async () => {
     if (!formData.name || !formData.email) {
-      alert('İsim ve email zorunludur')
+      bildir('İsim ve email zorunludur')
       return
     }
 
@@ -55,17 +56,17 @@ export default function MemberManager({ organizationId, onClose }) {
 
       if (error) throw error
       if (!data || data.length === 0) {
-        alert('Üye eklenemedi. Bu işlem için organizasyon yöneticisi olmanız gerekiyor.')
+        bildir('Üye eklenemedi. Bu işlem için organizasyon yöneticisi olmanız gerekiyor.')
         return
       }
 
-      alert('Üye eklendi!')
+      bildir('Üye eklendi!')
       setFormData({ name: '', email: '', phone: '', role: 'member', status: 'active' })
       setAdding(false)
       loadMembers()
     } catch (error) {
       console.error('Error adding member:', error)
-      alert('Hata: ' + error.message)
+      bildir('Hata: ' + error.message)
     }
   }
 
@@ -82,17 +83,17 @@ export default function MemberManager({ organizationId, onClose }) {
 
       if (error) throw error
       if (!data || data.length === 0) {
-        alert('Üye güncellenemedi. Bu işlem için organizasyon yöneticisi olmanız gerekiyor.')
+        bildir('Üye güncellenemedi. Bu işlem için organizasyon yöneticisi olmanız gerekiyor.')
         return
       }
 
-      alert('Üye güncellendi!')
+      bildir('Üye güncellendi!')
       setEditingId(null)
       setFormData({ name: '', email: '', phone: '', role: 'member', status: 'active' })
       loadMembers()
     } catch (error) {
       console.error('Error updating member:', error)
-      alert('Hata: ' + error.message)
+      bildir('Hata: ' + error.message)
     }
   }
 
@@ -108,15 +109,15 @@ export default function MemberManager({ organizationId, onClose }) {
 
       if (error) throw error
       if (!data || data.length === 0) {
-        alert('Üye silinemedi. Yönetici olmanız gerekiyor; son yönetici ise önce başka bir yönetici atayın.')
+        bildir('Üye silinemedi. Yönetici olmanız gerekiyor; son yönetici ise önce başka bir yönetici atayın.')
         return
       }
 
-      alert('Üye silindi!')
+      bildir('Üye silindi!')
       loadMembers()
     } catch (error) {
       console.error('Error deleting member:', error)
-      alert('Hata: ' + error.message)
+      bildir('Hata: ' + error.message)
     }
   }
 
@@ -133,13 +134,13 @@ export default function MemberManager({ organizationId, onClose }) {
 
       if (error) throw error
       if (!data || data.length === 0) {
-        alert('Durum değiştirilemedi. Bu işlem için organizasyon yöneticisi olmanız gerekiyor.')
+        bildir('Durum değiştirilemedi. Bu işlem için organizasyon yöneticisi olmanız gerekiyor.')
         return
       }
       loadMembers()
     } catch (error) {
       console.error('Durum değiştirilemedi:', error)
-      alert('Hata: ' + error.message)
+      bildir('Hata: ' + error.message)
     }
   }
 

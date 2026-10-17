@@ -95,7 +95,7 @@ export default function CatalogLinkModal({ isOpen, onClose, link = null, linkInd
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditMode ? '✏️ Linki Düzenle' : '📁 Yeni Döküman / Link'}
+      title={isEditMode ? 'Linki Düzenle' : 'Yeni Döküman / Link'}
       size="md"
       closeOnOverlayClick={!saving}
       footer={
@@ -138,7 +138,7 @@ export default function CatalogLinkModal({ isOpen, onClose, link = null, linkInd
             autoFocus
           />
           {errors.title && (
-            <p className="text-xs text-red-500 mt-1">⚠️ {errors.title}</p>
+            <p className="text-xs text-red-500 mt-1">{errors.title}</p>
           )}
         </div>
 
@@ -166,10 +166,10 @@ export default function CatalogLinkModal({ isOpen, onClose, link = null, linkInd
             />
           </div>
           {errors.url ? (
-            <p className="text-xs text-red-500 mt-1">⚠️ {errors.url}</p>
+            <p className="text-xs text-red-500 mt-1">{errors.url}</p>
           ) : (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              💡 https:// otomatik eklenir
+              https:// otomatik eklenir
             </p>
           )}
         </div>
@@ -191,7 +191,7 @@ export default function CatalogLinkModal({ isOpen, onClose, link = null, linkInd
 
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
           <p className="text-xs font-semibold text-blue-800 dark:text-blue-200 mb-1">
-            💡 Nereden link alabilirsin?
+            Nereden link alabilirsin?
           </p>
           <p className="text-xs text-blue-700 dark:text-blue-300">
             Google Drive, Dropbox, OneDrive, Notion veya kendi web sitenizden paylaşım linki alıp yapıştırabilirsiniz.

@@ -3,6 +3,7 @@ import { CalendarClock, Check, X, Clock, Mail, Phone, QrCode, Nfc, Copy, Refresh
 import { supabase } from '../lib/supabaseClient'
 import { SITE_URL } from '../lib/siteUrl'
 
+import { bildir } from '../lib/bildirim'
 // RANDEVU YÖNETİMİ
 //
 // Çalışma saatleri Türkiye saatine göre yorumlanır (sunucuda da öyle).
@@ -105,7 +106,7 @@ export default function AppointmentManager() {
   const anahtarYenile = async () => {
     if (!confirm('Takvim adresi yenilensin mi? Eski adres çalışmayı bırakır; takvim uygulamanızdaki aboneliği yeni adresle kurmanız gerekir.')) return
     const { data, error } = await supabase.rpc('rotate_calendar_key')
-    if (error || !data?.ok) { alert('Yenilenemedi.'); return }
+    if (error || !data?.ok) { bildir('Yenilenemedi.'); return }
     setTakvimAnahtari(data.anahtar)
     setMesaj({ tur: 'basari', metin: 'Takvim adresi yenilendi. Aboneliğinizi yeni adresle kurun.' })
   }
@@ -122,7 +123,7 @@ export default function AppointmentManager() {
 
   const durumDegistir = async (randevu, durum) => {
     const { data, error } = await supabase.rpc('appointment_set_status', { p_id: randevu.id, p_durum: durum })
-    if (error || !data?.ok) { alert('İşlem tamamlanamadı.'); return }
+    if (error || !data?.ok) { bildir('İşlem tamamlanamadı.'); return }
     await yenile()
   }
 

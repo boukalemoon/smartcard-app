@@ -9,6 +9,7 @@ import { Building2, Users, ChevronRight, MessageSquare, QrCode, Eye, Download, M
 import AnalyticsFilter from './AnalyticsFilter'
 import { filtreyiAraligaCevir } from '../utils/analyticsHelpers'
 
+import { bildir } from '../lib/bildirim'
 // KURUMSAL / STK PANELİ
 //
 // Bu panel 18.09.2026'da baştan bağlandı. Önceki hâlindeki sorunlar:
@@ -128,16 +129,16 @@ export default function CorporateDashboard({ profile }) {
           'Katılım Tarihi': m.joined_at ? new Date(m.joined_at).toLocaleDateString('tr-TR') : '-',
         })))
       }
-      if (hepsi.length === 0) { alert('Dışa aktarılacak üye yok.'); return }
+      if (hepsi.length === 0) { bildir('Dışa aktarılacak üye yok.'); return }
       exportToCSV(hepsi, 'uyeler')
     } catch (error) {
       console.error('Dışa aktarma hatası:', error)
-      alert('Dışa aktarılamadı: ' + error.message)
+      bildir('Dışa aktarılamadı: ' + error.message)
     }
   }
 
   const handleExportAnalytics = async () => {
-    if (uyeAnalizi.length === 0) { alert('Bu dönemde dışa aktarılacak veri yok.'); return }
+    if (uyeAnalizi.length === 0) { bildir('Bu dönemde dışa aktarılacak veri yok.'); return }
     // Şifre penceresi yerine iki adımlı doğrulama: eski yöntem istemcide
     // çalışıyor, yeni oturum açıyor ve atlanabiliyordu.
     const verified = await adimAtla({ sebep: 'Veri dışa aktarma', zorla: true })
@@ -301,9 +302,9 @@ export default function CorporateDashboard({ profile }) {
               <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Üye Performansı</h2>
               <button
                 onClick={handleExportAnalytics}
-                className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700"
+                className="px-3 py-1.5 inline-flex items-center gap-1.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                CSV indir
+                <Download size={14} aria-hidden="true" />CSV indir
               </button>
             </div>
 
@@ -441,9 +442,9 @@ export default function CorporateDashboard({ profile }) {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={handleExportMembers}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-all text-sm"
+            className="px-4 py-2 inline-flex items-center gap-1.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
-            Üye listesini indir (CSV)
+            <Download size={16} aria-hidden="true" />Üye listesini indir (CSV)
           </button>
         </div>
       )}
@@ -525,7 +526,7 @@ export default function CorporateDashboard({ profile }) {
                   <div className="space-y-2">
                     <button
                       onClick={() => { setSelectedOrg(org); setShowOrgProfile(true); setShowMemberManager(false); setShowApplications(false) }}
-                      className="w-full flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-colors"
+                      className="w-full flex items-center justify-between px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
                     >
                       <div className="flex items-center gap-2"><Building2 className="w-4 h-4" /><span>Profil Yönet</span></div>
                       <ChevronRight className="w-4 h-4" />

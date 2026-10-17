@@ -2,8 +2,9 @@ import { exportToCSV } from '../utils/exportHelpers'
 import { useAdimAtlama } from '../hooks/useAdimAtlama'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Users, DollarSign, CreditCard, TrendingUp, Search, RefreshCw, Trash2, Shield, ShieldOff } from 'lucide-react'
+import { Users, DollarSign, CreditCard, TrendingUp, Search, RefreshCw, Trash2, Shield, ShieldOff, Download } from 'lucide-react'
 
+import { bildir } from '../lib/bildirim'
 export default function AdminCRM() {
   const { adimAtla } = useAdimAtlama()
   const [users, setUsers] = useState([])
@@ -78,7 +79,7 @@ export default function AdminCRM() {
 
   const handleDeleteUser = async (user, zorla = false, oncekiGerekce = null, oncekiKotuyeKullanim = false) => {
     if (!user.user_id) {
-      alert('Bu profilin bağlı bir kullanıcı hesabı yok.')
+      bildir('Bu profilin bağlı bir kullanıcı hesabı yok.')
       return
     }
     if (!zorla && !confirm(`"${user.name || user.email}" kullanıcısını silmek istediğinize emin misiniz?
@@ -115,16 +116,16 @@ Silinirse bu organizasyonlar yöneticisiz kalır. Yine de silinsin mi?`)) {
         return
       }
       if (!data?.ok) {
-        alert(SILME_HATALARI[data?.hata] || ('Kullanıcı silinemedi: ' + (data?.hata || 'bilinmeyen hata')))
+        bildir(SILME_HATALARI[data?.hata] || ('Kullanıcı silinemedi: ' + (data?.hata || 'bilinmeyen hata')))
         return
       }
 
       setUsers(prev => prev.filter(u => u.id !== user.id))
-      alert(data.kalan_dosya > 0
-        ? `✅ Kullanıcı silindi. Uyarı: ${data.kalan_dosya} dosyası depolamada kaldı.`
-        : '✅ Kullanıcı ve hesabı tamamen silindi.')
+      bildir(data.kalan_dosya > 0
+        ? `Kullanıcı silindi. Uyarı: ${data.kalan_dosya} dosyası depolamada kaldı.`
+        : 'Kullanıcı ve hesabı tamamen silindi.')
     } catch (error) {
-      alert('Hata: ' + error.message)
+      bildir('Hata: ' + error.message)
     } finally {
       setActionLoading(null)
     }
@@ -152,13 +153,13 @@ Silinirse bu organizasyonlar yöneticisiz kalır. Yine de silinsin mi?`)) {
           son_yonetici: 'Sistemdeki son yöneticinin yetkisi kaldırılamaz.',
           gecersiz_rol: 'Geçersiz rol.',
         }
-        alert(mesajlar[data?.hata] || ('Rol değiştirilemedi: ' + (data?.hata || 'bilinmeyen hata')))
+        bildir(mesajlar[data?.hata] || ('Rol değiştirilemedi: ' + (data?.hata || 'bilinmeyen hata')))
         return
       }
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, role: newRole } : u))
-      alert(`✅ Rol "${data.eski_rol}" → "${newRole}" olarak güncellendi.`)
+      bildir(`Rol "${data.eski_rol}" → "${newRole}" olarak güncellendi.`)
     } catch (error) {
-      alert('Hata: ' + error.message)
+      bildir('Hata: ' + error.message)
     } finally {
       setActionLoading(null)
     }
@@ -180,13 +181,13 @@ Silinirse bu organizasyonlar yöneticisiz kalır. Yine de silinsin mi?`)) {
       })
       if (error) throw error
       if (!data?.ok) {
-        alert('Plan değiştirilemedi: ' + (data?.hata || 'bilinmeyen hata'))
+        bildir('Plan değiştirilemedi: ' + (data?.hata || 'bilinmeyen hata'))
         return
       }
       setSubscriptions(prev => prev.map(s => s.profile_id === userId ? { ...s, plan: newPlan } : s))
-      alert(`✅ Plan "${data.eski_plan}" → "${newPlan}" olarak güncellendi.`)
+      bildir(`Plan "${data.eski_plan}" → "${newPlan}" olarak güncellendi.`)
     } catch (error) {
-      alert('Hata: ' + error.message)
+      bildir('Hata: ' + error.message)
     } finally {
       setActionLoading(null)
     }
@@ -223,7 +224,7 @@ Silinirse bu organizasyonlar yöneticisiz kalır. Yine de silinsin mi?`)) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Admin CRM</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Yönetici paneli</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">Tüm kullanıcıları ve ödemeleri yönetin</p>
         </div>
         <button onClick={loadAllData} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all text-sm">
@@ -273,8 +274,8 @@ Silinirse bu organizasyonlar yöneticisiz kalır. Yine de silinsin mi?`)) {
 
         {/* Export */}
         <div className="flex gap-2 mb-4 flex-wrap">
-          <button onClick={handleExportUsers} className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700">📥 Kullanıcılar</button>
-          <button onClick={handleExportSubscriptions} className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700">📥 Abonelikler</button>
+          <button onClick={handleExportUsers} className="px-3 py-2 inline-flex items-center gap-1.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"><Download size={16} aria-hidden="true" />Kullanıcıları indir</button>
+          <button onClick={handleExportSubscriptions} className="px-3 py-2 inline-flex items-center gap-1.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"><Download size={16} aria-hidden="true" />Abonelikleri indir</button>
         </div>
 
         {/* Search & Filter */}

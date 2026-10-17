@@ -3,10 +3,10 @@ import { supabase } from '../lib/supabaseClient';
 import { 
   Linkedin, Facebook, Twitter, Instagram, Youtube, 
   Github, Globe, Twitch, Music, Camera, Send,
-  Plus, Trash2, ExternalLink, Check, X, Crown
-} from 'lucide-react';
+  Plus, Trash2, ExternalLink, Check, X, Crown, Pencil } from 'lucide-react';
 import { guvenliUrl } from '../utils/guvenliUrl';
 
+import { bildir } from '../lib/bildirim'
 const SOCIAL_PLATFORMS = [
   { id: 'linkedin', name: 'LinkedIn', icon: Linkedin, placeholder: 'https://linkedin.com/in/username', color: 'bg-blue-600' },
   { id: 'facebook', name: 'Facebook', icon: Facebook, placeholder: 'https://facebook.com/username', color: 'bg-blue-700' },
@@ -78,7 +78,7 @@ export default function SocialLinksManager({ profileId }) {
 
   const addLink = async () => {
     if (!newLink.platform || !newLink.url) {
-      alert('Platform ve URL zorunludur');
+      bildir('Platform ve URL zorunludur');
       return;
     }
 
@@ -113,9 +113,9 @@ export default function SocialLinksManager({ profileId }) {
       setNewLink({ platform: '', url: '' });
       setAdding(false);
       loadLinks();
-      alert('Sosyal medya hesabı eklendi!');
+      bildir('Sosyal medya hesabı eklendi!');
     } catch (error) {
-      alert('Hata: ' + error.message);
+      bildir('Hata: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -135,14 +135,14 @@ export default function SocialLinksManager({ profileId }) {
 
       if (error) throw error;
       if (!data || data.length === 0) {
-        alert('Bağlantı silinemedi: bu işlem için yetkiniz yok.');
+        bildir('Bağlantı silinemedi: bu işlem için yetkiniz yok.');
         return;
       }
 
       loadLinks();
-      alert('Sosyal medya hesabı silindi');
+      bildir('Sosyal medya hesabı silindi');
     } catch (error) {
-      alert('Hata: ' + error.message);
+      bildir('Hata: ' + error.message);
     }
   };
 
@@ -166,7 +166,7 @@ export default function SocialLinksManager({ profileId }) {
 
   const updateLink = async (id) => {
     if (!editLink.url) {
-      alert('URL boş olamaz');
+      bildir('URL boş olamaz');
       return;
     }
 
@@ -200,16 +200,16 @@ export default function SocialLinksManager({ profileId }) {
 
       if (error) throw error;
       if (!data || data.length === 0) {
-        alert('Bağlantı güncellenemedi: bu işlem için yetkiniz yok.');
+        bildir('Bağlantı güncellenemedi: bu işlem için yetkiniz yok.');
         return;
       }
 
       setEditingId(null);
       setEditLink({ platform: '', url: '' });
       loadLinks();
-      alert('Sosyal medya hesabı güncellendi!');
+      bildir('Sosyal medya hesabı güncellendi!');
     } catch (error) {
-      alert('Hata: ' + error.message);
+      bildir('Hata: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -280,7 +280,7 @@ export default function SocialLinksManager({ profileId }) {
 
       {/* Upgrade Modal */}
       {showUpgrade && (
-        <div className="mb-6 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border-2 border-yellow-300 dark:border-yellow-700 rounded-xl">
+        <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-300 dark:border-yellow-700 rounded-xl">
           <div className="flex items-start gap-3">
             <Crown className="text-yellow-600 dark:text-yellow-400 mt-1" size={24} />
             <div className="flex-1">
@@ -518,7 +518,7 @@ export default function SocialLinksManager({ profileId }) {
                         className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
                         title="Düzenle"
                       >
-                        ✏️
+                        <Pencil size={16} aria-hidden="true" />
                       </button>
                       <button
                         onClick={() => deleteLink(link.id)}
@@ -540,7 +540,7 @@ export default function SocialLinksManager({ profileId }) {
       {!sinirsiz && sinir !== null && links.length > 0 && links.length < sinir && (
         <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
           <p className="text-sm text-blue-800 dark:text-blue-300">
-            💡 {sinir - links.length} sosyal medya hesabı daha ekleyebilirsiniz
+            {sinir - links.length} sosyal medya hesabı daha ekleyebilirsiniz
           </p>
         </div>
       )}

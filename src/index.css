@@ -1,6 +1,48 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* QRtım tasarım dili — renk değişkenleri (RGB üçlüsü; Tailwind opaklık için).
+   Açık tema mevcut logodan: lacivert #162349, aksan mavisi #0A52B0, sıcak vurgu #C27A2C. */
+@layer base {
+  :root {
+    --renk-zemin: 244 246 250;      /* #F4F6FA */
+    --renk-yuzey: 255 255 255;
+    --renk-yuzey-2: 237 240 245;    /* #EDF0F5 */
+    --renk-cizgi: 217 222 232;      /* #D9DEE8 */
+    --renk-metin: 18 26 46;         /* #121A2E */
+    --renk-metin-2: 85 96 112;      /* #556070 */
+    --renk-aksan: 10 82 176;        /* #0A52B0 */
+    --renk-aksan-koyu: 10 69 148;   /* #0A4594 */
+    --renk-aksan-acik: 227 236 250; /* #E3ECFA */
+    --renk-murekkep: 22 35 73;      /* #162349 lacivert */
+    --renk-vurgu: 194 122 44;       /* #C27A2C */
+    --renk-vurgu-acik: 248 236 220;
+    color-scheme: light;
+  }
+  .dark {
+    --renk-zemin: 13 19 36;         /* #0D1324 */
+    --renk-yuzey: 28 37 57;         /* #1C2539 */
+    --renk-yuzey-2: 18 26 46;
+    --renk-cizgi: 51 62 84;         /* #333E54 */
+    --renk-metin: 236 239 245;
+    --renk-metin-2: 168 177 194;
+    --renk-aksan: 91 155 255;       /* #5B9BFF */
+    --renk-aksan-koyu: 147 182 236;
+    --renk-aksan-acik: 22 35 73;
+    --renk-murekkep: 225 230 242;
+    --renk-vurgu: 224 160 90;
+    --renk-vurgu-acik: 58 40 20;
+    color-scheme: dark;
+  }
+  body {
+    @apply font-sans antialiased text-gray-900 dark:text-gray-100;
+  }
+  h1, h2, h3, h4 {
+    @apply font-baslik tracking-tight;
+  }
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

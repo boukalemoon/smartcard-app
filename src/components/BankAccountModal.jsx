@@ -103,7 +103,7 @@ export default function BankAccountModal({ isOpen, onClose, account = null, onSa
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditMode ? '✏️ Banka Hesabı Düzenle' : '🏦 Yeni Banka Hesabı'}
+      title={isEditMode ? 'Banka Hesabı Düzenle' : 'Yeni Banka Hesabı'}
       size="md"
       closeOnOverlayClick={!saving}
       footer={
@@ -147,7 +147,7 @@ export default function BankAccountModal({ isOpen, onClose, account = null, onSa
             autoFocus
           />
           {errors.bankName && (
-            <p className="text-xs text-red-500 mt-1">⚠️ {errors.bankName}</p>
+            <p className="text-xs text-red-500 mt-1">{errors.bankName}</p>
           )}
         </div>
 
@@ -168,7 +168,7 @@ export default function BankAccountModal({ isOpen, onClose, account = null, onSa
             maxLength={100}
           />
           {errors.accountHolder && (
-            <p className="text-xs text-red-500 mt-1">⚠️ {errors.accountHolder}</p>
+            <p className="text-xs text-red-500 mt-1">{errors.accountHolder}</p>
           )}
         </div>
 
@@ -186,10 +186,10 @@ export default function BankAccountModal({ isOpen, onClose, account = null, onSa
             maxLength={32} // 26 karakter + 6 boşluk
           />
           {errors.iban ? (
-            <p className="text-xs text-red-500 mt-1">⚠️ {errors.iban}</p>
+            <p className="text-xs text-red-500 mt-1">{errors.iban}</p>
           ) : (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              💡 TR ile başlamalı, toplam 26 karakter (boşluklar otomatik eklenir)
+              TR ile başlamalı, toplam 26 karakter (boşluklar otomatik eklenir)
             </p>
           )}
         </div>
@@ -197,7 +197,7 @@ export default function BankAccountModal({ isOpen, onClose, account = null, onSa
         {/* Bilgi Kutusu */}
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
           <p className="text-xs text-blue-800 dark:text-blue-200">
-            🔒 Banka bilgileriniz, yalnızca "Kartımda göster" seçeneğini açarsanız kartınızı açan herkese görünür. Kapalıyken kimseye gösterilmez. Müşterileriniz tek tıkla IBAN'ı kopyalayabilir.
+            Banka bilgileriniz, yalnızca "Kartımda göster" seçeneğini açarsanız kartınızı açan herkese görünür. Kapalıyken kimseye gösterilmez. Müşterileriniz tek tıkla IBAN'ı kopyalayabilir.
           </p>
         </div>
       </div>

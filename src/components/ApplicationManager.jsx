@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { Clock, CheckCircle, XCircle, Mail, Phone, MessageSquare } from 'lucide-react'
 
+import { bildir } from '../lib/bildirim'
 export default function ApplicationManager({ organizationId, onChange }) {
   const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(true)
@@ -53,21 +54,21 @@ export default function ApplicationManager({ organizationId, onChange }) {
       })
       if (error) throw error
       if (!data?.ok) {
-        alert(BASVURU_HATALARI[data?.hata] || 'Başvuru güncellenemedi.')
+        bildir(BASVURU_HATALARI[data?.hata] || 'Başvuru güncellenemedi.')
         return
       }
 
       loadApplications()
       onChange?.()   // kurum listesindeki bekleyen başvuru sayısı tazelensin
       if (newStatus === 'approved') {
-        alert(data.hesap_bagli
+        bildir(data.hesap_bagli
           ? 'Başvuru onaylandı; kişi QRtım hesabıyla üye olarak eklendi.'
           : 'Başvuru onaylandı ve üye olarak eklendi. Kişinin QRtım hesabı olmadığı için üye kaydı başvuru bilgileriyle oluşturuldu.')
       } else {
-        alert('Başvuru reddedildi')
+        bildir('Başvuru reddedildi')
       }
     } catch (error) {
-      alert('Hata: ' + error.message)
+      bildir('Hata: ' + error.message)
     }
   }
 

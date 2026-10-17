@@ -3,6 +3,7 @@ import { Users, Trash2, Download, Mail, Phone } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { exportToCSV } from '../utils/exportHelpers'
 
+import { bildir } from '../lib/bildirim'
 // KİŞİ DEFTERİ
 //
 // Kartını okutan kişilerin kendi rızasıyla bıraktığı bilgiler. Veri kart
@@ -44,19 +45,19 @@ export default function CardContacts() {
         .select('id')
       if (error) throw error
       if (!data || data.length === 0) {
-        alert('Kayıt silinemedi.')
+        bildir('Kayıt silinemedi.')
         return
       }
       setKisiler((o) => o.filter((k) => k.id !== kisi.id))
     } catch (e) {
-      alert('Hata: ' + e.message)
+      bildir('Hata: ' + e.message)
     } finally {
       setSiliniyor(null)
     }
   }
 
   const disaAktar = () => {
-    if (kisiler.length === 0) { alert('Dışa aktarılacak kayıt yok.'); return }
+    if (kisiler.length === 0) { bildir('Dışa aktarılacak kayıt yok.'); return }
     exportToCSV(
       kisiler.map((k) => ({
         'Ad Soyad': k.name,

@@ -4,6 +4,7 @@ import ImageUpload from './ImageUpload'
 import { Building2, Globe, Mail, Phone, MapPin, Save, X, Link2, Copy } from 'lucide-react'
 import { SITE_URL } from '../lib/siteUrl'
 
+import { bildir } from '../lib/bildirim'
 // STK türleri sunucudaki is_stk_org_type ile aynı listedir; herkese açık
 // dizin ve başvuru sayfaları yalnızca bu türlerde çalışır.
 const STK_TURLERI = ['association', 'foundation', 'community', 'union',
@@ -61,7 +62,7 @@ export default function OrganizationProfileManager({ organizationId, onClose, on
       setIletisimGorunur(Boolean(ayar.showMemberContact))
     } catch (error) {
       console.error('Error loading organization:', error)
-      alert('Organizasyon yüklenemedi!')
+      bildir('Organizasyon yüklenemedi!')
     } finally {
       setLoading(false)
     }
@@ -98,16 +99,16 @@ export default function OrganizationProfileManager({ organizationId, onClose, on
 
       if (error) throw error
       if (!data || data.length === 0) {
-        alert('Güncellenemedi. Bu işlem için organizasyon yöneticisi olmanız gerekiyor.')
+        bildir('Güncellenemedi. Bu işlem için organizasyon yöneticisi olmanız gerekiyor.')
         return
       }
 
-      alert('✅ Organizasyon güncellendi!')
+      bildir('Organizasyon güncellendi!')
       onUpdate?.()
       onClose?.()
     } catch (error) {
       console.error('Save error:', error)
-      alert('Hata: ' + error.message)
+      bildir('Hata: ' + error.message)
     } finally {
       setSaving(false)
     }
@@ -123,15 +124,15 @@ export default function OrganizationProfileManager({ organizationId, onClose, on
 
       if (error) throw error
       if (!data || data.length === 0) {
-        alert('Logo güncellenemedi. Bu işlem için organizasyon yöneticisi olmanız gerekiyor.')
+        bildir('Logo güncellenemedi. Bu işlem için organizasyon yöneticisi olmanız gerekiyor.')
         return
       }
 
       setOrganization({ ...organization, logo_url: logoUrl })
-      alert('Logo güncellendi!')
+      bildir('Logo güncellendi!')
     } catch (error) {
       console.error('Logo update error:', error)
-      alert('Hata: ' + error.message)
+      bildir('Hata: ' + error.message)
     }
   }
 

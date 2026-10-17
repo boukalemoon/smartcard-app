@@ -1,5 +1,5 @@
 import AvatarFlipCard from './AvatarFlipCard'
-import { Linkedin, Facebook, Twitter, Instagram, Youtube, Github, Globe, Twitch, Music, Camera, Send } from 'lucide-react'
+import { Linkedin, Facebook, Twitter, Instagram, Youtube, Github, Globe, Twitch, Music, Camera, Send , Mail, Phone } from 'lucide-react'
 import { guvenliUrl } from '../utils/guvenliUrl'
 
 const PLATFORM_CONFIG = {
@@ -35,7 +35,7 @@ export default function PublicCardPreview({ profile, themeColor, socialLinks = [
   return (
     <div className="bg-gray-100 dark:bg-gray-700 rounded-xl p-4">
       <p className="text-xs text-gray-600 dark:text-gray-400 mb-3 text-center font-semibold">
-        📱 Kartınızın Önizlemesi
+        Kartınızın Önizlemesi
       </p>
       
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl overflow-hidden max-w-sm mx-auto">
@@ -73,12 +73,12 @@ export default function PublicCardPreview({ profile, themeColor, socialLinks = [
         {/* İletişim */}
         <div className="px-4 pt-4 space-y-2">
           <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-            <span>📧</span>
+            <Mail size={14} aria-hidden="true" className="shrink-0" />
             <span className="truncate">{profile?.email || 'email@example.com'}</span>
           </div>
           {profile?.phone && (
             <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-              <span>📱</span>
+              <Phone size={14} aria-hidden="true" className="shrink-0" />
               <span>{profile.phone}</span>
             </div>
           )}

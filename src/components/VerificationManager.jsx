@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { BadgeCheck, Globe, Copy, Check, RefreshCw, Trash2, AlertTriangle, Mail, Building2 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 
+import { bildir } from '../lib/bildirim'
 // DOĞRULAMA YÖNETİMİ
 //
 // Kullanıcı kendi alan adını doğrular; sonuç kartında rozet olur.
@@ -99,7 +100,7 @@ export default function VerificationManager() {
   const kaldir = async (kayit) => {
     if (!confirm(`${kayit.konu} doğrulaması kaldırılsın mı? Kartınızdaki rozet kalkar.`)) return
     const { data, error } = await supabase.rpc('verification_cancel', { p_id: kayit.id })
-    if (error || !data?.ok) { alert(HATALAR[data?.hata] || 'Kaldırılamadı.'); return }
+    if (error || !data?.ok) { bildir(HATALAR[data?.hata] || 'Kaldırılamadı.'); return }
     await yukle()
   }
 

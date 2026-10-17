@@ -114,7 +114,7 @@ export default function BillingInfoModal({ isOpen, onClose, billingInfo = null, 
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditMode ? '✏️ Fatura Bilgilerini Düzenle' : '📋 Fatura Bilgileri'}
+      title={isEditMode ? 'Fatura Bilgilerini Düzenle' : 'Fatura Bilgileri'}
       size="md"
       closeOnOverlayClick={!saving}
       footer={
@@ -191,7 +191,7 @@ export default function BillingInfoModal({ isOpen, onClose, billingInfo = null, 
             autoFocus
           />
           {errors.companyTitle && (
-            <p className="text-xs text-red-500 mt-1">⚠️ {errors.companyTitle}</p>
+            <p className="text-xs text-red-500 mt-1">{errors.companyTitle}</p>
           )}
         </div>
 
@@ -227,10 +227,10 @@ export default function BillingInfoModal({ isOpen, onClose, billingInfo = null, 
             maxLength={isIndividual ? 11 : 10}
           />
           {errors.taxNumber ? (
-            <p className="text-xs text-red-500 mt-1">⚠️ {errors.taxNumber}</p>
+            <p className="text-xs text-red-500 mt-1">{errors.taxNumber}</p>
           ) : (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              💡 {isIndividual ? '11 haneli TC Kimlik numaranız' : '10 haneli vergi numaranız'}{' '}
+              {isIndividual ? '11 haneli TC Kimlik numaranız' : '10 haneli vergi numaranız'}{' '}
               {taxNumber && (
                 <span className={taxNumber.length === (isIndividual ? 11 : 10) ? 'text-green-600' : 'text-orange-500'}>
                   ({taxNumber.length}/{isIndividual ? 11 : 10})
@@ -261,7 +261,7 @@ export default function BillingInfoModal({ isOpen, onClose, billingInfo = null, 
         {/* Bilgi Kutusu */}
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
           <p className="text-xs text-blue-800 dark:text-blue-200">
-            💡 Bu bilgiler kartvizitinizde görünür ve müşterileriniz tek tıkla kopyalayabilir. e-Fatura kesilirken hız sağlar.
+            Bu bilgiler kartvizitinizde görünür ve müşterileriniz tek tıkla kopyalayabilir. e-Fatura kesilirken hız sağlar.
           </p>
         </div>
       </div>

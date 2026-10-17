@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import { Download, Share2, FileImage } from 'lucide-react';
+import { Download, Share2, FileImage, Copy } from 'lucide-react';
 import { cardUrl, kaynakliAdres } from '../lib/siteUrl';
 
+import { bildir } from '../lib/bildirim'
 export default function QRCodeDisplay({ 
   username, 
   url = null,        // verilirse bu adres kodlanir (persona paylasimi)
@@ -112,7 +113,7 @@ const addLogoToQR = (canvas, logoUrl) => {
       link.click();
     } catch (error) {
       console.error('QR indirilemedi:', error);
-      alert('QR kod indirilemedi.');
+      bildir('QR kod indirilemedi.');
     }
   };
 
@@ -134,7 +135,7 @@ const addLogoToQR = (canvas, logoUrl) => {
       URL.revokeObjectURL(link.href);
     } catch (error) {
       console.error('SVG indirilemedi:', error);
-      alert('SVG indirilemedi.');
+      bildir('SVG indirilemedi.');
     }
   };
 
@@ -159,7 +160,7 @@ const addLogoToQR = (canvas, logoUrl) => {
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(profileUrl);
-    alert('Link panoya kopyalandı!');
+    bildir('Link panoya kopyalandı!');
   };
 
   return (
@@ -189,7 +190,7 @@ const addLogoToQR = (canvas, logoUrl) => {
               className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
               title="Kopyala"
             >
-              📋
+              <Copy size={16} aria-hidden="true" />
             </button>
           </div>
         </div>

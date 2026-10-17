@@ -113,7 +113,7 @@ export default function ServiceModal({ isOpen, onClose, service = null, serviceI
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditMode ? '✏️ Hizmeti Düzenle' : '🛍️ Yeni Hizmet'}
+      title={isEditMode ? 'Hizmeti Düzenle' : 'Yeni Hizmet'}
       size="md"
       closeOnOverlayClick={!saving}
       footer={
@@ -157,7 +157,7 @@ export default function ServiceModal({ isOpen, onClose, service = null, serviceI
             autoFocus
           />
           {errors.title && (
-            <p className="text-xs text-red-500 mt-1">⚠️ {errors.title}</p>
+            <p className="text-xs text-red-500 mt-1">{errors.title}</p>
           )}
         </div>
 
@@ -179,7 +179,7 @@ export default function ServiceModal({ isOpen, onClose, service = null, serviceI
           />
           <div className="flex items-center justify-between mt-1">
             {errors.description ? (
-              <p className="text-xs text-red-500">⚠️ {errors.description}</p>
+              <p className="text-xs text-red-500">{errors.description}</p>
             ) : (
               <p className="text-xs text-gray-500 dark:text-gray-400">En az 10 karakter</p>
             )}
@@ -208,7 +208,7 @@ export default function ServiceModal({ isOpen, onClose, service = null, serviceI
               />
             </div>
             {errors.price && (
-              <p className="text-xs text-red-500 mt-1">⚠️ {errors.price}</p>
+              <p className="text-xs text-red-500 mt-1">{errors.price}</p>
             )}
           </div>
 
@@ -230,8 +230,8 @@ export default function ServiceModal({ isOpen, onClose, service = null, serviceI
 
         {/* Önizleme */}
         {(title || description || price) && (
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-            <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-2">👀 Önizleme</p>
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-2">Önizleme</p>
             <h4 className="font-semibold text-gray-900 dark:text-gray-100">
               {title || 'Hizmet Adı'}
             </h4>
@@ -244,7 +244,7 @@ export default function ServiceModal({ isOpen, onClose, service = null, serviceI
               </span>
               {deliveryTime && (
                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                  ⏱️ {deliveryTime}
+                  {deliveryTime}
                 </span>
               )}
             </div>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X, CreditCard, Check } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 
+import { bildir } from '../lib/bildirim'
 export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal = false, currentSubscription = null, initialPeriod = 'monthly' }) {
   // Panelden "yıllık" diye açıldığında aylık gösterilmesin.
   const [selectedPeriod, setSelectedPeriod] = useState(initialPeriod === 'yearly' ? 'yearly' : 'monthly')
@@ -89,7 +90,7 @@ export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal 
       })
       if (niyetHatasi) throw niyetHatasi
       if (!niyet?.ok) {
-        alert(ODEME_HATALARI[niyet?.hata] || 'Ödeme başlatılamadı. Lütfen tekrar deneyin.')
+        bildir(ODEME_HATALARI[niyet?.hata] || 'Ödeme başlatılamadı. Lütfen tekrar deneyin.')
         return
       }
 
@@ -109,7 +110,7 @@ export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal 
       if (baslatmaHatasi) {
         let kod = null
         try { kod = (await baslatmaHatasi.context?.json())?.hata } catch { /* gövde okunamadı */ }
-        alert(ODEME_HATALARI[kod] || 'Ödeme başlatılamadı. Lütfen tekrar deneyin.')
+        bildir(ODEME_HATALARI[kod] || 'Ödeme başlatılamadı. Lütfen tekrar deneyin.')
         return
       }
 
@@ -128,7 +129,7 @@ export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal 
       form.submit()
     } catch (error) {
       console.error('Ödeme başlatma hatası:', error)
-      alert('Ödeme işlemi başlatılamadı. Lütfen tekrar deneyin.')
+      bildir('Ödeme işlemi başlatılamadı. Lütfen tekrar deneyin.')
     } finally {
       setLoading(false)
     }
@@ -142,7 +143,7 @@ export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal 
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              {isRenewal ? '🔄 Abonelik Yenileme' : '💳 Ödeme'}
+              {isRenewal ? 'Abonelik Yenileme' : 'Ödeme'}
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               {currentPlan.name} Planı
@@ -182,7 +183,7 @@ export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal 
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">📅 Aylık</span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">Aylık</span>
                   {selectedPeriod === 'monthly' && <Check size={18} className="text-blue-500" />}
                 </div>
                 <p className="text-2xl font-bold text-blue-600">
@@ -205,7 +206,7 @@ export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal 
                   </div>
                 )}
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">🎯 Yıllık</span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">Yıllık</span>
                   {selectedPeriod === 'yearly' && <Check size={18} className="text-blue-500" />}
                 </div>
                 <p className="text-2xl font-bold text-blue-600">
@@ -232,7 +233,7 @@ export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal 
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">💻 Dijital Only</span>
+                    <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">Dijital Only</span>
                     {!includeNFC && <Check size={16} className="text-blue-500" />}
                   </div>
                   <p className="text-xl font-bold text-blue-600">
@@ -249,7 +250,7 @@ export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal 
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">💳 + NFC Kart</span>
+                    <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">+ NFC Kart</span>
                     {includeNFC && <Check size={16} className="text-purple-500" />}
                   </div>
                   <p className="text-xl font-bold text-purple-600">
@@ -266,7 +267,7 @@ export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal 
           {!showNFCOption && isRenewal && (
             <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
               <p className="text-sm text-green-900 dark:text-green-100">
-                ✅ NFC kartınız mevcut, yenilemeye dahil değildir.
+                NFC kartınız mevcut, yenilemeye dahil değildir.
               </p>
             </div>
           )}
@@ -288,7 +289,7 @@ export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal 
             {selectedPeriod === 'yearly' && includeNFC && currentPlan.nfcIncluded > 0 && (
               <div className="flex items-center justify-between text-sm bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded">
                 <span className="text-yellow-700 dark:text-yellow-300">
-                  💳 {currentPlan.nfcIncluded} NFC Kart dahil
+                  {currentPlan.nfcIncluded} NFC Kart dahil
                 </span>
                 <span className="font-semibold text-green-600 dark:text-green-400">DAHİL</span>
               </div>
@@ -296,7 +297,7 @@ export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal 
 
             {selectedPeriod === 'yearly' && yearlyDiscount > 0 && (
               <div className="flex items-center justify-between text-sm text-green-600 dark:text-green-400">
-                <span>🎉 Yıllık indirim</span>
+                <span>Yıllık indirim</span>
                 <span className="font-semibold">-₺{yearlyDiscount.toLocaleString('tr-TR')}</span>
               </div>
             )}
@@ -312,7 +313,7 @@ export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal 
           <button
             onClick={handlePayment}
             disabled={loading}
-            className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-bold text-lg transition-all disabled:opacity-50"
+            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg transition-all disabled:opacity-50"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
@@ -326,7 +327,7 @@ export default function PaymentModal({ isOpen, onClose, selectedPlan, isRenewal 
 
           <div className="text-center">
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              🔒 Güvenli ödeme altyapısı ile korunmaktasınız
+              Güvenli ödeme altyapısı ile korunmaktasınız
             </p>
           </div>
         </div>

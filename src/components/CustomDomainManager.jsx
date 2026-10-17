@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link2, Copy, Check, RefreshCw, Trash2, Globe, AlertTriangle } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 
+import { bildir } from '../lib/bildirim'
 // ÖZEL ALAN ADI
 //
 // Kart kişinin kendi adresinde açılır: kart.ornek.com.tr
@@ -113,7 +114,7 @@ export default function CustomDomainManager() {
   const kaldir = async (kayit) => {
     if (!confirm(`${kayit.host} adresi kaldırılsın mı? Kartınız bu adreste açılmayı bırakır.`)) return
     const { data, error } = await supabase.rpc('custom_domain_remove', { p_id: kayit.id })
-    if (error || !data?.ok) { alert(HATALAR[data?.hata] || 'Kaldırılamadı.'); return }
+    if (error || !data?.ok) { bildir(HATALAR[data?.hata] || 'Kaldırılamadı.'); return }
     await yukle()
   }
 
