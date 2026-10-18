@@ -30,6 +30,18 @@ export function goreli(d) {
   return tarih(d)
 }
 
+// Saniye → "2 sa 14 dk". Sıfır ve null ayrı: 0 gerçek bir değer ("0 dk"),
+// null ise "henüz yok" demek ve "—" gösterilir.
+export function sureMetni(sn) {
+  if (sn === null || sn === undefined || Number.isNaN(Number(sn))) return '—'
+  const t = Math.max(0, Math.floor(Number(sn)))
+  const sa = Math.floor(t / 3600)
+  const dk = Math.floor((t % 3600) / 60)
+  if (sa > 0) return dk > 0 ? `${sayi(sa)} sa ${dk} dk` : `${sayi(sa)} sa`
+  if (dk > 0) return `${dk} dk`
+  return `${t} sn`
+}
+
 // Ad soyaddan baş harfler: "Elif Kayaalp" → "EK"
 export function basHarf(ad) {
   if (!ad) return '?'
