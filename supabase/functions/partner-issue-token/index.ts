@@ -19,7 +19,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import { oturumKimligi, tazeMfaEksik } from "../_shared/mfa.ts";
 import { belirtecOzeti } from "../_shared/belirtec.ts";
 
-const KNOWN_PARTNERS = ["arku", "ilgezdi", "tinga", "thedraw"];
+const KNOWN_PARTNERS = ["arku", "ilgezdi", "tinga", "thedraw", "ulku"];
 const TTL_VARSAYILAN_SN = 300; // web yönlendirme akışı için
 const TTL_EN_AZ_SN = 30;
 const TTL_EN_COK_SN = 300;

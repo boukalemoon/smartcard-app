@@ -1,7 +1,7 @@
 # QRtım ile kimlik entegrasyonu
 
 **Kimin için:** QRtım hesabıyla giriş yapılacak uygulamaları geliştirenler
-(Arku, İlgezdi, Tınga, The Draw, CRM ve bundan sonra yazılacak her uygulama).
+(Arku, İlgezdi, Tınga, The Draw, Ülkü, CRM ve bundan sonra yazılacak her uygulama).
 **Son güncelleme:** 20.09.2026 · QRtım Supabase projesi: `kfpnsxoxfrxepxezatsr`
 
 QRtım artık bir kartvizit uygulaması değil, ekosistemin **kimlik sağlayıcısı**.
@@ -72,7 +72,8 @@ Belirteci uygulamanızın sunucusuna verin, doğrulamayı orada yapın.
 ### 3c. Doğrulama (yalnızca SUNUCUDAN)
 
 ```http
-POST /functions/v1/arku-link        (Tınga: /tinga-link, The Draw: /draw-link)
+POST /functions/v1/arku-link        (Tınga: /tinga-link, The Draw: /draw-link,
+                                     Ülkü: /ulku-link)
 { "token": "<belirteç>" }
 ```
 

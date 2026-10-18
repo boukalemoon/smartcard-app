@@ -66,6 +66,8 @@ const TRUSTED_PARTNERS = {
   // localhost güvenilir sayılsaydı, kurbanın makinesinde o portu dinleyen
   // herhangi bir uygulama SSO belirtecini alabilirdi.
   thedraw: [],
+  // Ülkü: üretim adresi bildirildi ve açıldı (Burak onayı 18.10.2026).
+  ulku: ['https://ulku-ten.vercel.app'],
 }
 
 // Yerel geliştirme sunucuları yalnızca dev derlemesinde güvenilir sayılır;
@@ -74,6 +76,8 @@ if (import.meta.env.DEV) {
   TRUSTED_PARTNERS.arku.push('http://localhost:3000', 'http://localhost:5173')
   TRUSTED_PARTNERS.ilgezdi.push('http://localhost:4000')
   TRUSTED_PARTNERS.thedraw.push('http://localhost:5180')
+  // 5173 arku'da, 5180 Draw'da: Ülkü 5182.
+  TRUSTED_PARTNERS.ulku.push('http://localhost:5182')
 }
 
 // Callback URL'in origin'i hangi partner'a ait? Değilse null.
@@ -108,6 +112,7 @@ const PARTNER_BILGI = {
   ilgezdi: { ad: 'İlgezdi', kisa: 'İL', donus: "İlgezdi'ye", adaDonus: "İlgezdi'ye" },
   tinga: { ad: 'Tınga', kisa: 'TI', donus: "Tınga'ya", adaDonus: "Tınga'ya" },
   thedraw: { ad: 'The Draw', kisa: 'TD', donus: "The Draw'a", adaDonus: "The Draw'a" },
+  ulku: { ad: 'Ülkü', kisa: 'Ü', donus: "Ülkü'ye", adaDonus: "Ülkü'ye" },
 }
 const PAYLASILAN_ALANLAR = [
   'Ad soyad ve kullanıcı adı',
@@ -124,6 +129,8 @@ const PAYLASILAN_ALANLAR = [
 // draw-link plan alanlarını göndermiyor — onay ekranından da çıkarıldı.
 const PARTNER_ALANLARI = {
   thedraw: PAYLASILAN_ALANLAR.filter((a) => a !== 'Abonelik planı'),
+  // Ülkü de plan istemedi; ulku-link plan göndermiyor.
+  ulku: PAYLASILAN_ALANLAR.filter((a) => a !== 'Abonelik planı'),
 }
 
 const paylasilanAlanlar = (ad) => PARTNER_ALANLARI[ad] ?? PAYLASILAN_ALANLAR

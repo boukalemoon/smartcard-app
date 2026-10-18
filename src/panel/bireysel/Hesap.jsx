@@ -22,6 +22,7 @@ const UYGULAMALAR = [
   { anahtar: 'ilgezdi', ad: 'İlgezdi', kisa: 'İL', renk: 'bg-aksan text-white dark:text-zemin' },
   { anahtar: 'tinga', ad: 'Tınga', kisa: 'TI', renk: 'bg-vurgu text-white dark:text-zemin' },
   { anahtar: 'thedraw', ad: 'The Draw', kisa: 'TD', renk: 'bg-aksan-acik text-aksan-koyu dark:text-aksan' },
+  { anahtar: 'ulku', ad: 'Ülkü', kisa: 'Ü', renk: 'bg-vurgu-acik text-vurgu' },
 ]
 
 // Tarayıcı yalnızca KENDİ oturumunu bilir; diğer cihazların listesi için
