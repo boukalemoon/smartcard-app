@@ -19,7 +19,17 @@
 -- tabloya bağlı RPC, en son tablo.
 
 -- 1) Zamanlanmış temizlik işi
-delete from cron.job where jobname = 'qrtim-uzak-oturum-saklama';
+--
+-- cron.job tablosuna DOĞRUDAN delete atılmaz: tablo sahibi değiliz,
+-- "permission denied for table job" verir. pg_cron'da işi kaldırmanın yolu
+-- cron.unschedule(). İş yoksa hata fırlatır, bu yüzden varlığı önce
+-- denetleniyor (migration iki kez çalıştırılabilsin).
+do $kaldir$
+begin
+  if exists (select 1 from cron.job where jobname = 'qrtim-uzak-oturum-saklama') then
+    perform cron.unschedule('qrtim-uzak-oturum-saklama');
+  end if;
+end $kaldir$;
 
 -- 2) Temizlik fonksiyonu
 drop function if exists public.prune_remote_sessions();
