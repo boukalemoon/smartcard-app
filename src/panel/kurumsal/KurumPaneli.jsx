@@ -18,6 +18,7 @@ import KurumBasvurular from './KurumBasvurular'
 import KurumOlcum from './KurumOlcum'
 import KurumPartner from './KurumPartner'
 import KurumProfili from './KurumProfili'
+import { kurumsalMenu } from '../menuler'
 import KurumAyarlari, { KurumOlustur } from './KurumAyarlari'
 
 const SECILI_ANAHTAR = 'qrtim-kurum-secili'
@@ -26,22 +27,6 @@ const yaz = (id) => { try { localStorage.setItem(SECILI_ANAHTAR, id) } catch { /
 
 const kurumlariYukle = async () => (await rpc('my_organizations')) || []
 
-// Yönetici olunmayan kurumda yalnızca genel bakış ve salt okunur üye listesi.
-function menuKur(kurum) {
-  const yonetici = !!kurum?.is_admin
-  const m = [{ anahtar: 'genel', ad: 'Genel bakış' }, { anahtar: 'uyeler', ad: 'Üyeler' }]
-  if (yonetici) {
-    // Başvuru formu yalnızca STK türünde çalışır (get_public_organization).
-    if (kurum.is_stk) m.push({ anahtar: 'basvurular', ad: 'Başvurular', sayi: Number(kurum.pending_applications) || 0 })
-    m.push(
-      { anahtar: 'profil', ad: 'Kurum profili' },
-      { anahtar: 'olcum', ad: 'Ölçüm' },
-      { anahtar: 'partner', ad: 'Partner' },
-      { anahtar: 'ayarlar', ad: 'Ayarlar' },
-    )
-  }
-  return m
-}
 
 export default function KurumPaneli({ profile, kullanici, hesapMenusu, onModDegistir }) {
   const [arama, setArama] = useSearchParams()
@@ -50,7 +35,7 @@ export default function KurumPaneli({ profile, kullanici, hesapMenusu, onModDegi
 
   const liste = kurumlar || []
   const kurum = liste.find((k) => k.id === seciliId) || liste[0] || null
-  const menu = menuKur(kurum)
+  const menu = kurumsalMenu(kurum)
   const istenen = arama.get('kbolum') || 'genel'
   const bolum = menu.some((m) => m.anahtar === istenen) ? istenen : 'genel'
 

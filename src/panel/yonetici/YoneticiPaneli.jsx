@@ -18,20 +18,10 @@ import { useYoneticiVerisi, useTuretilmis } from './veri'
 import { Istatistikler, PlanDagilimi, DikkatGerektiren } from './Platform'
 import KayitTablosu from './KayitTablosu'
 import KullaniciPaneli from './KullaniciPaneli'
+import { yoneticiMenu } from '../menuler'
 
-// Menü tasarımdaki sırada. NFC siparişleri ve denetim kaydı için yöneticinin
-// okuyabildiği bir kaynak yok (nfc_orders'ta yönetici okuma kuralı yok,
-// audit_log yalnızca kişinin kendi kayıtlarına açık): "Yakında".
-const MENU = [
-  { anahtar: 'platform', ad: 'Platform' },
-  { anahtar: 'kullanicilar', ad: 'Kullanıcılar' },
-  { anahtar: 'abonelikler', ad: 'Abonelikler' },
-  { anahtar: 'komisyonlar', ad: 'Komisyonlar' },
-  { anahtar: 'referanslar', ad: 'Referanslar' },
-  { anahtar: 'nfc', ad: 'NFC siparişleri', etiket: 'Yakında', kapali: true },
-  { anahtar: 'kurumlar', ad: 'Kurumlar' },
-  { anahtar: 'denetim', ad: 'Denetim kaydı', etiket: 'Yakında', kapali: true },
-]
+// Menü ve ikonlar ../menuler.js'te: üç panel aynı haritadan beslenir.
+const MENU = yoneticiMenu()
 const SAYFA = {
   kullanicilar: { tur: 'users', baslik: 'Kullanıcılar', alt: 'Tüm hesaplar. Rol, plan ve silme işlemleri için satırda Aç.' },
   abonelikler: { tur: 'subs', baslik: 'Abonelikler', alt: 'Kişi başına abonelik kaydı, dönemi ve bitiş tarihi.' },
