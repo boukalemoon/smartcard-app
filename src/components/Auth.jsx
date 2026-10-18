@@ -56,6 +56,16 @@ const TRUSTED_PARTNERS = {
   // Tınga masaüstü uygulaması: OAuth loopback (RFC 8252) — sabit yerel port.
   // Loopback adresleri masaüstü akışının parçasıdır, üretimde de geçerlidir.
   tinga: ['http://127.0.0.1:17605', 'http://localhost:17605'],
+  // The Draw: ÜRETİMDE HENÜZ ADRES YOK. Boş liste kalması kasıtlı —
+  // detectPartnerSource hiçbir origin'i eşleştirmez, yani üretimde Draw
+  // akışı hiç açılmaz. Canlı HTTPS adresi bildirildiğinde buraya eklenir.
+  //
+  // Localhost ÜRETİME KONULMADI (karar: Burak, 18.10.2026). Tınga'nın
+  // loopback istisnası masaüstü akışı (RFC 8252) gerekçesiyle var; The Draw
+  // bir web/sunucu uygulaması, aynı gerekçe geçerli değil. Üretimde
+  // localhost güvenilir sayılsaydı, kurbanın makinesinde o portu dinleyen
+  // herhangi bir uygulama SSO belirtecini alabilirdi.
+  thedraw: [],
 }
 
 // Yerel geliştirme sunucuları yalnızca dev derlemesinde güvenilir sayılır;
@@ -63,6 +73,7 @@ const TRUSTED_PARTNERS = {
 if (import.meta.env.DEV) {
   TRUSTED_PARTNERS.arku.push('http://localhost:3000', 'http://localhost:5173')
   TRUSTED_PARTNERS.ilgezdi.push('http://localhost:4000')
+  TRUSTED_PARTNERS.thedraw.push('http://localhost:5180')
 }
 
 // Callback URL'in origin'i hangi partner'a ait? Değilse null.
@@ -96,6 +107,7 @@ const PARTNER_BILGI = {
   arku: { ad: 'Arku Remote', kisa: 'AR', donus: "Arku'ya", adaDonus: "Arku Remote'a" },
   ilgezdi: { ad: 'İlgezdi', kisa: 'İL', donus: "İlgezdi'ye", adaDonus: "İlgezdi'ye" },
   tinga: { ad: 'Tınga', kisa: 'TI', donus: "Tınga'ya", adaDonus: "Tınga'ya" },
+  thedraw: { ad: 'The Draw', kisa: 'TD', donus: "The Draw'a", adaDonus: "The Draw'a" },
 }
 const PAYLASILAN_ALANLAR = [
   'Ad soyad ve kullanıcı adı',
@@ -104,6 +116,17 @@ const PAYLASILAN_ALANLAR = [
   'Profil fotoğrafı',
   'Abonelik planı',
 ]
+
+// Partner başına sapma. Onay ekranında yazan liste, o partnerin link ucunun
+// GERÇEKTEN döndürdüğü alanlarla aynı olmalı; fazlasını yazmak kişiye
+// paylaşılmayan bir veriyi paylaşılıyor gibi göstermek olur.
+// The Draw plan bilgisi istemedi (M01 planı onaylanınca ayrıca istenecek),
+// draw-link plan alanlarını göndermiyor — onay ekranından da çıkarıldı.
+const PARTNER_ALANLARI = {
+  thedraw: PAYLASILAN_ALANLAR.filter((a) => a !== 'Abonelik planı'),
+}
+
+const paylasilanAlanlar = (ad) => PARTNER_ALANLARI[ad] ?? PAYLASILAN_ALANLAR
 
 function partnerBilgisi(ad) {
   return PARTNER_BILGI[ad] ?? { ad, kisa: String(ad).slice(0, 2).toUpperCase(), donus: 'uygulamaya', adaDonus: 'Uygulamaya' }
@@ -380,7 +403,7 @@ export default function Auth({ initialMode = 'signup' }) {
         bilgi={partnerBilgisi(onay.partnerName)}
         cb={onay.cb}
         kullanici={onay.session.user}
-        alanlar={PAYLASILAN_ALANLAR}
+        alanlar={paylasilanAlanlar(onay.partnerName)}
         mesgul={loading}
         onIzin={partnereGonder}
         onReddet={partneriReddet}

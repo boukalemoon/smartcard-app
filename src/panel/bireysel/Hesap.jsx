@@ -21,6 +21,7 @@ const UYGULAMALAR = [
   { anahtar: 'arku', ad: 'Arku Remote', kisa: 'AR', renk: 'bg-murekkep text-yuzey' },
   { anahtar: 'ilgezdi', ad: 'İlgezdi', kisa: 'İL', renk: 'bg-aksan text-white dark:text-zemin' },
   { anahtar: 'tinga', ad: 'Tınga', kisa: 'TI', renk: 'bg-vurgu text-white dark:text-zemin' },
+  { anahtar: 'thedraw', ad: 'The Draw', kisa: 'TD', renk: 'bg-aksan-acik text-aksan-koyu dark:text-aksan' },
 ]
 
 // Tarayıcı yalnızca KENDİ oturumunu bilir; diğer cihazların listesi için

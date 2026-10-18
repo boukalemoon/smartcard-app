@@ -1,7 +1,7 @@
 # QRtım ile kimlik entegrasyonu
 
 **Kimin için:** QRtım hesabıyla giriş yapılacak uygulamaları geliştirenler
-(Arku, İlgezdi, Tınga, CRM ve bundan sonra yazılacak her uygulama).
+(Arku, İlgezdi, Tınga, The Draw, CRM ve bundan sonra yazılacak her uygulama).
 **Son güncelleme:** 20.09.2026 · QRtım Supabase projesi: `kfpnsxoxfrxepxezatsr`
 
 QRtım artık bir kartvizit uygulaması değil, ekosistemin **kimlik sağlayıcısı**.
@@ -72,7 +72,7 @@ Belirteci uygulamanızın sunucusuna verin, doğrulamayı orada yapın.
 ### 3c. Doğrulama (yalnızca SUNUCUDAN)
 
 ```http
-POST /functions/v1/arku-link        (Tınga için: /tinga-link)
+POST /functions/v1/arku-link        (Tınga: /tinga-link, The Draw: /draw-link)
 { "token": "<belirteç>" }
 ```
 
@@ -160,6 +160,25 @@ kullanıcının kapattığı bir veriyi istememeli ve saklamamalıdır.
 4. Gerekiyorsa plan RPC'si açın (parametresiz).
 5. Uygulama tarafında: `qrtim_uid` kolonu + benzersizlik kısıtı, e-posta
    doğrulama şartı, sunucudan doğrulama.
+6. `integration_providers` tablosuna satır ekleyin. `partner_user_links.partner`
+   ve `user_sync_data.app_key` bu tabloya yabancı anahtarla bağlı; satır
+   olmadan bağlantı kaydı oluşmaz.
+7. Onay ekranındaki alan listesini uca göre ayarlayın (`Auth.jsx` →
+   `PARTNER_ALANLARI`). Ucunuz plan göndermiyorsa onay ekranı da "Abonelik
+   planı" yazmamalı: kişiye paylaşılmayan bir veriyi paylaşılıyor gibi
+   göstermeyin.
+
+### Yerel geliştirme adresleri
+
+Üretim listesine localhost KONULMAZ: kurbanın makinesinde o portu dinleyen
+herhangi bir uygulama SSO belirtecini alabilirdi. Yerel adresler yalnızca
+`import.meta.env.DEV` bloğuna yazılır ve üretim paketine hiç girmez. Yani
+partner ekibi callback akışını test etmek için QRtım'ı **yerelde** çalıştırır
+(`npm run dev`); canlı qrtim.com.tr üzerinden localhost'a dönüş çalışmaz.
+
+Tek istisna Tınga: masaüstü uygulaması olduğu için OAuth loopback (RFC 8252)
+akışı kullanıyor ve sabit yerel portu üretimde de geçerli. Bu istisna
+masaüstü akışına özgüdür; web/sunucu uygulamalarına uygulanmaz.
 
 Sorular ve yeni entegrasyonlar için QRtım tarafını güncelleyen oturuma yazın;
 bu belge QRtım deposunda `docs/qrtim-kimlik-entegrasyonu.md` altında tutulur.
