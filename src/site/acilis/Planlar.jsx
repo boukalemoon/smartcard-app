@@ -4,10 +4,16 @@ import { Check, ChartLine, RefreshCw, X } from 'lucide-react'
 import { birlestir } from '../../panel/bicim'
 import { PLANLAR, yillikKartHediyesiVar } from '../../lib/planlar'
 import { refliAdres } from '../yardim'
-import { BOLUM_KAYMA, DUGME, H2, KAP, ODAK, UST } from './siniflar'
+import { BOLUM_KAYMA, DUGME, H2, KAP, ODAK, ODAK_KOYU, UST } from './siniflar'
 
 const sayiBicimi = new Intl.NumberFormat('tr-TR')
 const tutar = (n) => `₺${sayiBicimi.format(n)}`
+
+// Toplu kart talebi: İletişim sayfası konu ve mesajla ön dolu açılır.
+// Platformda adetli kart satın alma YOK; teklifle yürüyor.
+const teklifAdresi = (plan) =>
+  `/iletisim?konu=${encodeURIComponent('Kurumsal / STK Teklif')}`
+  + `&mesaj=${encodeURIComponent(`${plan.ad} planı için toplu NFC kart teklifi istiyorum. Adet: `)}`
 
 // Ücretli plan düğmesi kayıt sayfasına plan anahtarıyla gider; partner kodu
 // (?ref=) refliAdres ile korunur. Kurumsal satış görüşmeyle başlar.
@@ -151,7 +157,17 @@ function PlanKarti({ plan, donem }) {
             )}
             <span>
               {m.yok && <span className="sr-only">Dahil değil: </span>}
-              {m.metin}
+              {/* Toplu kart TEKLİFLE veriliyor: platformda adetli satın alma
+                  yok. Madde metni olarak bırakmak çıkmaz sokaktı, bağlantıya
+                  çevrildi (kurucu kararı). */}
+              {plan.kartTeklif && m.kart ? (
+                <Link
+                  to={teklifAdresi(plan)}
+                  className={birlestir('underline underline-offset-2 font-semibold rounded', koyu ? 'text-marka-acik hover:text-white' : 'text-aksan hover:text-aksan-koyu', koyu ? ODAK_KOYU : ODAK)}
+                >
+                  {m.metin}
+                </Link>
+              ) : m.metin}
             </span>
           </li>
         ))}

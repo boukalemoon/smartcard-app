@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { CreditCard, Check, Gift, MoveHorizontal, MoveVertical, Minus, Plus } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { CreditCard, Check, Gift, MoveHorizontal, MoveVertical, Minus, Plus, Mail } from 'lucide-react'
 import { birlestir } from '../panel/bicim'
 import { KART_FIYATLARI } from '../lib/planlar'
 
@@ -75,6 +76,12 @@ export default function NFCCardDesigner({ profile, subscription }) {
 
   const cardPrice = getCardPrice()
   const totalPrice = cardPrice * quantity
+  // ADETLİ TALEPTE SATIN ALMA YOK (kurucu kararı): birden fazla kart
+  // isteyen kişiye tutar gösterilip ödeme alınmaz, teklif talebine
+  // yönlendirilir. Tek kart self servis kalır — 249 ₺'lik giriş yolu bu.
+  const teklifGerekli = quantity > 1
+  const teklifAdresi = `/iletisim?konu=${encodeURIComponent('NFC Kart Siparişi')}`
+    + `&mesaj=${encodeURIComponent(`${quantity} adet ${CARD_TYPES[cardType]?.name || 'NFC kart'} için teklif istiyorum.`)}`
 
   // Kart malzemesinin önizleme rengi (ürünün kendisi; tema ile değişmez).
   const kartZemini = cardType === 'pvc' ? cardColor
@@ -457,9 +464,15 @@ export default function NFCCardDesigner({ profile, subscription }) {
 
           <div className="flex items-center justify-between">
             <span className="text-[15px] font-semibold text-metin">
-              Toplam:
+              {teklifGerekli ? 'Adet:' : 'Toplam:'}
             </span>
-            {totalPrice === 0 ? (
+            {/* Adetli talepte tutar GÖSTERİLMEZ: self servis bir fiyat varmış
+                gibi görünür, oysa adetli alım teklifle yürüyor. */}
+            {teklifGerekli ? (
+              <span className="font-baslik text-[26px] font-extrabold text-metin tabular-nums">
+                {quantity}
+              </span>
+            ) : totalPrice === 0 ? (
               <span className="font-baslik text-[26px] font-extrabold text-emerald-700 dark:text-emerald-300">
                 ÜCRETSİZ
               </span>
@@ -470,20 +483,40 @@ export default function NFCCardDesigner({ profile, subscription }) {
             )}
           </div>
 
-          {/* Sipariş akışı ödeme entegrasyonuna bağlı; hazır olmayan bir
-              düğmeyi "Sipariş Ver" diye göstermek yerine durum açıkça yazılıyor. */}
-          <button
-            type="button"
-            disabled
-            title="Kart siparişi ödeme altyapısı tamamlanınca açılacak"
-            className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-xl border border-cizgi bg-yuzey-2 text-[15px] font-semibold text-metin-2 cursor-not-allowed"
-          >
-            Sipariş yakında
-          </button>
-          <p className="text-[13px] text-center text-metin-2">
-            Tasarımınızı şimdi hazırlayabilirsiniz; sipariş alma açıldığında
-            buradan devam edeceksiniz.
-          </p>
+          {/* Adetli talep ÇALIŞAN yol: teklif. Tek kartta sipariş ödeme
+              altyapısına bağlı olduğu için hâlâ kapalı — hazır olmayan bir
+              düğmeyi "Sipariş Ver" diye göstermiyoruz. */}
+          {teklifGerekli ? (
+            <>
+              <Link
+                to={teklifAdresi}
+                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-aksan text-white dark:text-zemin text-[15px] font-semibold hover:bg-aksan-koyu transition-colors"
+              >
+                <Mail size={18} aria-hidden="true" />
+                {quantity} adet için teklif isteyin
+              </Link>
+              <p className="text-[13px] text-center text-metin-2">
+                Çok adetli siparişler teklifle veriliyor: adet ve malzemeye göre fiyat
+                çıkarıp size dönüyoruz. Tasarımınız kayıtlı kalır.
+              </p>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled
+                title="Kart siparişi ödeme altyapısı tamamlanınca açılacak"
+                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-xl border border-cizgi bg-yuzey-2 text-[15px] font-semibold text-metin-2 cursor-not-allowed"
+              >
+                Sipariş yakında
+              </button>
+              <p className="text-[13px] text-center text-metin-2">
+                Tasarımınızı şimdi hazırlayabilirsiniz; sipariş alma açıldığında
+                buradan devam edeceksiniz. Birden fazla kart gerekiyorsa adedi artırıp
+                teklif isteyebilirsiniz.
+              </p>
+            </>
+          )}
         </div>
       </section>
     </div>

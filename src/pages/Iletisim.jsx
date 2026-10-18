@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Mail, Phone, MapPin, Send, Check, Clock, ChevronDown } from 'lucide-react'
 import SiteKabugu from '../site/SiteKabugu'
 import { SayfaUst, Mesaj } from '../site/sayfalar/ortak'
@@ -8,6 +9,22 @@ import { birlestir } from '../panel/bicim'
 const BOS_FORM = { name: '', email: '', subject: '', message: '' }
 
 const KONULAR = ['Genel Soru', 'Teknik Destek', 'Faturalama / Ödeme', 'Kurumsal / STK Teklif', 'NFC Kart Siparişi', 'İş Birliği', 'Diğer']
+
+// Adetli kart talebi ve kurumsal/STK paket talepleri buraya yönlendiriliyor:
+// platformda çok adetli satın alma YOK, teklifle yürüyor (kurucu kararı).
+// Yönlendiren sayfa konuyu ve mesajı ?konu= / ?mesaj= ile doldurur; kişi
+// sıfırdan yazmak zorunda kalmasın. Değer listede yoksa yok sayılır —
+// adresten gelen metin doğrudan forma basılmaz.
+function baslangicFormu(arama) {
+  const konu = arama.get('konu')
+  const mesaj = arama.get('mesaj')
+  return {
+    ...BOS_FORM,
+    subject: KONULAR.includes(konu) ? konu : '',
+    message: typeof mesaj === 'string' ? mesaj.slice(0, 500) : '',
+  }
+}
+
 
 const ILETISIM = [
   { ikon: <Mail size={20} aria-hidden="true" />, ad: 'E-posta', deger: 'info@qartim.com', href: 'mailto:info@qartim.com' },
@@ -26,7 +43,8 @@ function Zorunlu() {
 }
 
 export default function Iletisim() {
-  const [form, setForm] = useState(BOS_FORM)
+  const [arama] = useSearchParams()
+  const [form, setForm] = useState(() => baslangicFormu(arama))
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')

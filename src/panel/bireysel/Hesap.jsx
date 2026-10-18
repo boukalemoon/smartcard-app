@@ -11,7 +11,7 @@ import { MFA_AKTIF } from '../../lib/mfaAyari'
 import { SITE_URL, signupUrl } from '../../lib/siteUrl'
 import GuvenlikKarti from '../../components/GuvenlikKarti'
 import { Kart, KartBaslik, SayfaBaslik, Dugme, Rozet, Girdi, Satir } from '../ui'
-import { tarih, goreli, tl, sureMetni, sayi, birlestir } from '../bicim'
+import { tarih, goreli, tl, birlestir } from '../bicim'
 
 const PLAN_AD = { free: 'Başlangıç Planı', student: 'Öğrenci Planı', professional: 'Profesyonel Plan', stk: 'STK Özel Plan', business: 'Kurumsal Plan', corporate: 'Kurumsal Plan' }
 
@@ -183,13 +183,17 @@ function BagliUygulamalar({ showToast }) {
 }
 
 // ------------------------------------------------- Arku uzak bağlantı kimliği
-// Arku'nun ÜRETTİĞİ, paylaşılmak ÜZERE olan bağlantı kimliği ve bağlantı
-// süreleri. QRtım kimliğiyle (Kimlik sayfası) karıştırılmamalı: o kimlik
-// bağlı uygulamaların kişiyi tanıdığı değer ve paylaşılmaz.
+// Arku'nun ÜRETTİĞİ, paylaşılmak ÜZERE olan bağlantı kimliği. QRtım
+// kimliğiyle (Kimlik sayfası) karıştırılmamalı: o kimlik bağlı uygulamaların
+// kişiyi tanıdığı değer ve paylaşılmaz.
 //
-// Kart yalnızca veri VARSA görünür. my_remote_baglanti RPC'si henüz canlıya
-// uygulanmadıysa (migration 20261018130000) hata döner ve kart hiç çizilmez —
-// panelde çalışmayan bir bölüm görünmesin.
+// BAĞLANTI SÜRESİ BURADA GÖSTERİLMEZ. Süre geçmişi bağlantıyı kuran kişinin
+// kendi bilgisayarında kalıyor, bulutta tutulmuyor (kurucu kararı
+// 19.10.2026). Önceki sürümde oturum listesi vardı; sunucu tarafı da
+// kaldırıldı (migration 20261019090000).
+//
+// Kart yalnızca kimlik VARSA görünür. my_remote_baglanti RPC'si yoksa hata
+// döner ve kart hiç çizilmez — panelde çalışmayan bir bölüm görünmesin.
 function ArkuBaglantisi({ showToast }) {
   const [veri, setVeri] = useState(null)
 
@@ -202,10 +206,8 @@ function ArkuBaglantisi({ showToast }) {
     return () => { iptal = true }
   }, [])
 
-  if (!veri) return null
-  const { baglanti_kimligi: kimlik, ozet, son_oturumlar: oturumlar } = veri
-  // Ne kimlik ne oturum varsa gösterecek bir şey yok.
-  if (!kimlik && !ozet?.oturum_sayisi) return null
+  if (!veri?.baglanti_kimligi) return null
+  const kimlik = veri.baglanti_kimligi
 
   const kopyala = async () => {
     try { await navigator.clipboard.writeText(kimlik); showToast('Bağlantı kimliği kopyalandı', 'success') }
@@ -220,42 +222,17 @@ function ArkuBaglantisi({ showToast }) {
         alt="Bu kimliği karşı tarafa vererek uzak masaüstü bağlantısı kurulur. Paylaşmak için üretilmiştir."
         ikon={<span className="w-10 h-10 rounded-[10px] bg-murekkep text-yuzey inline-flex items-center justify-center shrink-0"><MonitorSmartphone size={20} aria-hidden="true" /></span>}
       />
-
-      {kimlik ? (
-        <div className="flex items-center gap-2 flex-wrap">
-          <code className="flex-1 min-w-[160px] h-10 px-3 inline-flex items-center rounded-[10px] bg-yuzey-2 border border-cizgi font-mono text-sm tracking-wide tabular-nums">{kimlik}</code>
-          <Dugme tur="ikincil" boyut="k" ikon={Copy} onClick={kopyala}>Kopyala</Dugme>
-        </div>
-      ) : (
-        <p className="text-[13px] text-metin-2">Arku henüz bir bağlantı kimliği bildirmedi. Arku&apos;yu bir kez açtığınızda burada görünür.</p>
-      )}
-
-      {ozet?.oturum_sayisi > 0 && (
-        <>
-          <div className="flex gap-2 flex-wrap text-xs">
-            <Rozet ton="notr">{sayi(ozet.oturum_sayisi)} bağlantı</Rozet>
-            <Rozet ton="notr">toplam {sureMetni(ozet.toplam_sure_sn)}</Rozet>
-            {ozet.suren_oturum > 0 && <Rozet ton="vurgu">{sayi(ozet.suren_oturum)} bağlantı sürüyor</Rozet>}
-          </div>
-          <div className="flex flex-col">
-            {oturumlar.slice(0, 5).map((o) => (
-              <Satir key={o.baslangic}>
-                <div className="flex-1 min-w-0">
-                  <b className="text-sm">{tarih(o.baslangic)}</b>
-                  <div className="text-xs text-metin-2">{goreli(o.baslangic)}</div>
-                </div>
-                <span className="text-sm tabular-nums">
-                  {o.bitis ? sureMetni(o.sure_sn) : <span className="text-metin-2">sürüyor</span>}
-                </span>
-              </Satir>
-            ))}
-          </div>
-        </>
-      )}
+      <div className="flex items-center gap-2 flex-wrap">
+        <code className="flex-1 min-w-[160px] h-10 px-3 inline-flex items-center rounded-[10px] bg-yuzey-2 border border-cizgi font-mono text-sm tracking-wide tabular-nums">{kimlik}</code>
+        <Dugme tur="ikincil" boyut="k" ikon={Copy} onClick={kopyala}>Kopyala</Dugme>
+      </div>
+      <p className="text-xs text-metin-2">
+        Bağlantı süreniz Arku&apos;da, kendi bilgisayarınızda tutulur; QRtım bu bilgiyi saklamaz.
+        {veri.son_gorulme ? ` Son görülme: ${goreli(veri.son_gorulme)}.` : ''}
+      </p>
     </Kart>
   )
 }
-
 
 // ---------------------------------------------------------------- oturumlar
 function AktifOturumlar({ showToast }) {
