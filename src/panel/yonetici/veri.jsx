@@ -65,7 +65,7 @@ export const yakindaBitiyor = (s, simdi) => {
 
 const BOS = {
   users: [], subs: [], comms: [], refs: [], orgs: [], fiyatlar: [], alanAdlari: [],
-  platform: null, mfa: null, hatalar: [], zaman: 0,
+  platform: null, mfa: null, engelliler: {}, hatalar: [], zaman: 0,
 }
 
 // Tüm panel verisi tek seferde; her sorgunun hatası ayrı toplanır ki biri
@@ -84,13 +84,17 @@ async function getir() {
     supabase.from('custom_domains').select('id, durum, created_at').eq('durum', 'beklemede'),
     supabase.rpc('get_platform_stats'),
     supabase.rpc('shieldauth_mfa_durumum'),
+    // Engelli hesaplar: profile_id -> banned_until. auth.users istemciye
+    // kapalı, bu yüzden RPC ile geliyor (profiles'a denormalize kolon YOK).
+    supabase.rpc('admin_blocked_users'),
   ])
-  const adlar = ['kullanıcılar', 'abonelikler', 'komisyonlar', 'referanslar', 'kurumlar', 'fiyatlar', 'alan adları', 'platform sayıları', '2FA durumu']
+  const adlar = ['kullanıcılar', 'abonelikler', 'komisyonlar', 'referanslar', 'kurumlar', 'fiyatlar', 'alan adları', 'platform sayıları', '2FA durumu', 'engelli hesaplar']
   const hatalar = sonuc.map((r, i) => (r.error ? adlar[i] : null)).filter(Boolean)
-  const [u, s, c, r, o, f, d, p, m] = sonuc.map((x) => x.data)
+  const [u, s, c, r, o, f, d, p, m, e] = sonuc.map((x) => x.data)
   return {
     users: u || [], subs: s || [], comms: c || [], refs: r || [], orgs: o || [],
     fiyatlar: f || [], alanAdlari: d || [], platform: p || null, mfa: m || null,
+    engelliler: e || {},
     hatalar, zaman: Date.now(),
   }
 }

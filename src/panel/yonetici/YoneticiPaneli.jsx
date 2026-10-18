@@ -235,6 +235,8 @@ export default function YoneticiPaneli({ profile, session }) {
           onayIste={setOnay}
           onDegisti={degisti}
           engelli={!!onay}
+          erisimBitis={veri.engelliler?.[seciliKisi.id] || null}
+          onErisimDegisti={yenile}
         />
       )}
       <ConfirmModal

@@ -5,7 +5,7 @@
 // paneldeki alandan alınır, ikinci onay ConfirmModal ile (üst bileşen açar).
 // Her RPC kendi denetim kaydını yazar; burada ekrana yalnızca sonucu yansıtırız.
 import { useEffect, useId, useRef, useState } from 'react'
-import { X, ExternalLink, Shield, ShieldOff, Trash2 } from 'lucide-react'
+import { X, ExternalLink, Shield, ShieldOff, Trash2, Ban, LockOpen } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { bildir } from '../../lib/bildirim'
 import { cardUrl } from '../../lib/siteUrl'
@@ -32,6 +32,40 @@ const PLAN_HATALARI = {
   yetkisiz: 'Bu işlem için yönetici olmanız gerekiyor.',
   gecersiz_plan: 'Geçersiz plan.',
   abonelik_bulunamadi: 'Bu kişinin abonelik kaydı yok.',
+  bitis_tarihi_gerekli: 'Ücretli plan için süre seçin. Süresiz ücretli plan kaydedilmiyor.',
+}
+const ERISIM_HATALARI = {
+  yetkisiz: 'Bu işlem için yönetici olmanız gerekiyor.',
+  kullanici_bulunamadi: 'Kullanıcı bulunamadı.',
+  kendini_engelleyemezsin: 'Kendi erişiminizi engelleyemezsiniz.',
+  yonetici_engellenemez: 'Yönetici hesapları engellenemez; önce yönetici yetkisini alın.',
+  gecersiz_tarih: 'Geçersiz tarih.',
+}
+
+// Ücretli planda süre ZORUNLU: admin_set_plan tarihsiz çağrıyı reddediyor.
+// Sebebi canlıda yaşandı — panel tarih göndermediği için verilen ücretli plan
+// süresiz kaydolmuştu (expires_at null = sonsuza kadar geçerli).
+const SURELER = [
+  { ay: 1, ad: '1 ay' },
+  { ay: 3, ad: '3 ay' },
+  { ay: 6, ad: '6 ay' },
+  { ay: 12, ad: '1 yıl' },
+  { ay: 24, ad: '2 yıl' },
+]
+const ayEkle = (ay) => {
+  const d = new Date()
+  d.setMonth(d.getMonth() + Number(ay))
+  return d
+}
+
+// Süresiz engel sunucuda "şimdi + 100 yıl" olarak yazılıyor ('infinity' bazı
+// istemcilerde JSON'a çevrilemiyor). Panelde o tarihi göstermek anlamsız
+// olurdu ("18 Eki 2126"): 50 yıldan uzağı "kalıcı" diye yazıyoruz.
+const KALICI_ESIK_YIL = 50
+function engelMetni(bitis) {
+  if (!bitis) return 'Açık'
+  const yil = (new Date(bitis) - Date.now()) / (365.25 * 24 * 3600 * 1000)
+  return yil > KALICI_ESIK_YIL ? 'Engelli — kalıcı' : `Engelli — ${tarih(bitis)} tarihine kadar`
 }
 
 function Bilgi({ etiket, children }) {
@@ -52,13 +86,17 @@ function Bolum({ baslik, children }) {
   )
 }
 
-export default function KullaniciPaneli({ kullanici: u, abonelik: s, kurumlar, benimProfilId, onKapat, onayIste, onDegisti, engelli }) {
+// engelli: ÜST BİLEŞENİN onay penceresi açık mı (Escape'i kapatmak için).
+// erisimBitis: kişinin erişim engelinin bitiş tarihi (null = engelli değil).
+// İkisi ayrı şeyler; adları karışmasın.
+export default function KullaniciPaneli({ kullanici: u, abonelik: s, kurumlar, benimProfilId, onKapat, onayIste, onDegisti, engelli, erisimBitis, onErisimDegisti }) {
   const baslikId = useId()
   const gerekceId = useId()
   const kapatRef = useRef(null)
   const [gerekce, setGerekce] = useState('')
   const [uyari, setUyari] = useState('')
   const [yeniPlan, setYeniPlan] = useState(planBul(s?.plan)?.deger || 'free')
+  const [sureAy, setSureAy] = useState(12)
   const [kotuye, setKotuye] = useState(false)
   const [islem, setIslem] = useState(null)
 
@@ -129,7 +167,10 @@ export default function KullaniciPaneli({ kullanici: u, abonelik: s, kurumlar, b
   const planCalistir = async (g) => {
     setIslem('plan')
     try {
-      const { data, error } = await supabase.rpc('admin_set_plan', { p_profile_id: u.id, p_plan: yeniPlan, p_reason: g })
+      // Ücretsize dönüşte tarih gönderilmez (sunucu null yazıyor).
+      const bitis = yeniPlan === 'free' ? null : ayEkle(sureAy).toISOString()
+      const { data, error } = await supabase.rpc('admin_set_plan',
+        { p_profile_id: u.id, p_plan: yeniPlan, p_expires_at: bitis, p_reason: g })
       if (error) throw error
       if (!data?.ok) {
         bildir(PLAN_HATALARI[data?.hata] || ('Plan değiştirilemedi: ' + (data?.hata || 'bilinmeyen hata')), 'error')
@@ -137,7 +178,7 @@ export default function KullaniciPaneli({ kullanici: u, abonelik: s, kurumlar, b
       }
       onDegisti({ tur: 'plan', id: u.id, plan: yeniPlan })
       setGerekce('')
-      bildir(`Plan ${planBul(data.eski_plan)?.ad || data.eski_plan} → ${planBul(yeniPlan)?.ad} olarak güncellendi.`, 'success')
+      bildir(`Plan ${planBul(data.eski_plan)?.ad || data.eski_plan} → ${planBul(yeniPlan)?.ad}${data.bitis ? ' (' + tarih(data.bitis) + ' sonuna kadar)' : ''} olarak güncellendi.`, 'success')
     } catch (e) {
       bildir('Hata: ' + e.message, 'error')
     } finally {
@@ -149,9 +190,46 @@ export default function KullaniciPaneli({ kullanici: u, abonelik: s, kurumlar, b
     if (!g) return
     onayIste({
       title: 'Planı değiştir',
-      message: `"${ad}" kişisinin planı ${p?.ad || '—'} → ${planBul(yeniPlan)?.ad} olacak. Ödemesiz plan değişikliği denetim kaydına kritik olarak düşer. Gerekçe: ${g}`,
+      message: `"${ad}" kişisinin planı ${p?.ad || '—'} → ${planBul(yeniPlan)?.ad} olacak${yeniPlan === 'free' ? '' : ` ve ${tarih(ayEkle(sureAy))} tarihinde sona erecek`}. Ödemesiz plan değişikliği denetim kaydına kritik olarak düşer. Gerekçe: ${g}`,
       confirmText: 'Planı ata',
       onConfirm: () => planCalistir(g),
+    })
+  }
+
+  // ---------------------------------------------------------------- erişim
+  const erisimCalistir = async (g, engelle) => {
+    setIslem('erisim')
+    try {
+      const { data, error } = await supabase.rpc('admin_set_access',
+        { p_profile_id: u.id, p_engelli: engelle, p_until: null, p_reason: g })
+      if (error) throw error
+      if (!data?.ok) {
+        bildir(ERISIM_HATALARI[data?.hata] || ('Erişim değiştirilemedi: ' + (data?.hata || 'bilinmeyen hata')), 'error')
+        return
+      }
+      setGerekce('')
+      bildir(engelle
+        ? `Erişim engellendi${data.kapatilan_oturum ? `; ${data.kapatilan_oturum} oturum kapatıldı` : ''}.`
+        : 'Erişim yeniden açıldı.', 'success')
+      onErisimDegisti?.()
+    } catch (e) {
+      bildir('Hata: ' + e.message, 'error')
+    } finally {
+      setIslem(null)
+    }
+  }
+  const erisimDegistir = () => {
+    const g = gerekceAl()
+    if (!g) return
+    const engelle = !erisimBitis
+    onayIste({
+      title: engelle ? 'Erişimi engelle' : 'Erişimi aç',
+      message: engelle
+        ? `"${ad}" hesabı giriş yapamayacak ve açık oturumları kapatılacak. Hesap SİLİNMEZ; engel kaldırılınca her şey yerinde kalır. Elindeki belirteç süresi dolana kadar (en çok 1 saat) erişimi sürebilir. Gerekçe: ${g}`
+        : `"${ad}" hesabı yeniden giriş yapabilecek. Gerekçe: ${g}`,
+      confirmText: engelle ? 'Erişimi engelle' : 'Erişimi aç',
+      variant: engelle ? 'danger' : undefined,
+      onConfirm: () => erisimCalistir(g, engelle),
     })
   }
 
@@ -229,6 +307,7 @@ export default function KullaniciPaneli({ kullanici: u, abonelik: s, kurumlar, b
               {yonetici && <Rozet ton="vurguDolu">{ROL_AD[u.role]}</Rozet>}
               {p && <Rozet ton={p.ton}>{p.ad}</Rozet>}
               {d ? <Rozet ton={d.ton}>{d.ad}</Rozet> : <Rozet>Abonelik yok</Rozet>}
+              {erisimBitis && <Rozet ton="tehlike" ikon={Ban}>Erişim engelli</Rozet>}
             </div>
           </div>
           <IkonDugme ref={kapatRef} etiket="Kapat" ikon={X} onClick={onKapat} />
@@ -315,11 +394,54 @@ export default function KullaniciPaneli({ kullanici: u, abonelik: s, kurumlar, b
                 <Secim etiket="Yeni plan" value={yeniPlan} onChange={setYeniPlan} disabled={!s || !!islem} className="flex-1 min-w-[140px]">
                   {PLANLAR.map((x) => <option key={x.deger} value={x.deger}>{x.ad}</option>)}
                 </Secim>
-                <Dugme boyut="k" tur="ana" className="h-9" disabled={!s || !!islem || yeniPlan === p?.deger} onClick={planAta}>
+                {/* Ücretsizde süre sorulmaz: bitiş tarihi null olur. */}
+                {yeniPlan !== 'free' && (
+                  <Secim etiket="Süre" value={sureAy} onChange={setSureAy} disabled={!s || !!islem} className="w-[112px]">
+                    {SURELER.map((x) => <option key={x.ay} value={x.ay}>{x.ad}</option>)}
+                  </Secim>
+                )}
+                <Dugme boyut="k" tur="ana" className="h-9 self-end" disabled={!s || !!islem || yeniPlan === p?.deger} onClick={planAta}>
                   {islem === 'plan' ? 'İşleniyor…' : 'Planı ata'}
                 </Dugme>
               </div>
+              {yeniPlan !== 'free' && s && (
+                <span className="text-xs text-metin-2">
+                  Bitiş: <b className="text-metin">{tarih(ayEkle(sureAy))}</b>. Ücretli plan süresiz verilemez.
+                </span>
+              )}
               {!s && <span className="text-xs text-metin-2">Abonelik kaydı olmadığı için plan atanamaz.</span>}
+            </div>
+
+            <div className="rounded-xl border border-cizgi p-3.5 flex flex-col gap-2.5">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="min-w-0">
+                  <div className="text-[13px] font-semibold text-metin">Erişim</div>
+                  <div className="text-xs text-metin-2">
+                    {engelMetni(erisimBitis)}
+                  </div>
+                </div>
+                {kendisi ? (
+                  <span className="text-xs text-metin-2">Kendi erişiminizi engelleyemezsiniz</span>
+                ) : yonetici ? (
+                  <span className="text-xs text-metin-2">Yönetici hesabı engellenemez</span>
+                ) : !u.user_id ? (
+                  <span className="text-xs text-metin-2">Bağlı kullanıcı hesabı yok</span>
+                ) : (
+                  <Dugme
+                    boyut="k"
+                    tur={erisimBitis ? 'ikincil' : 'tehlike'}
+                    ikon={erisimBitis ? LockOpen : Ban}
+                    disabled={!!islem}
+                    onClick={erisimDegistir}
+                  >
+                    {islem === 'erisim' ? 'İşleniyor…' : erisimBitis ? 'Erişimi aç' : 'Erişimi engelle'}
+                  </Dugme>
+                )}
+              </div>
+              <span className="text-xs text-metin-2">
+                Engel hesabı silmez: veriler yerinde kalır, kişi giriş yapamaz. Silmeden önce buradan engellemek
+                geri dönülebilir olanı seçmek demektir.
+              </span>
             </div>
 
             <div className="rounded-xl border border-red-200 dark:border-red-500/40 p-3.5 flex flex-col gap-2.5">
