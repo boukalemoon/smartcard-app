@@ -43,8 +43,18 @@ Burak'ın kararı: ücretsizde yerel kayıt, abonelikte bulut yedeği.
 `plan_features.sync_passwords` zaten `(plan <> 'free')` — öğrenci planı dahil,
 ayrıca bir şey yapılmasına gerek yok.
 
-**Abonelik biterse:** yedek SİLİNMEZ ve indirilebilir kalır; yalnız yeni yükleme
-durur. Şifreleri rehin tutmuyoruz. (Aksi kararı Burak verir.)
+**Abonelik biterse** (Burak kararı, 18.10.2026): yedek **silinmez**, okunabilir
+kalır, kullanıcı ücretsizden devam eder. Yalnız **yazma durur**. Yani:
+
+- Mevcut kasa buluttan indirilip çözülebilir — format sonrası geri gelme
+  hakkı abonelik bitse de kaybolmaz.
+- Yeni ya da değişen şifreler **yerel kasaya** gider. Bu yönlendirmeyi İlgezdi
+  arayüzü yapar; sunucu yalnız yazmayı reddeder (`senkron_sifre_hakki()`).
+- Arayüz bunu sessizce yapmaz: "Aboneliğiniz bitti, yeni şifreler yalnız bu
+  cihazda tutuluyor. Bulut yedeğiniz duruyor ve geri yüklenebilir."
+
+Süresi dolmuş abonelik "ücretsiz" sayılır; tanım `my_plan_limits` ile birebir
+aynı tutuldu (tek kaynak).
 
 ## 3. Şifre kasası — format sorununun çözümü
 
@@ -131,16 +141,44 @@ açılmaya devam eder.
 Yalnız `sarmal_parola` yeniden üretilir. `DK` ve `kasa` değişmez, bütün kasayı
 yeniden şifrelemek gerekmez.
 
-## 4. QRtım tarafında yapılacaklar
+## 4. QRtım tarafı — yazıldı
 
-1. `user_sync_data`'ya yazma hakkı: `data_type='passwords'` satırı yalnız
-   `sync_passwords` hakkı olan planda kabul edilsin. Sunucuda, RLS ya da RPC
-   ile — istemcinin "aboneliğim var" demesine güvenilmez.
-2. `is_encrypted = true` zorunluluğu: `passwords` satırı düz metin kabul
-   etmesin. Yanlışlıkla açık yüklenmesinin önüne geçer.
-3. Boyut tavanı: `size_bytes` üzerinden makul bir sınır (kasa birkaç yüz KB'ı
-   aşmamalı). Depolama kötüye kullanılmasın.
-4. Abonelik bitince yazma kapanır, okuma açık kalır (madde 2).
+`supabase/migrations/20261018110000_senkron_yazma_kurallari.sql`
+(yayın paketi: `docs/yayin/7_senkron_yazma_kurallari.sql`).
+
+Yazarken ölçülen iki şey planı değiştirdi:
+
+**İlgezdi'nin eski tabloda kalması gözden kaçma değildi.** `user_sync_data`'da
+yalnız bir SELECT politikası vardı; INSERT/UPDATE/DELETE politikası yoktu.
+RLS açık olduğu için istemci bu tabloya **hiç yazamıyordu**. Yeni katmanın
+yazma yolu hiç açılmamış. Açıldı:
+
+- `insert` / `update`: kendi satırı; `passwords` ise ek olarak
+  `senkron_sifre_hakki()` **ve** `is_encrypted`.
+- `delete`: kendi satırı, koşulsuz. Abonelik bitse de kullanıcı kendi verisini
+  silebilir.
+
+**Boyut tavanı zaten vardı.** Mevcut `user_sync_data_guard_trg`, `size_bytes`'ı
+sunucuda `pg_column_size` ile hesaplayıp 5 MB tavanı uyguluyor ve istemcinin
+gönderdiği değeri yoksayıyor. İkinci bir tetikleyici eklenmedi — ikisi de aynı
+kolonu yazınca sonuç çalışma sırasına bağlı hâle gelirdi.
+
+Eklenenler:
+
+1. `senkron_sifre_hakki()` — plan `plan_features.sync_passwords`'tan okunur,
+   kodda plan adı listelenmez. Süresi dolmuş abonelik ücretsiz sayılır.
+2. **Kısıt** (politika değil): `data_type <> 'passwords' or is_encrypted`.
+   service_role dahil hiç kimse şifre kasasını düz metin yazamaz; arayüz
+   hatası da buraya çarpar.
+3. Yetki temizliği: `anon`'dan her şey alındı, `authenticated`'dan
+   `truncate/references/trigger` alındı. **TRUNCATE RLS'i delmez** — tablo
+   düzeyinde kalması, ileride izin verici bir yazma politikası eklendiğinde
+   kapıyı açık bırakırdı. Oturumda başka tablolara uygulanan temizlik buraya
+   uygulanmamıştı.
+
+Ayarlar, yer imleri ve notlar ücretsizde de yazılabilir (bugünkü davranış
+korundu). Ayrımın şifrede olduğu Burak kararı; aksi istenirse değişecek yer
+bu iki politikadır.
 
 ## 5. İlgezdi tarafında yapılacaklar
 
