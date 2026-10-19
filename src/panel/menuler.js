@@ -1,6 +1,6 @@
 import {
   LayoutGrid, IdCard, Share2, BadgeCheck, Inbox, BarChart3, Wallet, Handshake, User,
-  Users, UserPlus, Building2, Settings, Nfc, CreditCard, FileText,
+  Users, UserPlus, Building2, Settings, Nfc, CreditCard, FileText, Armchair,
 } from 'lucide-react'
 
 // PANEL MENÜLERİ — üçü de burada.
@@ -42,6 +42,7 @@ const SIMGE = {
   uyeler: Users,
   basvurular: UserPlus,
   profil: Building2,
+  koltuk: Armchair,
   // yönetici
   platform: LayoutGrid,
   kullanicilar: Users,
@@ -90,6 +91,10 @@ export function kurumsalMenu(kurum) {
   }
   m.push(
     oge('profil', 'Kurum profili'),
+    // Koltuk: kotayı platform yöneticisi tanımlıyor, dağıtımı kurum yapıyor.
+    // Kota yoksa sayfa yine açılıyor ve "teklif isteyin" diyor — menüden
+    // gizlemek "böyle bir şey yok" izlenimi verirdi.
+    oge('koltuk', 'Koltuklar'),
     // ---- ortak kuyruk: bireysel menüyle aynı sırada
     oge('olcum', 'Ölçüm'),
     oge('partner', 'Partner'),

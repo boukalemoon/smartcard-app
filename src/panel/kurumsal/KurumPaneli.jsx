@@ -18,6 +18,7 @@ import KurumBasvurular from './KurumBasvurular'
 import KurumOlcum from './KurumOlcum'
 import KurumPartner from './KurumPartner'
 import KurumProfili from './KurumProfili'
+import KurumKoltuklar from './KurumKoltuklar'
 import { kurumsalMenu } from '../menuler'
 import KurumAyarlari, { KurumOlustur } from './KurumAyarlari'
 
@@ -106,6 +107,7 @@ export default function KurumPaneli({ profile, kullanici, hesapMenusu, onModDegi
   if (bolum === 'uyeler') sayfa = <KurumUyeler key={kurum.id} {...ortak} />
   else if (bolum === 'basvurular') sayfa = <KurumBasvurular key={kurum.id} {...ortak} />
   else if (bolum === 'profil') sayfa = <KurumProfili key={kurum.id} {...ortak} />
+  else if (bolum === 'koltuk') sayfa = <KurumKoltuklar key={kurum.id} {...ortak} />
   else if (bolum === 'olcum') sayfa = <KurumOlcum key={kurum.id} {...ortak} />
   else if (bolum === 'partner') sayfa = <KurumPartner key={kurum.id} {...ortak} bireyseleGec={bireyseleGec} />
   else if (bolum === 'ayarlar') sayfa = <KurumAyarlari key={kurum.id} {...ortak} kurumlar={liste} onKurumSec={kurumSec} />
