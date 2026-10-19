@@ -17,7 +17,7 @@ import UstBolum from './kartim/UstBolum'
 import Bloklar from './kartim/Bloklar'
 import BlokEkle from './kartim/BlokEkle'
 import { CanliOnizlemeKarti, TelefonOnizleme } from './kartim/Onizleme'
-import { RenkSecici, SosyalGorunumSecici } from './kartim/parcalar'
+import { RenkSecici } from './kartim/parcalar'
 
 // "Kaydedildi · 2 dk önce" — saat, render sırasında okunmasın diye dışarıdan gelir.
 function kacOnce(t, simdi) {
@@ -36,11 +36,12 @@ const URL_DUZELT = (u) => {
   return /^https?:\/\//i.test(t) ? t : `https://${t}`
 }
 
-// Kart teması: renk + sosyal bağlantı görünümü. İkisi de kartın GÖRÜNÜŞÜ,
-// aynı panelde duruyor. Renk profil geneli ya da yalnız bu profil olabilir;
-// sosyal görünüm HER ZAMAN profil başına (istek böyleydi: bireysel kartta
-// geniş buton, kurumsal kartta ikon).
-function TemaPaneli({ renk, personaRengi, onSec, onKapat, sosyalGorunum, onSosyalSec }) {
+// Kart teması: yalnız renk.
+//
+// Sosyal bağlantı görünümü BURADAN ÇIKARILDI (Burak, 19.10.2026): buraya
+// koyunca bulunamadı. Artık Bloklar → Sosyal bloğunun içinde, yani
+// bağlantıların düzenlendiği yerde. İki yerde birden durmuyor.
+function TemaPaneli({ renk, personaRengi, onSec, onKapat }) {
   const [yalnizBu, setYalnizBu] = useState(!!personaRengi)
   return (
     <Kart className="p-4 flex flex-col gap-3" aria-labelledby="kartim-tema">
@@ -58,10 +59,6 @@ function TemaPaneli({ renk, personaRengi, onSec, onKapat, sosyalGorunum, onSosya
           Bu profilin özel rengini kaldır
         </button>
       )}
-      <div className="flex flex-col gap-2 border-t border-cizgi pt-3">
-        <span className="text-[13px] font-semibold">Sosyal bağlantı görünümü</span>
-        <SosyalGorunumSecici deger={sosyalGorunum} onSec={onSosyalSec} />
-      </div>
     </Kart>
   )
 }
@@ -509,8 +506,6 @@ export default function Kartim({ ctx }) {
                 personaRengi={ed.persona?.theme_color || null}
                 onSec={(r, yalnizBu) => islem.temaKaydet(r, yalnizBu)}
                 onKapat={() => setTemaAcik(false)}
-                sosyalGorunum={ed.persona?.social_layout}
-                onSosyalSec={islem.sosyalGorunumKaydet}
               />
             )}
           </aside>

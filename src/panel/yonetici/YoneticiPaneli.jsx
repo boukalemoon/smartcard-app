@@ -18,6 +18,7 @@ import { useYoneticiVerisi, useTuretilmis } from './veri'
 import { Istatistikler, PlanDagilimi, DikkatGerektiren } from './Platform'
 import KayitTablosu from './KayitTablosu'
 import KullaniciPaneli from './KullaniciPaneli'
+import KotaPaneli from './KotaPaneli'
 import { yoneticiMenu } from '../menuler'
 
 // Menü ve ikonlar ../menuler.js'te: üç panel aynı haritadan beslenir.
@@ -27,7 +28,7 @@ const SAYFA = {
   abonelikler: { tur: 'subs', baslik: 'Abonelikler', alt: 'Kişi başına abonelik kaydı, dönemi ve bitiş tarihi.' },
   komisyonlar: { tur: 'comms', baslik: 'Komisyonlar', alt: 'Davet ödemelerinden doğan hakedişler.' },
   referanslar: { tur: 'refs', baslik: 'Referanslar', alt: 'Kim kimi davet etti, davet ödemeye dönüştü mü.' },
-  kurumlar: { tur: 'orgs', baslik: 'Kurumlar', alt: 'Platformdaki tüm kurumlar. Yalnızca görüntüleme; kurum işlemleri kurum yöneticisindedir.' },
+  kurumlar: { tur: 'orgs', baslik: 'Kurumlar', alt: 'Platformdaki tüm kurumlar. Koltuk kotasını buradan tanımlayın; dağıtımı kurum kendi yapar.' },
 }
 const gecerliBolum = (b) => (b && (b === 'platform' || SAYFA[b]) ? b : 'platform')
 const BOS_FILTRE = { plan: 'hepsi', durum: 'hepsi' }
@@ -43,6 +44,7 @@ export default function YoneticiPaneli({ profile, session }) {
   const [tablo, setTablo] = useState(() => ({ tur: SAYFA[bolum]?.tur || 'users', ...BOS_FILTRE }))
   const [arama, setArama] = useState('')
   const [secili, setSecili] = useState(null)
+  const [seciliKurum, setSeciliKurum] = useState(null)
   const [onay, setOnay] = useState(null)
   const tabloRef = useRef(null)
 
@@ -153,6 +155,8 @@ export default function YoneticiPaneli({ profile, session }) {
     veri,
     t,
     onAc: ac,
+    // Kurum satırındaki "Kota": koltuk kotası panelini açar.
+    onKota: (orgId) => setSeciliKurum((veri.orgs || []).find((o) => o.id === orgId) || null),
   }
 
   const sayfa = SAYFA[bolum]
@@ -224,6 +228,16 @@ export default function YoneticiPaneli({ profile, session }) {
       )}
       {icerik}
 
+      {seciliKurum && (
+        <KotaPaneli
+          key={seciliKurum.id}
+          kurum={seciliKurum}
+          acikKoltuk={seciliKurum.acik_koltuk || 0}
+          onKapat={() => setSeciliKurum(null)}
+          onayIste={setOnay}
+          onDegisti={yenile}
+        />
+      )}
       {seciliKisi && (
         <KullaniciPaneli
           key={seciliKisi.id}

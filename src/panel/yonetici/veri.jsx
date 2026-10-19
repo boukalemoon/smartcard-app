@@ -65,7 +65,7 @@ export const yakindaBitiyor = (s, simdi) => {
 
 const BOS = {
   users: [], subs: [], comms: [], refs: [], orgs: [], fiyatlar: [], alanAdlari: [],
-  platform: null, mfa: null, engelliler: {}, hatalar: [], zaman: 0,
+  platform: null, mfa: null, engelliler: {}, koltuklar: [], hatalar: [], zaman: 0,
 }
 
 // Tüm panel verisi tek seferde; her sorgunun hatası ayrı toplanır ki biri
@@ -79,7 +79,9 @@ async function getir() {
       .from('referrals')
       .select('*, referrer:profiles!referrals_referrer_id_fkey(name, email), referee:profiles!referrals_referee_id_fkey(name, email)')
       .order('created_at', { ascending: false }),
-    supabase.from('organizations').select('id, name, type, member_count, created_by, created_at').order('created_at', { ascending: false }),
+    supabase.from('organizations')
+      .select('id, name, type, member_count, created_by, created_at, seat_quota, seat_plan, seat_quota_expires_at')
+      .order('created_at', { ascending: false }),
     supabase.from('plan_prices').select('plan, period, with_nfc, amount_kurus').eq('is_active', true).eq('with_nfc', false),
     supabase.from('custom_domains').select('id, durum, created_at').eq('durum', 'beklemede'),
     supabase.rpc('get_platform_stats'),
@@ -87,12 +89,23 @@ async function getir() {
     // Engelli hesaplar: profile_id -> banned_until. auth.users istemciye
     // kapalı, bu yüzden RPC ile geliyor (profiles'a denormalize kolon YOK).
     supabase.rpc('admin_blocked_users'),
+    // Dağıtılmış koltuklar: kota ayarlarken kullanımı görmek gerekiyor.
+    // Yönetici okuma politikası migration 20261019170000 ile açıldı.
+    supabase.from('org_seats').select('organization_id, profile_id, plan, expires_at')
+      .is('revoked_at', null).gt('expires_at', new Date().toISOString()),
   ])
-  const adlar = ['kullanıcılar', 'abonelikler', 'komisyonlar', 'referanslar', 'kurumlar', 'fiyatlar', 'alan adları', 'platform sayıları', '2FA durumu', 'engelli hesaplar']
+  const adlar = ['kullanıcılar', 'abonelikler', 'komisyonlar', 'referanslar', 'kurumlar', 'fiyatlar', 'alan adları', 'platform sayıları', '2FA durumu', 'engelli hesaplar', 'koltuklar']
   const hatalar = sonuc.map((r, i) => (r.error ? adlar[i] : null)).filter(Boolean)
-  const [u, s, c, r, o, f, d, p, m, e] = sonuc.map((x) => x.data)
+  const [u, s, c, r, o, f, d, p, m, e, ks] = sonuc.map((x) => x.data)
+  // Kurum başına açık koltuk sayısı: tabloda "3/10" diye gösteriliyor.
+  const koltukSayisi = new Map()
+  for (const k of ks || []) {
+    koltukSayisi.set(k.organization_id, (koltukSayisi.get(k.organization_id) || 0) + 1)
+  }
+  const orgs = (o || []).map((x) => ({ ...x, acik_koltuk: koltukSayisi.get(x.id) || 0 }))
   return {
-    users: u || [], subs: s || [], comms: c || [], refs: r || [], orgs: o || [],
+    users: u || [], subs: s || [], comms: c || [], refs: r || [], orgs,
+    koltuklar: ks || [],
     fiyatlar: f || [], alanAdlari: d || [], platform: p || null, mfa: m || null,
     engelliler: e || {},
     hatalar, zaman: Date.now(),

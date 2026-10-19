@@ -88,7 +88,7 @@ function AcDugmesi({ ad, onClick, disabled }) {
   )
 }
 
-function Satirlar({ tur, satirlar, t, onAc }) {
+function Satirlar({ tur, satirlar, t, onAc, onKota }) {
   if (tur === 'users') {
     return satirlar.map((u) => {
       const s = t.abonelik.get(u.id)
@@ -175,7 +175,20 @@ function Satirlar({ tur, satirlar, t, onAc }) {
         <Td sag>{sayi(o.member_count ?? 0)}</Td>
         <Td>{kuran ? <Kisi ad={kuran.name} eposta={kuran.email} /> : <span className="text-metin-2">—</span>}</Td>
         <Td className="text-metin-2 whitespace-nowrap">{tarih(o.created_at)}</Td>
-        <AcDugmesi ad={kuran?.name} onClick={() => onAc(o.created_by)} disabled={!kuran} />
+        <Td>
+          {/* Koltuk kotası: satın alınan adet ve kullanımı. Kota 0 ise kurum
+              koltuk dağıtamıyor. */}
+          {o.seat_quota > 0 ? (
+            <span className="whitespace-nowrap">
+              <b className="text-metin tabular-nums">{sayi(o.acik_koltuk ?? 0)}/{sayi(o.seat_quota)}</b>
+              <span className="text-metin-2"> · {o.seat_plan || '—'}</span>
+            </span>
+          ) : <span className="text-metin-2">—</span>}
+        </Td>
+        <Td className="text-right whitespace-nowrap">
+          <Dugme tur="sessiz" boyut="k" onClick={() => onKota(o.id)} aria-label={`${o.name} koltuk kotasını düzenle`}>Kota</Dugme>
+          <Dugme tur="sessiz" boyut="k" onClick={() => onAc(o.created_by)} disabled={!kuran} aria-label={`${kuran?.name || 'Kuran'} ayrıntılarını aç`}>Kuran</Dugme>
+        </Td>
       </tr>
     )
   })
@@ -186,7 +199,7 @@ const BASLIKLAR = {
   subs: [['Kullanıcı'], ['Plan'], ['Dönem'], ['Durum'], ['NFC hakkı', true], ['Başlangıç'], ['Bitiş']],
   comms: [['Kişi'], ['Açıklama'], ['Tutar', true], ['Durum'], ['Tarih']],
   refs: [['Davet eden'], ['Davetli'], ['Kod'], ['Durum'], ['Komisyon', true], ['Tarih']],
-  orgs: [['Kurum'], ['Tür'], ['Üye', true], ['Kuran'], ['Kuruluş']],
+  orgs: [['Kurum'], ['Tür'], ['Üye', true], ['Kuran'], ['Kuruluş'], ['Koltuk']],
 }
 const BOS_METIN = {
   users: 'Kullanıcı bulunamadı', subs: 'Abonelik bulunamadı', comms: 'Komisyon bulunamadı',
@@ -194,7 +207,7 @@ const BOS_METIN = {
 }
 
 export default function KayitTablosu({
-  tur, sekmeli, onTur, plan, onPlan, durum, onDurum, arama, onArama, veri, t, onAc, etiket,
+  tur, sekmeli, onTur, plan, onPlan, durum, onDurum, arama, onArama, veri, t, onAc, onKota, etiket,
 }) {
   const [sayfa, setSayfa] = useState(0)
   const satirlar = useMemo(() => satirlariSec(tur, { veri, t, plan, durum, arama }), [tur, veri, t, plan, durum, arama])
@@ -286,7 +299,7 @@ export default function KayitTablosu({
             </tr>
           </thead>
           <tbody>
-            <Satirlar tur={tur} satirlar={gorunen} t={t} onAc={onAc} />
+            <Satirlar tur={tur} satirlar={gorunen} t={t} onAc={onAc} onKota={onKota} />
           </tbody>
         </Tablo>
       )}

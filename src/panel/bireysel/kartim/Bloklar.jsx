@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Lock, Pencil, Plus, Trash2, ExternalLink, BadgeCheck, ArrowRight } from 'lucide-react'
 import { Kart, Anahtar, Dugme, Girdi, Secim, Rozet } from '../../ui'
 import { birlestir, tl } from '../../bicim'
-import { GorunurlukSecici, Yakinda } from './parcalar'
+import { GorunurlukSecici, Yakinda, SosyalGorunumSecici } from './parcalar'
 import { SEVIYELER, alanDegeri, doluMu, ibanMaske, platformAdi, SOSYAL_PLATFORMLAR } from './yardim'
 
 const IKON_TON = {
@@ -129,6 +129,14 @@ function SosyalDuzenle({ editor, ctx, islem, sinir }) {
 
   return (
     <div className="flex flex-col gap-2">
+      {/* GÖRÜNÜM SEÇİMİ BURADA: bağlantıları düzenlediğin yerde. Önce "Kart
+          teması" panelinin içine koymuştum, kimse bulamadı (Burak, 19.10.2026)
+          — sosyal bağlantıların nasıl göründüğünü merak eden kişi bu bloğa
+          bakıyor, önizleme kolonundaki bir düğmenin arkasına değil. */}
+      <div className="flex flex-col gap-2 pb-1">
+        <span className="text-[13px] font-semibold">Bu profilde nasıl görünsün?</span>
+        <SosyalGorunumSecici deger={editor.persona?.social_layout} onSec={islem.sosyalGorunumKaydet} />
+      </div>
       {satirlar.map((l) => {
         const t = tam(l.id)
         if (duzenlenen?.id === l.id) {
