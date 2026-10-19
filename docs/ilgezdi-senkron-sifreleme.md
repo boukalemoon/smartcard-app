@@ -24,8 +24,11 @@ yere daha yazmış oluruz.
 |---|---|---|---|
 | `settings` | 24 ayar anahtarı (cihaza özgü olanlar hariç) | hayır | gerekmez |
 | `bookmarks` | klasörler + ögeler | hayır | gerekmez |
-| `notes` | notlar | hayır | gerekmez |
+| `notes` | notlar | **evet** | **gerekli** |
 | `passwords` | kasa — **yalnız şifreli blob** | **evet** | **gerekli** |
+
+Notlar ve şifreler aynı kasadan geçer: tek veri anahtarı (`DK`), tek senkron
+parolası, tek kurtarma kodu. Kullanıcı iki parola hatırlamaz.
 
 Cihaza özgü olanlar (indirme klasörü, VPN, oturum) senkronlanmaz — mevcut
 `sync-manager.js` kararı korunur.
@@ -34,11 +37,16 @@ Cihaza özgü olanlar (indirme klasörü, VPN, oturum) senkronlanmaz — mevcut
 
 Burak'ın kararı: ücretsizde yerel kayıt, abonelikte bulut yedeği.
 
-- **Ücretsiz:** şifre kasası bugün olduğu gibi yalnız cihazda (DPAPI / Keychain /
-  keyring). Hiçbir şey eksilmez; İlgezdi ücretsiz tarayıcı olarak Chrome'un
-  verdiğini vermeye devam eder.
-- **Ücretli (öğrenci dahil):** kasa şifreli olarak QRtım'a yedeklenir, çok cihazda
-  açılır ve **format sonrası geri gelir.**
+- **Ücretsiz:** şifre kasası ve notlar bugün olduğu gibi yalnız cihazda
+  (DPAPI / Keychain / keyring). Hiçbir şey eksilmez; İlgezdi ücretsiz tarayıcı
+  olarak Chrome'un verdiğini vermeye devam eder. Ayarlar ve yer imleri
+  ücretsizde de senkronlanır.
+- **Ücretli (öğrenci dahil):** kasa (şifreler + notlar) şifreli olarak QRtım'a
+  yedeklenir, çok cihazda açılır ve **format sonrası geri gelir.**
+
+Notların da ücretli olması Burak'ın "ücretsizde yerel, abonelikte bulut
+yedeği" ayrımından geliyor. Not senkronu bugün HİÇ YOK, yani kimseden bir şey
+alınmıyor.
 
 `plan_features.sync_passwords` zaten `(plan <> 'free')` — öğrenci planı dahil,
 ayrıca bir şey yapılmasına gerek yok.
@@ -162,6 +170,11 @@ yazma yolu hiç açılmamış. Açıldı:
 sunucuda `pg_column_size` ile hesaplayıp 5 MB tavanı uyguluyor ve istemcinin
 gönderdiği değeri yoksayıyor. İkinci bir tetikleyici eklenmedi — ikisi de aynı
 kolonu yazınca sonuç çalışma sırasına bağlı hâle gelirdi.
+
+**Notlarda tavan gerçek bir sınır.** `notes.js` not başına 100.000 karakter ve
+en çok 2.000 nota izin veriyor; teorik üst sınır 5 MB'ı aşar. İlgezdi tarafı
+yüklemeden önce şifreli gövdenin boyutuna bakmalı ve aşarsa kullanıcıya
+söylemeli — sessizce başarısız olan bir yedek, yedek değildir.
 
 Eklenenler:
 
