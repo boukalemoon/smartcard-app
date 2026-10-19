@@ -5,7 +5,7 @@
 // altında yatay kaydırılan bir şeride dönüşür.
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Moon, Sun, ExternalLink, ChevronDown } from 'lucide-react'
+import { Moon, Sun, ChevronDown } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 import { Avatar, Sayac, IkonDugme, Dugme, Segment } from './ui'
 import { birlestir } from './bicim'
@@ -110,7 +110,6 @@ export default function PanelKabugu({
   ustSlot,
   altSlot,
   sagUst,
-  kartUrl,
   kullanici,
   hesapMenusu,
   ustEtiket,
@@ -136,11 +135,10 @@ export default function PanelKabugu({
           ) : <span className="hidden md:block" />}
           <div className="flex items-center gap-2">
             {sagUst}
-            {kartUrl && (
-              <Dugme as="a" href={kartUrl} target="_blank" rel="noopener noreferrer" tur="ikincil" ikon={ExternalLink} className="hidden sm:inline-flex">
-                Kartımı gör
-              </Dugme>
-            )}
+            {/* "Kartımı gör" KALDIRILDI (Burak, 19.10.2026). Kartım sayfasındaki
+                "Önizle" düğmesi aynı işi yapıyordu. Dahası bu düğme yalnız
+                bireysel modda çiziliyordu: kurumsala geçince sağ grubun
+                genişliği değiştiği için ortadaki mod anahtarı kayıyordu. */}
             <TemaDugmesi />
             {kullanici && <HesapMenusu ad={kullanici.ad} avatar={kullanici.avatar} eposta={kullanici.eposta} menu={hesapMenusu || []} />}
           </div>

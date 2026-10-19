@@ -154,6 +154,49 @@ export function GorselYukle({ kova, mevcut, onYuklendi, onKaldir, etiket, maksMb
 }
 
 // Tema rengi: hazır renkler + serbest renk
+// Sosyal bağlantı görünümü. Profil başına seçilir (personas.social_layout):
+// kişi bireysel kartında geniş buton, kurumsal kartında yalnız ikon
+// kullanabilsin. Varsayılan 'kutu' — bugünkü davranış.
+// Dosya içinde kalıyor: bileşenle aynı dosyadan sabit dışa aktarmak hızlı
+// yenilemeyi bozuyor (react-refresh). Dışarıda kullanan yok.
+const SOSYAL_GORUNUMLER = [
+  { deger: 'kutu',  ad: 'İki kolon',  alt: 'İkon ve etiket, yan yana' },
+  { deger: 'genis', ad: 'Geniş buton', alt: 'Tam genişlik, alt alta' },
+  { deger: 'ikon',  ad: 'Yalnız ikon', alt: 'Etiket yok, tek sıra' },
+]
+
+export function SosyalGorunumSecici({ deger, onSec, disabled }) {
+  const secili = deger || 'kutu'
+  return (
+    <div className="flex flex-col gap-1.5" role="group" aria-label="Sosyal bağlantı görünümü">
+      <div className="flex gap-1.5 flex-wrap">
+        {SOSYAL_GORUNUMLER.map((g) => {
+          const sec = secili === g.deger
+          return (
+            <button
+              key={g.deger}
+              type="button"
+              disabled={disabled}
+              aria-pressed={sec}
+              onClick={() => onSec(g.deger)}
+              className={birlestir(
+                'h-9 px-3 rounded-lg border text-[13px] font-semibold transition-colors disabled:opacity-50',
+                sec ? 'border-aksan bg-aksan-acik text-aksan-koyu dark:text-aksan' : 'border-cizgi bg-yuzey text-metin-2 hover:bg-yuzey-2',
+              )}
+            >
+              {g.ad}
+            </button>
+          )
+        })}
+      </div>
+      <span className="text-xs text-metin-2">
+        {SOSYAL_GORUNUMLER.find((g) => g.deger === secili)?.alt}
+        {' · '}Öne çıkarılan bağlantılar her görünümde tam genişlikte kalır.
+      </span>
+    </div>
+  )
+}
+
 export function RenkSecici({ deger, onSec, disabled }) {
   const kucuk = String(deger || '').toLowerCase()
   return (

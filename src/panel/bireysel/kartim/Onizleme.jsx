@@ -152,7 +152,7 @@ function Satir({ ikon: Ikon, ton = 'aksan', vurgulu, children }) {
   )
 }
 
-export function TelefonOnizleme({ editor, profile, persona, kitle, renk, randevu, orgCount, vurgulanan }) {
+export function TelefonOnizleme({ editor, profile, persona, kitle, renk, randevu, orgCount, vurgulanan, sosyalGorunum }) {
   const gorur = KITLELER.find((k) => k.deger === kitle)?.gorur || ['public']
   const alan = (k) => editor?.fields?.find((f) => f.key === k)
   const gorunur = (k) => {
@@ -233,13 +233,26 @@ export function TelefonOnizleme({ editor, profile, persona, kitle, renk, randevu
           {bankalar.length > 0 && <Satir ikon={Landmark} ton="vurgu" vurgulu={vurgulanan === 'odeme'}>IBAN · kopyala{bankalar.length > 1 ? ` (${bankalar.length})` : ''}</Satir>}
           {fatura && <Satir ikon={Receipt} ton="vurgu" vurgulu={vurgulanan === 'fatura'}>Fatura bilgisi · kopyala</Satir>}
 
+          {/* Sosyal görünüm seçimi önizlemede de görünür: kişi kaydetmeden
+              önce hangi hâli seçtiğini görsün (personas.social_layout). */}
           {linkler.length > 0 && (
-            <div className={birlestir('grid grid-cols-2 gap-1.5 rounded-[10px]', vurgulanan === 'sosyal' && 'outline outline-2 outline-aksan outline-offset-1')}>
+            <div className={birlestir(
+              'rounded-[10px]',
+              sosyalGorunum === 'ikon' ? 'flex flex-wrap gap-1.5'
+                : sosyalGorunum === 'genis' ? 'flex flex-col gap-1.5'
+                : 'grid grid-cols-2 gap-1.5',
+              vurgulanan === 'sosyal' && 'outline outline-2 outline-aksan outline-offset-1',
+            )}>
               {linkler.map((l, i) => (
-                <span key={l.id} className="h-[30px] rounded-[9px] bg-yuzey border border-cizgi flex items-center px-2 gap-1.5 text-[10px] font-semibold min-w-0">
-                  <i className={birlestir('w-3.5 h-3.5 rounded shrink-0 inline-block', i % 2 ? 'bg-vurgu' : 'bg-murekkep')} aria-hidden="true" />
-                  <span className="truncate">{platformAdi(l.platform)}</span>
-                </span>
+                sosyalGorunum === 'ikon' ? (
+                  <i key={l.id} title={platformAdi(l.platform)}
+                     className={birlestir('w-[30px] h-[30px] rounded-[9px] shrink-0 inline-block', i % 2 ? 'bg-vurgu' : 'bg-murekkep')} />
+                ) : (
+                  <span key={l.id} className="h-[30px] rounded-[9px] bg-yuzey border border-cizgi flex items-center px-2 gap-1.5 text-[10px] font-semibold min-w-0">
+                    <i className={birlestir('w-3.5 h-3.5 rounded shrink-0 inline-block', i % 2 ? 'bg-vurgu' : 'bg-murekkep')} aria-hidden="true" />
+                    <span className="truncate">{platformAdi(l.platform)}</span>
+                  </span>
+                )
               ))}
             </div>
           )}

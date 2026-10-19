@@ -19,7 +19,6 @@ import { gecerliBolum } from '../lib/dashboardBolumler'
 import { LogOut, ShieldCheck, User as UserIcon } from 'lucide-react'
 import PanelKabugu from '../panel/PanelKabugu'
 import { bireyselMenu } from '../panel/menuler'
-import { cardUrl } from '../lib/siteUrl'
 import PlanKarti from '../panel/bireysel/PlanKarti'
 import DavetBandi from '../panel/bireysel/DavetBandi'
 import GenelBakis from '../panel/bireysel/GenelBakis'
@@ -309,7 +308,6 @@ export default function Dashboard({ session }) {
           mod="bireysel"
           kurumsalAcik={kurumsalAcik}
           onModDegistir={(m) => (m === 'kurumsal' ? setCorporate() : setIndividual())}
-          kartUrl={profile?.username ? cardUrl(profile.username) : null}
           kullanici={kullanici}
           hesapMenusu={hesapMenusu}
           altSlot={<PlanKarti ctx={ctx} />}

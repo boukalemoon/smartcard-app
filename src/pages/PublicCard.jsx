@@ -188,7 +188,7 @@ export default function PublicCard() {
         {bio}
         <Iletisim fields={fields} />
         {duzen === 'kurumsal' && randevu}
-        <Baglantilar socialLinks={profile.social_links} whatsapp={fields.whatsapp} hedef={hedef} />
+        <Baglantilar socialLinks={profile.social_links} whatsapp={fields.whatsapp} hedef={hedef} gorunum={profile.social_layout} />
         <Kurumlar organizations={profile.organizations} dogrulamalar={dogrulamalar} />
         <Hizmetler services={fields.services} />
         {duzen === 'bireysel' && randevu}

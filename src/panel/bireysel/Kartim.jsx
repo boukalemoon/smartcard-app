@@ -17,7 +17,7 @@ import UstBolum from './kartim/UstBolum'
 import Bloklar from './kartim/Bloklar'
 import BlokEkle from './kartim/BlokEkle'
 import { CanliOnizlemeKarti, TelefonOnizleme } from './kartim/Onizleme'
-import { RenkSecici } from './kartim/parcalar'
+import { RenkSecici, SosyalGorunumSecici } from './kartim/parcalar'
 
 // "Kaydedildi · 2 dk önce" — saat, render sırasında okunmasın diye dışarıdan gelir.
 function kacOnce(t, simdi) {
@@ -36,7 +36,11 @@ const URL_DUZELT = (u) => {
   return /^https?:\/\//i.test(t) ? t : `https://${t}`
 }
 
-function TemaPaneli({ renk, personaRengi, onSec, onKapat }) {
+// Kart teması: renk + sosyal bağlantı görünümü. İkisi de kartın GÖRÜNÜŞÜ,
+// aynı panelde duruyor. Renk profil geneli ya da yalnız bu profil olabilir;
+// sosyal görünüm HER ZAMAN profil başına (istek böyleydi: bireysel kartta
+// geniş buton, kurumsal kartta ikon).
+function TemaPaneli({ renk, personaRengi, onSec, onKapat, sosyalGorunum, onSosyalSec }) {
   const [yalnizBu, setYalnizBu] = useState(!!personaRengi)
   return (
     <Kart className="p-4 flex flex-col gap-3" aria-labelledby="kartim-tema">
@@ -54,6 +58,10 @@ function TemaPaneli({ renk, personaRengi, onSec, onKapat }) {
           Bu profilin özel rengini kaldır
         </button>
       )}
+      <div className="flex flex-col gap-2 border-t border-cizgi pt-3">
+        <span className="text-[13px] font-semibold">Sosyal bağlantı görünümü</span>
+        <SosyalGorunumSecici deger={sosyalGorunum} onSec={onSosyalSec} />
+      </div>
     </Kart>
   )
 }
@@ -379,6 +387,8 @@ export default function Kartim({ ctx }) {
         kaydedildi()
       } catch (e) { showToast('Kapak kaydedilemedi: ' + e.message, 'error') }
     },
+    // Sosyal görünüm HER ZAMAN profil başına: profil geneli karşılığı yok.
+    sosyalGorunumKaydet: (g) => personaGuncelle({ social_layout: g }, 'Sosyal bağlantı görünümü kaydedildi'),
     temaKaydet: async (r, yalnizBuProfil = !!ed?.persona?.theme_color) => {
       if (yalnizBuProfil) return personaGuncelle({ theme_color: r || '' })
       try {
@@ -487,7 +497,7 @@ export default function Kartim({ ctx }) {
 
           <aside className="flex flex-col gap-3.5 lg:sticky lg:top-[84px]" aria-label="Canlı önizleme">
             <CanliOnizlemeKarti profile={profile} setProfile={setProfile} persona={persona} kitle={kitle} setKitle={setKitle} bildir={showToast} onKaydedildi={kaydedildi} />
-            <TelefonOnizleme editor={ed} profile={profile} persona={persona} kitle={kitle} renk={renk} randevu={randevu} orgCount={ctx.orgCount || 0} vurgulanan={acikBlok} />
+            <TelefonOnizleme editor={ed} profile={profile} persona={persona} kitle={kitle} renk={renk} randevu={randevu} orgCount={ctx.orgCount || 0} vurgulanan={acikBlok} sosyalGorunum={ed.persona?.social_layout} />
             <div className="flex gap-2">
               <Dugme tur="ikincil" ikon={QrCode} className="flex-1 h-9" onClick={() => ctx.bolumDegistir('paylasim')}>QR kodu</Dugme>
               <Dugme tur="ikincil" ikon={Palette} className="flex-1 h-9" aria-expanded={temaAcik} onClick={() => setTemaAcik((v) => !v)}>Kart teması</Dugme>
@@ -499,6 +509,8 @@ export default function Kartim({ ctx }) {
                 personaRengi={ed.persona?.theme_color || null}
                 onSec={(r, yalnizBu) => islem.temaKaydet(r, yalnizBu)}
                 onKapat={() => setTemaAcik(false)}
+                sosyalGorunum={ed.persona?.social_layout}
+                onSosyalSec={islem.sosyalGorunumKaydet}
               />
             )}
           </aside>

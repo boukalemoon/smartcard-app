@@ -126,6 +126,30 @@ export function Iletisim({ fields }) {
 }
 
 // ---------------------------------------------------------------- bağlantılar
+// Yalnız ikon: etiket yok, dar kare. Kalabalık sosyal hesabı olan kart
+// uzayıp gitmesin diye seçenek olarak duruyor. Etiket GÖRÜNMEDİĞİ için
+// erişilebilir ad aria-label'a yazılıyor.
+function BaglantiIkonu({ link, hedef }) {
+  const href = link.whatsapp ? link.url : safeUrl(link.url)
+  if (!href) return null
+  const b = platformBilgisi(link.platform)
+  const Ikon = b.ikon
+  const ad = link.etiket || b.ad
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={ad}
+      title={ad}
+      onClick={link.whatsapp ? undefined : () => trackCardEvent('link_click', { ...hedef, meta: { link_id: link.id, label: ad, platform: link.platform } })}
+      className={birlestir('w-12 h-12 rounded-xl inline-flex items-center justify-center shrink-0 transition-opacity hover:opacity-80', b.ton, ODAK)}
+    >
+      <Ikon size={20} aria-hidden="true" />
+    </a>
+  )
+}
+
 function BaglantiKutusu({ link, hedef, genis }) {
   const href = link.whatsapp ? link.url : safeUrl(link.url)
   if (!href) return null
@@ -152,21 +176,42 @@ function BaglantiKutusu({ link, hedef, genis }) {
   )
 }
 
-export function Baglantilar({ socialLinks, whatsapp, hedef }) {
+// gorunum: 'kutu' (iki kolon, varsayılan) | 'genis' (tam genişlik) | 'ikon'
+// (yalnız ikon). Kart sahibi profil başına seçiyor (personas.social_layout).
+export function Baglantilar({ socialLinks, whatsapp, hedef, gorunum }) {
   const liste = (socialLinks || []).filter((l) => safeUrl(l.url))
   const wa = whatsapp ? String(whatsapp).replace(/[^0-9]/g, '') : ''
   if (!liste.length && !wa) return null
   // Öne çıkarılan bağlantı ikon kalabalığında kaybolmasın diye başlığıyla
-  // birlikte tam genişlikte, en üstte gösterilir.
+  // birlikte tam genişlikte, en üstte gösterilir. BU KURAL 'ikon' GÖRÜNÜMÜNDE
+  // DE GEÇERLİ: öne çıkarmanın amacı tam olarak kalabalıktan ayrılmak.
   const one = liste.filter((l) => l.one_cikan)
   const diger = liste.filter((l) => !l.one_cikan)
+  const waLink = wa ? { id: 'wa', platform: 'whatsapp', url: `https://wa.me/${wa}`, whatsapp: true } : null
+
   return (
     <Blok baslik="Bağlantılar" baslikId="kart-baglanti">
-      <div className="grid grid-cols-2 gap-2">
-        {one.map((l) => <BaglantiKutusu key={l.id} link={l} hedef={hedef} genis />)}
-        {diger.map((l) => <BaglantiKutusu key={l.id} link={l} hedef={hedef} />)}
-        {wa && <BaglantiKutusu link={{ id: 'wa', platform: 'whatsapp', url: `https://wa.me/${wa}`, whatsapp: true }} hedef={hedef} />}
-      </div>
+      {one.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {one.map((l) => <BaglantiKutusu key={l.id} link={l} hedef={hedef} genis />)}
+        </div>
+      )}
+      {gorunum === 'ikon' ? (
+        <div className="flex flex-wrap gap-2">
+          {diger.map((l) => <BaglantiIkonu key={l.id} link={l} hedef={hedef} />)}
+          {waLink && <BaglantiIkonu link={waLink} hedef={hedef} />}
+        </div>
+      ) : gorunum === 'genis' ? (
+        <div className="flex flex-col gap-2">
+          {diger.map((l) => <BaglantiKutusu key={l.id} link={l} hedef={hedef} genis />)}
+          {waLink && <BaglantiKutusu link={waLink} hedef={hedef} genis />}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          {diger.map((l) => <BaglantiKutusu key={l.id} link={l} hedef={hedef} />)}
+          {waLink && <BaglantiKutusu link={waLink} hedef={hedef} />}
+        </div>
+      )}
     </Blok>
   )
 }
