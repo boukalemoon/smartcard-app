@@ -53,6 +53,7 @@ const HATALAR = {
   gecersiz_gorunurluk: 'Bu görünürlük seviyesi henüz desteklenmiyor.',
   persona_bulunamadi: 'Profil bulunamadı; sayfayı yenileyin.',
   gorunen_ad_cok_uzun: 'Görünen ad en fazla 80 karakter olabilir.',
+  gecersiz_sosyal_gorunum: 'Geçersiz görünüm seçimi.',
 }
 const DEGER_TURU = {
   email: 'e-posta', phone: 'telefon', url: 'bağlantı (https:// ile)',
@@ -61,6 +62,13 @@ const DEGER_TURU = {
 export function hataMesaji(data, varsayilan = 'İşlem tamamlanamadı') {
   if (!data?.hata) return varsayilan
   if (data.hata === 'gecersiz_deger' && data.tur) return `Geçerli bir ${DEGER_TURU[data.tur] || 'değer'} girin.`
+  // persona_update beyaz liste dışı bir alan görünce bunu döndürüyor. Genel
+  // "İşlem tamamlanamadı" yazmak teşhisi imkânsızlaştırıyordu: social_layout
+  // eklenirken listeye yazılmadığı için tam bu yaşandı (19.10.2026). Alan adı
+  // mesaja giriyor ki bir daha olursa ne olduğu görünsün.
+  if (data.hata === 'izinsiz_alan') {
+    return `Bu alan buradan değiştirilemiyor${data.alan ? ` (${data.alan})` : ''}. Sunucu tarafında izin verilmesi gerekiyor.`
+  }
   return HATALAR[data.hata] || varsayilan
 }
 
