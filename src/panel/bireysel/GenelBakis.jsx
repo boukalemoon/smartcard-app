@@ -201,6 +201,23 @@ function Istatistikler({ veri }) {
 }
 
 // ------------------------------------------------------------- kartlarınız
+// Profil başlığı: tür etiketi + ad. İKİSİ AYNIYSA TEK KEZ yazılır.
+//
+// Varsayılan profil kind='genel' ve name='Genel' ile açılıyor, tür etiketi de
+// "Genel". Eskiden ikisi koşulsuz birleştirildiği için her kullanıcı
+// "Genel · Genel" görüyordu (34 profilin 34'ünde böyleydi, kenar durum değil).
+// Ad tür etiketinden farklıysa ikisi birlikte görünmeye devam eder:
+// "İş · Satış ekibi" gibi.
+function personaBasligi(p) {
+  const tur = p.kind_label || p.kind
+  const ad = p.display_name || p.name
+  if (!ad) return tur || 'Profil'
+  if (!tur) return ad
+  return ad.trim().toLocaleLowerCase('tr-TR') === tur.trim().toLocaleLowerCase('tr-TR')
+    ? tur
+    : `${tur} · ${ad}`
+}
+
 function Kartlariniz({ personalar, profile, bolumDegistir }) {
   return (
     <Kart className="p-5 flex flex-col gap-3.5" aria-labelledby="g-kart">
@@ -230,7 +247,7 @@ function Kartlariniz({ personalar, profile, bolumDegistir }) {
                 <Avatar ad={profile?.name || p.name} boyut={44} kare ton={p.is_primary ? 'bg-aksan text-white dark:text-zemin' : 'bg-vurgu text-white'} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <b className="font-semibold text-[14px] text-metin">{[p.kind_label, p.display_name || p.name].filter(Boolean).join(' · ')}</b>
+                    <b className="font-semibold text-[14px] text-metin">{personaBasligi(p)}</b>
                     <Rozet ton={yayinda ? 'aksan' : 'notr'}>{yayinda ? 'Yayında' : 'Duraklatıldı'}</Rozet>
                   </div>
                   <div className="text-xs text-metin-2 font-mono truncate">
