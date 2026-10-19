@@ -213,6 +213,26 @@ function QrKarti({ profile, personalar, gorunum, ctx }) {
     <Kart className="p-5 flex flex-col gap-4" aria-labelledby="p-qr">
       <KartBaslik id="p-qr" baslik="QR kodunuz" alt="Basılan kod kalıcıdır; kullanıcı adınızı değiştirseniz de çalışır." />
 
+      {/* TEK PROFİLDE DE BİR ŞEY YAZILIYOR.
+          Önceden blok tamamen gizliydi (personalar.length > 1): 34 kullanıcının
+          34'ünde tek profil olduğu için seçici kimseye görünmüyordu ve "her
+          profil için ayrı QR" özelliği YOK gibi duruyordu — oysa altyapı
+          hazırdı (/k/<share_code>). Burak bunu sordu (19.10.2026). Artık tek
+          profilde de ne yapılabileceği yazıyor ve yol gösteriliyor. */}
+      {personalar.length === 1 && (
+        <div className="rounded-xl border border-cizgi bg-yuzey-2 p-3.5 flex flex-col gap-1.5">
+          <span className="text-[13px] font-semibold">Birden fazla kart taşıyabilirsiniz</span>
+          <span className="text-xs text-metin-2">
+            Her profilin KENDİ QR kodu ve kendi görünürlük ayarları olur: bir profilde yalnız şirket
+            bilgilerinizi, başka bir profilde başka bir işi paylaşabilirsiniz. Karşı taraf yalnız
+            okuttuğu profilin bilgilerini görür.
+          </span>
+          <Dugme tur="ikincil" boyut="k" className="self-start" onClick={() => ctx.bolumDegistir('kartim')}>
+            Kartım&apos;da profil ekle
+          </Dugme>
+        </div>
+      )}
+
       {personalar.length > 1 && (
         <div className="flex flex-col gap-1.5">
           <span className="text-[13px] font-semibold">Hangi profilinizi paylaşacaksınız?</span>
