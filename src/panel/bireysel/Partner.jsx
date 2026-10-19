@@ -122,33 +122,90 @@ function OdemeKarti({ ctx }) {
   )
 }
 
+const ODEME_DURUM = {
+  pending: 'Bekliyor', approved: 'Onaylandı', paid: 'Ödendi', rejected: 'Reddedildi',
+}
+
 function DurumRozeti({ r }) {
-  if (r.status === 'active') return <Rozet ton="aksan">Ücretli pakete geçti</Rozet>
+  if (r.suruyor) return <Rozet ton="aksan">Aboneliği sürüyor</Rozet>
+  if (r.toplam > 0) return <Rozet ton="notr">Abonelik bitti</Rozet>
   return <Rozet ton="uyari">Kayıt oldu</Rozet>
+}
+
+// my_referral_tracking ve my_referrals satırlarını TEK biçime indirir.
+// Yedek yol my_referrals: sunucu güncellemesi dağıtımdan sonra uygulanırsa
+// panel arada bozuk görünmesin (sosyal görünümde bunun maliyetini gördük).
+// Yedek yolda yenileme bilgisi YOK — uydurmuyoruz, alan boş kalıyor.
+function satirlariDuzle(takip, eski) {
+  if (takip?.ok) {
+    return (takip.davetler || []).map((d) => ({
+      id: d.davet_id,
+      ad: d.ad,
+      hesapSilinmis: d.hesap_silinmis,
+      tarih: d.davet_tarihi,
+      plan: d.plan,
+      suruyor: d.suruyor,
+      yenileme: d.yenileme,
+      toplam: Number(d.toplam_hakedis || 0),
+      odemeler: d.odemeler || [],
+    }))
+  }
+  return (eski || []).map((r) => ({
+    id: r.id,
+    ad: r.davetli_adi,
+    hesapSilinmis: r.hesap_silinmis,
+    tarih: r.created_at,
+    plan: null,
+    suruyor: r.status === 'active',
+    yenileme: null,
+    toplam: Number(r.commission_amount || 0),
+    odemeler: [],
+  }))
 }
 
 export default function Partner({ ctx }) {
   const [kod, setKod] = useState(null)
   const [liste, setListe] = useState(null)
+  const [ozet, setOzet] = useState(null)
+  const [yenilemeYok, setYenilemeYok] = useState(false)
   const [hata, setHata] = useState(false)
   const [filtre, setFiltre] = useState('tumu')
+  const [acik, setAcik] = useState(null)
 
   useEffect(() => {
+    let iptal = false
     supabase.rpc('get_or_create_referral_code').then(({ data, error }) => {
+      if (iptal) return
       if (error || !data?.ok) { setHata(true); return }
       setKod(data)
     })
-    supabase.rpc('my_referrals').then(({ data, error }) => {
-      if (error) setHata(true)
-      setListe(Array.isArray(data) ? data : [])
+    supabase.rpc('my_referral_tracking').then(async ({ data, error }) => {
+      if (iptal) return
+      if (!error && data?.ok) {
+        setListe(satirlariDuzle(data, null))
+        setOzet(data.ozet || null)
+        return
+      }
+      // Yedek: yenileme takibi henüz canlıda değil.
+      setYenilemeYok(true)
+      const { data: e, error: eHata } = await supabase.rpc('my_referrals')
+      if (iptal) return
+      if (eHata) setHata(true)
+      setListe(satirlariDuzle(null, Array.isArray(e) ? e : []))
     })
+    return () => { iptal = true }
   }, [])
 
   const baglanti = kod?.code ? signupUrl(kod.code) : ''
   const tum = liste || []
-  const ucretli = tum.filter((r) => r.status === 'active')
-  const toplam = tum.reduce((t, r) => t + Number(r.commission_amount || 0), 0)
-  const gorunen = filtre === 'ucretli' ? ucretli : tum
+  const suren = tum.filter((r) => r.suruyor)
+  const toplam = ozet ? Number(ozet.toplam_hakedis || 0) : tum.reduce((t, r) => t + r.toplam, 0)
+  // Ödeme satırlarından kırılım: bekleyen (pending) ve ödenmiş (paid).
+  const odemeSatirlari = tum.flatMap((r) => r.odemeler)
+  const topla = (d) => odemeSatirlari.filter((o) => o.durum === d).reduce((t, o) => t + Number(o.tutar || 0), 0)
+  const bekleyen = topla('pending')
+  const odenmis = topla('paid')
+  const gorunen = filtre === 'ucretli' ? suren : tum
 
   return (
     <>
@@ -166,9 +223,13 @@ export default function Partner({ ctx }) {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <Istatistik etiket="Partner kodunuzla gelen" deger={liste ? sayi(tum.length) : '—'} alt={liste ? `${sayi(ucretli.length)} ücretli pakete geçti` : null} />
-        <Istatistik etiket="Bekleyen hak ediş" deger="—" alt="Kırılım yakında" />
-        <Istatistik etiket="Onaylanan" deger="—" alt="Kırılım yakında" />
+        <Istatistik etiket="Partner kodunuzla gelen" deger={liste ? sayi(tum.length) : '—'} alt={liste ? `${sayi(suren.length)} aboneliği sürüyor` : null} />
+        <Istatistik
+          etiket="30 günde yenilenecek"
+          deger={ozet ? sayi(ozet.yakinda_yenilenen) : '—'}
+          alt={ozet ? 'Yenilenirse hak ediş yeniden yazılır' : 'Yenileme takibi hazırlanıyor'}
+        />
+        <Istatistik etiket="Bekleyen hak ediş" deger={liste ? tl(bekleyen) : '—'} alt={odenmis > 0 ? `${tl(odenmis)} ödendi` : 'Henüz ödeme aktarımı yok'} />
         <Istatistik etiket="Hak ediş · toplam" deger={liste ? tl(toplam) : '—'} alt="Kayıtlı hak edişlerin toplamı" altTon="aksan" />
       </div>
 
@@ -177,7 +238,7 @@ export default function Partner({ ctx }) {
           <h2 id="p-liste" className="font-baslik text-[17px] font-bold leading-tight">Yönlendirdikleriniz</h2>
           <div className="flex gap-1.5" role="group" aria-label="Liste filtresi">
             <Dugme boyut="k" tur={filtre === 'tumu' ? 'ikincil' : 'sessiz'} aria-pressed={filtre === 'tumu'} onClick={() => setFiltre('tumu')}>Tümü</Dugme>
-            <Dugme boyut="k" tur={filtre === 'ucretli' ? 'ikincil' : 'sessiz'} aria-pressed={filtre === 'ucretli'} onClick={() => setFiltre('ucretli')}>Ücretli pakete geçenler</Dugme>
+            <Dugme boyut="k" tur={filtre === 'ucretli' ? 'ikincil' : 'sessiz'} aria-pressed={filtre === 'ucretli'} onClick={() => setFiltre('ucretli')}>Aboneliği sürenler</Dugme>
           </div>
         </div>
         {liste === null ? (
@@ -185,38 +246,70 @@ export default function Partner({ ctx }) {
         ) : gorunen.length === 0 ? (
           <BosDurum
             ikon={Users}
-            baslik={filtre === 'ucretli' && tum.length ? 'Henüz ücretli pakete geçen yok' : 'Henüz yönlendirme yok'}
+            baslik={filtre === 'ucretli' && tum.length ? 'Aboneliği süren kimse yok' : 'Henüz yönlendirme yok'}
             aciklama="Bağlantınızla kayıt olanlar burada listelenir; ücretli pakete geçtiklerinde hak edişiniz yazılır."
           />
         ) : (
           <Tablo>
             <thead>
-              <tr><Th>Ad</Th><Th>Kayıt</Th><Th>Durum</Th><Th sag>Hak ediş · %10</Th></tr>
+              <tr><Th>Ad</Th><Th>Kayıt</Th><Th>Durum</Th><Th>Yenileme</Th><Th sag>Hak ediş · %10</Th></tr>
             </thead>
             <tbody>
               {gorunen.map((r) => {
-                const tutar = Number(r.commission_amount || 0)
-                return (
-                  <tr key={r.id}>
+                const genis = acik === r.id
+                const dokumVar = r.odemeler.length > 0
+                return [
+                  <tr
+                    key={r.id}
+                    className={dokumVar ? 'cursor-pointer hover:bg-yuzey-2/50' : undefined}
+                    onClick={dokumVar ? () => setAcik(genis ? null : r.id) : undefined}
+                  >
                     <Td>
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <Avatar ad={r.davetli_adi} boyut={32} />
+                        <Avatar ad={r.ad} boyut={32} />
                         <div className="min-w-0">
-                          <b className="block truncate">{r.davetli_adi}</b>
-                          {r.hesap_silinmis && <span className="text-xs text-metin-2">Hesabını sildi</span>}
+                          <b className="block truncate">{r.ad}</b>
+                          {r.hesapSilinmis && <span className="text-xs text-metin-2">Hesabını sildi</span>}
+                          {dokumVar && (
+                            <span className="text-xs text-metin-2">
+                              {sayi(r.odemeler.length)} ödeme · {genis ? 'kapat' : 'dökümü aç'}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </Td>
-                    <Td className="text-metin-2 whitespace-nowrap">{kayitTarihi(r.created_at)}</Td>
+                    <Td className="text-metin-2 whitespace-nowrap">{kayitTarihi(r.tarih)}</Td>
                     <Td><DurumRozeti r={r} /></Td>
-                    <Td sag className={tutar > 0 ? 'font-semibold' : 'text-metin-2'}>{tutar > 0 ? tl(tutar) : '—'}</Td>
-                  </tr>
-                )
+                    <Td className="text-metin-2 whitespace-nowrap">
+                      {r.yenileme ? kayitTarihi(r.yenileme) : '—'}
+                    </Td>
+                    <Td sag className={r.toplam > 0 ? 'font-semibold' : 'text-metin-2'}>{r.toplam > 0 ? tl(r.toplam) : '—'}</Td>
+                  </tr>,
+                  genis ? (
+                    <tr key={r.id + '-odeme'}>
+                      <Td colSpan={5} className="bg-yuzey-2/60">
+                        <div className="flex flex-col gap-1.5 py-1">
+                          {r.odemeler.map((o, i) => (
+                            <div key={i} className="flex justify-between gap-3 text-xs">
+                              <span className="text-metin-2">{kayitTarihi(o.tarih)}</span>
+                              <span className="text-metin-2">{ODEME_DURUM[o.durum] || o.durum}</span>
+                              <b className="tabular-nums">{tl(Number(o.tutar || 0))}</b>
+                            </div>
+                          ))}
+                        </div>
+                      </Td>
+                    </tr>
+                  ) : null,
+                ]
               })}
             </tbody>
           </Tablo>
         )}
-        <p className="px-5 py-3 text-xs text-metin-2 border-t border-cizgi/70">Yönlendirdiğiniz kişilerin kart verisini görmezsiniz; yalnızca ad, kayıt tarihi ve plan durumu listelenir.</p>
+        <p className="px-5 py-3 text-xs text-metin-2 border-t border-cizgi/70">
+          Yönlendirdiğiniz kişilerin kart verisini, e-postasını ve ödediği tutarı görmezsiniz; yalnızca ad,
+          kayıt tarihi, abonelik durumu, yenileme tarihi ve KENDİ hak edişiniz listelenir.
+          {yenilemeYok && ' Yenileme takibi için sunucu güncellemesi bekleniyor.'}
+        </p>
       </Kart>
     </>
   )
